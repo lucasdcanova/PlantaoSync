@@ -12,6 +12,7 @@ import { RegisterDto } from './dto/register.dto'
 import * as bcrypt from 'bcryptjs'
 import { v4 as uuidv4 } from 'uuid'
 import { TRIAL_DAYS, addDays } from '../../shared-constants'
+import { getJwtAccessSecret, getJwtRefreshSecret } from '../../config/jwt.config'
 
 @Injectable()
 export class AuthService {
@@ -189,13 +190,13 @@ export class AuthService {
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        secret: this.config.getOrThrow('JWT_ACCESS_SECRET'),
+        secret: getJwtAccessSecret(this.config),
         expiresIn: this.config.get('JWT_ACCESS_EXPIRES_IN', '15m'),
       }),
       this.jwtService.signAsync(
         { sub: userId, jti: uuidv4() },
         {
-          secret: this.config.getOrThrow('JWT_REFRESH_SECRET'),
+          secret: getJwtRefreshSecret(this.config),
           expiresIn: this.config.get('JWT_REFRESH_EXPIRES_IN', '30d'),
         },
       ),

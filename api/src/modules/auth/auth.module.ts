@@ -9,6 +9,7 @@ import { AuthService } from './auth.service'
 import { JwtStrategy } from './strategies/jwt.strategy'
 import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard'
 import { RolesGuard } from '../../shared/guards/roles.guard'
+import { getJwtAccessSecret } from '../../config/jwt.config'
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { RolesGuard } from '../../shared/guards/roles.guard'
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.getOrThrow('JWT_ACCESS_SECRET'),
+        secret: getJwtAccessSecret(config),
         signOptions: { expiresIn: config.get('JWT_ACCESS_EXPIRES_IN', '15m') },
       }),
     }),
