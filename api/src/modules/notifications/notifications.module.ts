@@ -11,12 +11,27 @@ import { NotificationsProcessor } from './queues/notifications.processor'
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        connection: {
-          host: config.get('REDIS_HOST', 'localhost'),
-          port: config.get<number>('REDIS_PORT', 6379),
-          password: config.get('REDIS_PASSWORD'),
-          tls: config.get('REDIS_TLS') === 'true' ? {} : undefined,
-        },
+        connection: (() => {
+          const redisUrl = config.get<string>('REDIS_URL')?.trim()
+
+          if (redisUrl) {
+            const parsed = new URL(redisUrl)
+            return {
+              host: parsed.hostname,
+              port: parsed.port ? Number(parsed.port) : 6379,
+              username: parsed.username || undefined,
+              password: parsed.password || undefined,
+              tls: parsed.protocol === 'rediss:' ? {} : undefined,
+            }
+          }
+
+          return {
+            host: config.get('REDIS_HOST', 'localhost'),
+            port: config.get<number>('REDIS_PORT', 6379),
+            password: config.get('REDIS_PASSWORD'),
+            tls: config.get('REDIS_TLS') === 'true' ? {} : undefined,
+          }
+        })(),
       }),
     }),
     BullModule.registerQueue({
