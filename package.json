@@ -1,0 +1,24 @@
+{
+  "name": "agendaplantao",
+  "version": "0.0.1",
+  "private": true,
+  "packageManager": "pnpm@10.23.0",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "db:migrate": "pnpm --filter=api db:migrate",
+    "db:generate": "pnpm --filter=api db:generate",
+    "db:seed": "pnpm --filter=api db:seed",
+    "db:studio": "pnpm --filter=api db:studio",
+    "db:reset": "pnpm --filter=api db:reset"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "prettier": "^3.4.2",
+    "@types/node": "^22.10.5"
+  }
+}
