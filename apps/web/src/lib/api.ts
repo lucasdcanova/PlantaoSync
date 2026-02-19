@@ -18,7 +18,7 @@ function createApiClient(token?: string): KyInstance {
           const { response } = error
           if (response) {
             try {
-              const body = await response.clone().json<{ message: string }>()
+              const body = (await response.clone().json()) as { message?: string }
               ;(error as any).message = body.message ?? error.message
             } catch {}
           }

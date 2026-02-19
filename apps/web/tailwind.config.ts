@@ -74,7 +74,7 @@ const config: Config = {
   		},
   		fontFamily: {
   			sans: [
-  				'var(--font-dm-sans)',
+  				'var(--font-geist-sans)',
   				'system-ui',
   				'sans-serif'
   			],
