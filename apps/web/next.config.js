@@ -1,4 +1,17 @@
-import type { NextConfig } from 'next'
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: '**.r2.dev' },
+      { protocol: 'https', hostname: 'api.dicebear.com' },
+    ],
+  },
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'recharts', 'framer-motion'],
+  },
+}
+
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
@@ -24,17 +37,5 @@ const withPWA = require('next-pwa')({
   ],
 })
 
-const nextConfig: NextConfig = {
-  reactStrictMode: true,
-  images: {
-    remotePatterns: [
-      { protocol: 'https', hostname: '**.r2.dev' },
-      { protocol: 'https', hostname: 'api.dicebear.com' },
-    ],
-  },
-  experimental: {
-    optimizePackageImports: ['lucide-react', 'recharts', 'framer-motion'],
-  },
-}
+module.exports = withPWA(nextConfig)
 
-export default withPWA(nextConfig)

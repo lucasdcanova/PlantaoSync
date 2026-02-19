@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next'
-import { DM_Sans, Geist, Geist_Mono } from 'next/font/google'
+import { DM_Sans } from 'next/font/google'
+import { GeistSans } from 'geist/font/sans'
+import { GeistMono } from 'geist/font/mono'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from 'sonner'
 import { QueryProvider } from '@/lib/query-provider'
@@ -11,17 +13,6 @@ const dmSans = DM_Sans({
   display: 'swap',
 })
 
-const geist = Geist({
-  subsets: ['latin'],
-  variable: '--font-geist',
-  display: 'swap',
-})
-
-const geistMono = Geist_Mono({
-  subsets: ['latin'],
-  variable: '--font-geist-mono',
-  display: 'swap',
-})
 
 export const metadata: Metadata = {
   title: {
@@ -61,7 +52,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${dmSans.variable} ${geist.variable} ${geistMono.variable} font-sans`}>
+      <body className={`${dmSans.variable} ${GeistSans.variable} ${GeistMono.variable} font-sans`}>
         <ThemeProvider
           attribute="data-theme"
           defaultTheme="system"
