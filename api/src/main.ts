@@ -57,7 +57,7 @@ async function bootstrap() {
   // Swagger (dev only)
   if (config.get('NODE_ENV') !== 'production') {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('AgendaPlantão API')
+      .setTitle('CONFIRMA PLANTÃO API')
       .setDescription('API de gestão de escalas e plantões médicos')
       .setVersion('1.0')
       .addBearerAuth()

@@ -4,49 +4,21 @@ import { Header } from '@/components/layout/header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { SHIFT_STATUS_CONFIG, formatDate } from '@/lib/utils'
-
-const mockSchedules = [
-  {
-    id: '1',
-    title: 'Cobertura UTI Adulto - Ciclo Fevereiro 2026',
-    location: 'UTI Adulto',
-    startDate: '2026-02-01',
-    endDate: '2026-02-28',
-    status: 'PUBLISHED' as const,
-    summary:
-      'Escala mensal com cobertura para turnos diurnos e noturnos. Distribuição equilibrada entre equipes titulares e suporte.',
-  },
-  {
-    id: '2',
-    title: 'Cobertura Pronto-Socorro - Ciclo Fevereiro 2026',
-    location: 'Pronto-Socorro',
-    startDate: '2026-02-01',
-    endDate: '2026-02-28',
-    status: 'PUBLISHED' as const,
-    summary:
-      'Escala com reforço em horários de maior demanda e janela extra para cobertura de pico nos fins de semana.',
-  },
-  {
-    id: '3',
-    title: 'Cobertura UTI Adulto - Planejamento Março 2026',
-    location: 'UTI Adulto',
-    startDate: '2026-03-01',
-    endDate: '2026-03-31',
-    status: 'DRAFT' as const,
-    summary:
-      'Planejamento inicial aguardando validação de disponibilidade de profissionais e ajustes de cobertura por especialidade.',
-  },
-]
+import { getDemoScheduleById } from '@/lib/demo-data'
 
 export default function ScheduleDetailsPage({ params }: { params: { id: string } }) {
-  const schedule = mockSchedules.find((item) => item.id === params.id) ?? {
+  const schedule = getDemoScheduleById(params.id) ?? {
     id: params.id,
     title: `Escala ${params.id}`,
-    location: 'Não informado',
+    location: { id: 'loc-unknown', name: 'Não informado' },
     startDate: '2026-03-01',
     endDate: '2026-03-31',
     status: 'DRAFT' as const,
-    summary: 'Detalhes dessa escala ainda não foram sincronizados nesta visualização.',
+    description: 'Detalhes dessa escala ainda não foram sincronizados nesta visualização.',
+    createdAt: '2026-02-01',
+    updatedAt: '2026-02-01',
+    organizationId: 'org-demo',
+    locationId: 'loc-unknown',
   }
 
   const status = SHIFT_STATUS_CONFIG[schedule.status]
@@ -68,7 +40,9 @@ export default function ScheduleDetailsPage({ params }: { params: { id: string }
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="font-display text-2xl font-bold text-foreground">{schedule.title}</h2>
-                <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{schedule.summary}</p>
+                <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                  {schedule.description ?? 'Sem descrição cadastrada para este ciclo.'}
+                </p>
               </div>
               <Badge className={status.color}>{status.label}</Badge>
             </div>
@@ -78,7 +52,7 @@ export default function ScheduleDetailsPage({ params }: { params: { id: string }
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Local</p>
                 <p className="mt-2 flex items-center gap-2 text-sm text-foreground">
                   <MapPin className="h-4 w-4 text-brand-500" />
-                  {schedule.location}
+                  {schedule.location?.name ?? 'Não informado'}
                 </p>
               </div>
               <div className="rounded-xl border border-border bg-background p-4">

@@ -1,20 +1,43 @@
-import { BarChart3 } from 'lucide-react'
-import { DashboardPlaceholderPage } from '@/components/dashboard/dashboard-placeholder'
+import { Header } from '@/components/layout/header'
+import { DEMO_REPORT_HIGHLIGHTS, DEMO_REPORT_METRICS } from '@/lib/demo-data'
 
 export default function ReportsPage() {
   return (
-    <DashboardPlaceholderPage
-      title="Relatórios"
-      subtitle="Cobertura, produtividade e risco por período"
-      description="Gere leituras executivas para comitês assistenciais e operacionais com foco em decisão rápida."
-      icon={<BarChart3 className="h-5 w-5" />}
-      highlights={[
-        'Cobertura por unidade, especialidade e janela de risco',
-        'Tempo médio entre convocação e confirmação efetiva',
-        'Comparativo entre planejamento e execução da escala',
-        'Exportação para auditoria interna e governança',
-      ]}
-      primaryAction={{ label: 'Abrir financeiro', href: '/finances' }}
-    />
+    <>
+      <Header
+        title="Relatórios"
+        subtitle="Cobertura, produtividade e risco por período"
+      />
+
+      <div className="space-y-6 p-6">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {DEMO_REPORT_METRICS.map((metric) => (
+            <article key={metric.label} className="rounded-xl border border-border bg-card p-5 shadow-card">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">{metric.label}</p>
+              <p className="mt-2 font-display text-2xl font-bold text-foreground">{metric.value}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{metric.context}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="rounded-2xl border border-border bg-card p-6 shadow-card">
+          <h2 className="font-display text-lg font-bold text-foreground">Destaques operacionais do período</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Bloco pronto para diretoria clínica, coordenação e governança assistencial.
+          </p>
+
+          <div className="mt-5 grid gap-3">
+            {DEMO_REPORT_HIGHLIGHTS.map((highlight) => (
+              <article
+                key={highlight}
+                className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground"
+              >
+                {highlight}
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    </>
   )
 }

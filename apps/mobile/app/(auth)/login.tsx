@@ -2,14 +2,18 @@ import { useState } from 'react'
 import {
   View, Text, TextInput, Pressable, KeyboardAvoidingView,
   Platform, ScrollView, useColorScheme, ActivityIndicator,
+  Image,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MotiView } from 'moti'
-import { router } from 'expo-router'
+import { Link, router } from 'expo-router'
 import * as Haptics from 'expo-haptics'
-import { Eye, EyeOff, Calendar } from 'lucide-react-native'
+import { Eye, EyeOff } from 'lucide-react-native'
+import { MOBILE_DOCTOR_EMAIL, MOBILE_DOCTOR_PASSWORD, MOBILE_DOCTOR_USER } from '../../lib/doctor-demo-data'
+import { useMobileAuthStore } from '../../store/auth-store'
+import { useMobileDoctorDemoStore } from '../../store/doctor-demo-store'
 
-const BRAND = '#6366f1'
+const BRAND = '#4ECDC4'
 
 export default function LoginScreen() {
   const insets  = useSafeAreaInsets()
@@ -19,6 +23,8 @@ export default function LoginScreen() {
   const [showPwd, setShowPwd]   = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
+  const login = useMobileAuthStore((state) => state.login)
+  const validateRegisteredCredential = useMobileDoctorDemoStore((state) => state.validateRegisteredCredential)
 
   const bg   = isDark ? '#09090f' : '#f8faff'
   const card = isDark ? '#111120' : '#ffffff'
@@ -33,13 +39,39 @@ export default function LoginScreen() {
     }
     setError('')
     setLoading(true)
+
+    const normalizedEmail = email.trim().toLowerCase()
+
     try {
-      await new Promise((r) => setTimeout(r, 1200)) // simula API
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      router.replace('/(tabs)')
-    } catch {
+      await new Promise((r) => setTimeout(r, 600))
+
+      if (normalizedEmail === MOBILE_DOCTOR_EMAIL && password === MOBILE_DOCTOR_PASSWORD) {
+        login(MOBILE_DOCTOR_USER)
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+        router.replace('/(tabs)')
+        return
+      }
+
+      const invitedDoctor = validateRegisteredCredential(email, password)
+      if (invitedDoctor) {
+        login({
+          id: invitedDoctor.id,
+          name: invitedDoctor.fullName,
+          email: invitedDoctor.email,
+          role: 'PROFESSIONAL',
+          crm: invitedDoctor.crm,
+          specialty: invitedDoctor.specialty,
+          organizationName: 'Hospital São Gabriel',
+        })
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+        router.replace('/(tabs)')
+        return
+      }
+
+      throw new Error('invalid')
+    } catch (_error) {
       setError('E-mail ou senha incorretos')
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
     } finally {
       setLoading(false)
     }
@@ -62,17 +94,11 @@ export default function LoginScreen() {
           transition={{ type: 'spring', damping: 20 }}
           style={{ alignItems: 'center', marginBottom: 40 }}
         >
-          <View style={{
-            width: 64, height: 64, borderRadius: 20,
-            backgroundColor: BRAND, alignItems: 'center', justifyContent: 'center',
-            shadowColor: BRAND, shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.4, shadowRadius: 20, marginBottom: 16,
-          }}>
-            <Calendar size={30} color="#fff" />
-          </View>
-          <Text style={{ fontSize: 26, fontWeight: '800', color: text, letterSpacing: -0.5 }}>
-            AgendaPlantão
-          </Text>
+          <Image
+            source={require('../../assets/brand/logo-full.png')}
+            style={{ width: 230, height: 78, marginBottom: 10 }}
+            resizeMode="contain"
+          />
           <Text style={{ fontSize: 14, color: muted, marginTop: 4 }}>
             Entre na sua conta
           </Text>
@@ -140,7 +166,7 @@ export default function LoginScreen() {
             onPress={handleLogin}
             disabled={loading}
             style={({ pressed }) => ({
-              backgroundColor: pressed ? '#4f46e5' : BRAND,
+              backgroundColor: pressed ? '#2BB5AB' : BRAND,
               borderRadius: 14, paddingVertical: 14,
               alignItems: 'center', marginTop: 8,
               transform: [{ scale: pressed ? 0.97 : 1 }],
@@ -156,10 +182,18 @@ export default function LoginScreen() {
           </Pressable>
 
           {/* Demo hint */}
-          <View style={{ alignItems: 'center', marginTop: 4 }}>
+          <View style={{ alignItems: 'center', marginTop: 4, gap: 6 }}>
             <Text style={{ fontSize: 12, color: muted, textAlign: 'center' }}>
-              Demo: <Text style={{ color: BRAND }}>ana.costa@demo.com</Text> / <Text style={{ color: BRAND }}>Senha@123</Text>
+              Demo médico: <Text style={{ color: BRAND }}>{MOBILE_DOCTOR_EMAIL}</Text> /{' '}
+              <Text style={{ color: BRAND }}>{MOBILE_DOCTOR_PASSWORD}</Text>
             </Text>
+            <Link href="/(auth)/register" asChild>
+              <Pressable>
+                <Text style={{ fontSize: 12, color: BRAND, fontWeight: '700' }}>
+                  Recebeu convite do gestor? Cadastre-se aqui
+                </Text>
+              </Pressable>
+            </Link>
           </View>
         </MotiView>
       </ScrollView>

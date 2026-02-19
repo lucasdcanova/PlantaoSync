@@ -1,118 +1,111 @@
-import { View, Text, ScrollView, Pressable, useColorScheme } from 'react-native'
+import { useMemo, useState } from 'react'
+import { ScrollView, Text, View, useColorScheme } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MotiView } from 'moti'
-import { CheckCircle, Clock, XCircle, Calendar, MapPin, DollarSign } from 'lucide-react-native'
-import { useState } from 'react'
+import { Calendar, CheckCircle, Clock, XCircle } from 'lucide-react-native'
+import { useMobileDoctorDemoStore } from '../../store/doctor-demo-store'
 
-const BRAND  = '#6366f1'
-const GREEN  = '#22c55e'
-const AMBER  = '#f59e0b'
-const RED    = '#ef4444'
-
-const tabs = ['Próximos', 'Histórico']
-
-const shifts = [
-  { id: '1', date: '20/02/2026', location: 'UTI Adulto',     time: '07:00–19:00', value: 120000, status: 'ACCEPTED' },
-  { id: '2', date: '22/02/2026', location: 'Pronto-Socorro', time: '19:00–07:00', value: 150000, status: 'ACCEPTED' },
-  { id: '3', date: '15/02/2026', location: 'UTI Adulto',     time: '07:00–19:00', value: 120000, status: 'ACCEPTED' },
-  { id: '4', date: '10/02/2026', location: 'UTI Adulto',     time: '19:00–07:00', value: 150000, status: 'CANCELLED' },
-]
+const tabs = ['Próximos', 'Histórico'] as const
+const BRAND = '#4ECDC4'
+const GREEN = '#22c55e'
+const AMBER = '#f59e0b'
+const RED = '#ef4444'
 
 function formatCurrency(cents: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100)
 }
 
 const statusConfig = {
-  ACCEPTED:  { label: 'Confirmado', color: GREEN,  icon: CheckCircle },
-  PENDING:   { label: 'Pendente',   color: AMBER,  icon: Clock },
-  CANCELLED: { label: 'Cancelado',  color: RED,    icon: XCircle },
+  CONFIRMADO: { label: 'Confirmado', color: GREEN, icon: CheckCircle },
+  CONCLUIDO: { label: 'Concluído', color: BRAND, icon: Calendar },
+  TROCA_SOLICITADA: { label: 'Troca solicitada', color: AMBER, icon: Clock },
+  CANCELADO: { label: 'Cancelado', color: RED, icon: XCircle },
 }
 
-export default function ShiftsScreen() {
+export default function ShiftsHistoryScreen() {
   const insets = useSafeAreaInsets()
   const isDark = useColorScheme() === 'dark'
   const [activeTab, setActiveTab] = useState(0)
+  const shifts = useMobileDoctorDemoStore((state) => state.myShifts)
 
-  const bg     = isDark ? '#09090f' : '#f8faff'
-  const card   = isDark ? '#111120' : '#ffffff'
-  const text   = isDark ? '#f0f4ff' : '#0f172a'
-  const muted  = isDark ? '#a0aec0' : '#64748b'
+  const displayShifts = useMemo(() => {
+    return shifts.filter((shift) => {
+      const isUpcoming = shift.status === 'CONFIRMADO' || shift.status === 'TROCA_SOLICITADA'
+      return activeTab === 0 ? isUpcoming : !isUpcoming
+    })
+  }, [activeTab, shifts])
+
+  const bg = isDark ? '#09090f' : '#f8faff'
+  const card = isDark ? '#111120' : '#ffffff'
+  const text = isDark ? '#f0f4ff' : '#0f172a'
+  const muted = isDark ? '#a0aec0' : '#64748b'
   const border = isDark ? '#1e2035' : '#e2e8f0'
 
   return (
     <View style={{ flex: 1, backgroundColor: bg }}>
-      {/* Header */}
-      <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 20, paddingBottom: 0 }}>
-        <Text style={{ fontSize: 22, fontWeight: '800', color: text, letterSpacing: -0.5, marginBottom: 16 }}>
-          Meus Plantões
-        </Text>
-        {/* Tabs */}
-        <View style={{ flexDirection: 'row', backgroundColor: isDark ? '#1a1a2e' : '#f1f5f9', borderRadius: 12, padding: 3, marginBottom: 4 }}>
-          {tabs.map((tab, i) => (
-            <Pressable
+      <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 20, paddingBottom: 4 }}>
+        <Text style={{ fontSize: 22, fontWeight: '800', color: text, marginBottom: 14 }}>Histórico médico</Text>
+        <View style={{ flexDirection: 'row', backgroundColor: isDark ? '#1a1a2e' : '#f1f5f9', borderRadius: 12, padding: 3 }}>
+          {tabs.map((tab, index) => (
+            <Text
               key={tab}
-              onPress={() => setActiveTab(i)}
+              onPress={() => setActiveTab(index)}
               style={{
-                flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center',
-                backgroundColor: activeTab === i ? (isDark ? '#111120' : '#fff') : 'transparent',
-                shadowColor: activeTab === i ? '#000' : 'transparent',
-                shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 4,
+                flex: 1,
+                textAlign: 'center',
+                paddingVertical: 8,
+                borderRadius: 10,
+                color: activeTab === index ? text : muted,
+                backgroundColor: activeTab === index ? card : 'transparent',
+                fontSize: 13,
+                fontWeight: activeTab === index ? '700' : '500',
               }}
             >
-              <Text style={{ fontSize: 13, fontWeight: activeTab === i ? '700' : '500', color: activeTab === i ? text : muted }}>
-                {tab}
-              </Text>
-            </Pressable>
+              {tab}
+            </Text>
           ))}
         </View>
       </View>
 
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 + insets.bottom }}
-        showsVerticalScrollIndicator={false}
-      >
-        {shifts.map((shift, i) => {
-          const cfg = statusConfig[shift.status as keyof typeof statusConfig]
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 100 + insets.bottom }}>
+        {displayShifts.map((shift, index) => {
+          const cfg = statusConfig[shift.status]
           const StatusIcon = cfg.icon
           return (
             <MotiView
               key={shift.id}
-              from={{ opacity: 0, translateY: 16 }}
+              from={{ opacity: 0, translateY: 14 }}
               animate={{ opacity: 1, translateY: 0 }}
-              transition={{ delay: i * 60, type: 'spring', damping: 20 }}
+              transition={{ delay: index * 70, type: 'spring', damping: 20 }}
               style={{ marginBottom: 12 }}
             >
-              <View style={{ backgroundColor: card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: border }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Calendar size={14} color={BRAND} />
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: text }}>{shift.date}</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: `${cfg.color}15`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99 }}>
+              <View style={{ backgroundColor: card, borderRadius: 16, borderWidth: 1, borderColor: border, padding: 16 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: text }}>{shift.sectorName}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: `${cfg.color}18`, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
                     <StatusIcon size={11} color={cfg.color} />
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: cfg.color }}>{cfg.label}</Text>
+                    <Text style={{ fontSize: 11, color: cfg.color, fontWeight: '700' }}>{cfg.label}</Text>
                   </View>
                 </View>
-                <View style={{ flexDirection: 'row', gap: 16 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <MapPin size={13} color={muted} />
-                    <Text style={{ fontSize: 13, color: muted }}>{shift.location}</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Clock size={13} color={muted} />
-                    <Text style={{ fontSize: 13, color: muted }}>{shift.time}</Text>
-                  </View>
-                </View>
-                <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <DollarSign size={14} color={GREEN} />
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: GREEN }}>
-                    {formatCurrency(shift.value)}
-                  </Text>
+                <Text style={{ fontSize: 12, color: muted }}>
+                  {shift.date} · {shift.startTime}–{shift.endTime}
+                </Text>
+                <View style={{ marginTop: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ fontSize: 12, color: muted }}>Carga: {shift.patientLoad}</Text>
+                  <Text style={{ fontSize: 13, color: GREEN, fontWeight: '700' }}>{formatCurrency(shift.value)}</Text>
                 </View>
               </View>
             </MotiView>
           )
         })}
+
+        {displayShifts.length === 0 && (
+          <View style={{ borderRadius: 14, borderWidth: 1, borderColor: border, borderStyle: 'dashed', backgroundColor: card, padding: 20, alignItems: 'center' }}>
+            <Text style={{ fontSize: 13, color: muted, textAlign: 'center' }}>
+              Nenhum plantão nesta aba.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   )

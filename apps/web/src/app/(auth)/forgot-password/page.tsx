@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { BRAND_NAME } from '@/lib/brand'
 
 const forgotSchema = z.object({
   email: z.string().email('E-mail inválido'),
@@ -32,14 +33,14 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-6">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-card">
+      <div className="w-full max-w-md card-base rounded-xl p-8">
         <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-900/30 dark:text-brand-300">
           <MailCheck className="h-5 w-5" />
         </div>
 
         <h1 className="font-display text-2xl font-bold text-foreground">Restaurar acesso da operação</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Informe o e-mail institucional para receber as instruções de redefinição.
+          Informe o e-mail institucional para receber as instruções de redefinição no {BRAND_NAME}.
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
@@ -58,7 +59,7 @@ export default function ForgotPasswordPage() {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-brand-600 text-white shadow-brand hover:bg-brand-700"
+            className="w-full bg-brand-700 text-white shadow-brand hover:bg-brand-800"
           >
             {isSubmitting ? 'Enviando...' : 'Receber instruções'}
           </Button>
@@ -66,7 +67,7 @@ export default function ForgotPasswordPage() {
 
         <Link
           href="/login"
-          className="mt-6 inline-flex items-center gap-2 text-sm text-brand-600 transition-colors hover:text-brand-700"
+          className="mt-6 inline-flex items-center gap-2 text-sm text-brand-800 transition-colors hover:text-brand-900"
         >
           <ArrowLeft className="h-4 w-4" />
           Voltar para acesso

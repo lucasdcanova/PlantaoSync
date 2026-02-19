@@ -1,11 +1,13 @@
-import { Tabs } from 'expo-router'
+import { Tabs, router } from 'expo-router'
 import { useColorScheme, View, Text, Platform } from 'react-native'
 import { BlurView } from 'expo-blur'
-import { Home, Calendar, ClipboardList, DollarSign, User } from 'lucide-react-native'
+import { useEffect } from 'react'
+import { Home, Calendar, ClipboardList, Repeat, User } from 'lucide-react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useMobileAuthStore } from '../../store/auth-store'
 
-const BRAND = '#6366f1'
-const BRAND_MUTED = '#818cf8'
+const BRAND = '#4ECDC4'
+const BRAND_MUTED = '#65D4CD'
 
 function TabIcon({
   icon: Icon,
@@ -42,6 +44,15 @@ export default function TabLayout() {
   const colorScheme = useColorScheme()
   const insets = useSafeAreaInsets()
   const isDark = colorScheme === 'dark'
+  const isAuthenticated = useMobileAuthStore((state) => state.isAuthenticated)
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/(auth)/login')
+    }
+  }, [isAuthenticated])
+
+  if (!isAuthenticated) return null
 
   return (
     <Tabs
@@ -76,7 +87,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Início',
+          title: 'Disponíveis',
           tabBarIcon: ({ focused }) => (
             <TabIcon icon={Home} label="Início" focused={focused} />
           ),
@@ -85,7 +96,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="calendar"
         options={{
-          title: 'Calendário',
+          title: 'Setores',
           tabBarIcon: ({ focused }) => (
             <TabIcon icon={Calendar} label="Calendário" focused={focused} />
           ),
@@ -94,7 +105,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="shifts"
         options={{
-          title: 'Plantões',
+          title: 'Histórico',
           tabBarIcon: ({ focused }) => (
             <TabIcon icon={ClipboardList} label="Plantões" focused={focused} />
           ),
@@ -103,9 +114,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="finances"
         options={{
-          title: 'Financeiro',
+          title: 'Trocas',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon={DollarSign} label="Financeiro" focused={focused} />
+            <TabIcon icon={Repeat} label="Trocas" focused={focused} />
           ),
         }}
       />

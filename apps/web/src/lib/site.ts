@@ -1,4 +1,4 @@
-const PROD_URL = 'https://agendaplantao.com.br'
+const PROD_URL = 'https://confirmaplantao.com.br'
 
 export function getSiteUrl() {
   const rawUrl = process.env.NEXT_PUBLIC_APP_URL

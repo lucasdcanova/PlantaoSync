@@ -5,7 +5,7 @@ function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>)
     <div
       className={cn(
         'skeleton',
-        'bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:200%_100%]',
+        'bg-[length:200%_100%]',
         className,
       )}
       {...props}

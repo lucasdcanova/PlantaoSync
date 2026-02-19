@@ -10,6 +10,7 @@ import { PageTransition } from '@/components/shared/page-transition'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { DEMO_DASHBOARD_STATS, DEMO_RECENT_ACTIVITY } from '@/lib/demo-data'
 
 // Hook de stats (conecta com /api/v1/tenants/me/stats)
 function useDashboardStats() {
@@ -17,14 +18,7 @@ function useDashboardStats() {
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
       // Dados mock enquanto API não está conectada
-      return {
-        totalProfessionals: 24,
-        activeSchedules: 3,
-        confirmedThisWeek: 18,
-        pendingConfirmations: 6,
-        monthlyCost: 89400_00, // R$ 89.400,00 em centavos
-        occupancyRate: 78,
-      }
+      return DEMO_DASHBOARD_STATS
     },
   })
 }
@@ -33,12 +27,7 @@ function useRecentActivity() {
   return useQuery({
     queryKey: ['recent-activity'],
     queryFn: async () => {
-      return [
-        { id: '1', type: 'confirmation', message: 'Dra. Ana Costa confirmou cobertura na UTI Adulto', time: new Date(Date.now() - 5 * 60 * 1000) },
-        { id: '2', type: 'schedule',     message: 'Ciclo de escala da Clínica Médica foi publicado',   time: new Date(Date.now() - 32 * 60 * 1000) },
-        { id: '3', type: 'confirmation', message: 'Dr. Carlos Mendes assumiu plantão noturno',         time: new Date(Date.now() - 2 * 60 * 60 * 1000) },
-        { id: '4', type: 'alert',        message: 'Turno de 15/03 ainda requer confirmação final',     time: new Date(Date.now() - 3 * 60 * 60 * 1000) },
-      ]
+      return DEMO_RECENT_ACTIVITY
     },
   })
 }

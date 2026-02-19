@@ -1,11 +1,10 @@
 import ky, { type KyInstance, type Options } from 'ky'
 import { useAuthStore } from '@/store/auth.store'
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+import { API_BASE_URL } from '@/lib/env'
 
 function createApiClient(token?: string): KyInstance {
   return ky.create({
-    prefixUrl: `${BASE_URL}/api/v1`,
+    prefixUrl: `${API_BASE_URL}/api/v1`,
     credentials: 'include',
     timeout: 30000,
     headers: {
@@ -31,7 +30,7 @@ function createApiClient(token?: string): KyInstance {
             // Tentar refresh automático
             try {
               const refreshed = await ky
-                .post(`${BASE_URL}/api/v1/auth/refresh`, { credentials: 'include' })
+                .post(`${API_BASE_URL}/api/v1/auth/refresh`, { credentials: 'include' })
                 .json<{ accessToken: string }>()
 
               useAuthStore.getState().setAccessToken(refreshed.accessToken)

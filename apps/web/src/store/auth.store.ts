@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-interface AuthUser {
+export interface AuthUser {
   id: string
   name: string
   email: string
@@ -48,7 +48,7 @@ export const useAuthStore = create<AuthState>()(
         }),
     }),
     {
-      name: 'agendaplantao-auth',
+      name: 'confirma-plantao-auth',
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,

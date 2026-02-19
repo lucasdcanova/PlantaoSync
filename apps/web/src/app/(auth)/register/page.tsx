@@ -7,13 +7,16 @@ import { z } from 'zod'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowRight, Calendar, Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ProductLogo } from '@/components/brand/product-logo'
+import { API_BASE_URL } from '@/lib/env'
 import { useAuthStore } from '@/store/auth.store'
 import { cn } from '@/lib/utils'
+import { BRAND_NAME } from '@/lib/brand'
 
 const registerSchema = z
   .object({
@@ -83,7 +86,7 @@ export default function RegisterPage() {
         phone: data.phone || undefined,
       }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/register`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -114,14 +117,9 @@ export default function RegisterPage() {
         initial={{ opacity: 0, x: -32 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600 p-12 text-white lg:flex"
+        className="hidden w-1/2 flex-col justify-between bg-[linear-gradient(145deg,#1a1d23_0%,#22313a_55%,#2bb5ab_140%)] p-12 text-white lg:flex"
       >
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-            <Calendar className="h-5 w-5" />
-          </div>
-          <span className="font-display text-xl font-semibold">AgendaPlantão</span>
-        </div>
+        <ProductLogo variant="full" className="max-w-[300px]" imageClassName="w-full h-auto" priority />
 
         <div className="space-y-6">
           <div>
@@ -151,7 +149,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <p className="text-xs text-brand-200/70">Diagnóstico inicial guiado · sem cartão</p>
+        <p className="text-xs text-brand-100/70">Diagnóstico inicial guiado · sem cartão</p>
       </motion.div>
 
       <motion.div
@@ -161,11 +159,11 @@ export default function RegisterPage() {
         className="flex flex-1 items-center justify-center px-6 py-12 lg:px-12"
       >
         <div className="w-full max-w-xl">
-          <div className="mb-8 flex items-center gap-2 lg:hidden">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-              <Calendar className="h-4 w-4" />
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <div className="h-9 w-9 rounded-md bg-card p-1 shadow-card">
+              <ProductLogo variant="mark" className="h-full w-full" imageClassName="h-full w-full" />
             </div>
-            <span className="font-display text-base font-semibold">AgendaPlantão</span>
+            <span className="font-display text-base font-semibold">{BRAND_NAME}</span>
           </div>
 
           <div>
@@ -296,7 +294,7 @@ export default function RegisterPage() {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full gap-2 bg-brand-600 text-white shadow-brand hover:bg-brand-700"
+                className="w-full gap-2 bg-brand-700 text-white shadow-brand hover:bg-brand-800"
               >
                 {isSubmitting ? (
                   <>
@@ -320,7 +318,7 @@ export default function RegisterPage() {
 
           <p className="mt-3 text-center text-sm text-muted-foreground">
             Já possui acesso liberado?{' '}
-            <Link href="/login" className="font-medium text-brand-600 hover:underline">
+            <Link href="/login" className="font-medium text-brand-800 hover:underline">
               Fazer login
             </Link>
           </p>

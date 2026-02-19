@@ -1,7 +1,7 @@
 'use client'
 
-import { motion, AnimatePresence } from 'framer-motion'
-import { pageVariants } from '@/lib/animations'
+import { motion } from 'framer-motion'
+import { motionBase, pageVariants } from '@/lib/animations'
 
 export function PageTransition({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
@@ -30,7 +30,7 @@ export function FadeIn({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 380, damping: 28, delay }}
+      transition={{ ...motionBase, delay }}
       className={className}
     >
       {children}
@@ -49,7 +49,7 @@ export function StaggerList({
     <motion.div
       initial="initial"
       animate="animate"
-      variants={{ animate: { transition: { staggerChildren: 0.06 } } }}
+      variants={{ animate: { transition: { staggerChildren: 0.04 } } }}
       className={className}
     >
       {children}
@@ -61,8 +61,8 @@ export function StaggerItem({ children, className }: { children: React.ReactNode
   return (
     <motion.div
       variants={{
-        initial: { opacity: 0, y: 16 },
-        animate: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 380, damping: 28 } },
+        initial: { opacity: 0, y: 10 },
+        animate: { opacity: 1, y: 0, transition: motionBase },
       }}
       className={className}
     >

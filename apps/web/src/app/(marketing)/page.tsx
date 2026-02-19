@@ -1,13 +1,14 @@
 import type { Metadata } from 'next'
 import { LandingPage } from '@/components/marketing/landing-page'
 import { getSiteUrl } from '@/lib/site'
+import { BRAND_NAME } from '@/lib/brand'
 
 const baseUrl = getSiteUrl()
 
 export const metadata: Metadata = {
-  title: 'Software de Escalas Médicas para Hospitais e Clínicas',
+  title: 'Software de Escalas e Confirmação de Plantões para Hospitais e Clínicas',
   description:
-    'Gestão de escalas médicas com foco em continuidade assistencial. Antecipe lacunas, confirme plantões com rastreabilidade e decida com visão operacional e financeira.',
+    'Gestão de escalas médicas com confirmação em tempo real. Antecipe lacunas, valide cobertura com rastreabilidade e decida com visão operacional e financeira.',
   keywords: [
     'software de escalas médicas',
     'gestão de plantões',
@@ -19,17 +20,17 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: 'Escala médica sob controle antes da crise do plantão',
+    title: 'Escala médica sob controle com confirmação em tempo real',
     description:
-      'Uma central operacional para direção clínica, coordenação e financeiro atuarem com previsibilidade de cobertura.',
+      'Uma central operacional para direção clínica, coordenação e financeiro atuarem com previsibilidade de cobertura e confirmação imediata.',
     url: baseUrl,
-    siteName: 'AgendaPlantão',
+    siteName: BRAND_NAME,
     locale: 'pt_BR',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AgendaPlantão | Escala médica com governança operacional',
+    title: `${BRAND_NAME} | Escala médica com governança operacional`,
     description:
       'Antecipe lacunas, reduza improviso e mantenha rastreabilidade de ponta a ponta na operação de plantão.',
   },
@@ -38,7 +39,7 @@ export const metadata: Metadata = {
 const softwareSchema = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
-  name: 'AgendaPlantão',
+  name: BRAND_NAME,
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web',
   inLanguage: 'pt-BR',
@@ -53,7 +54,7 @@ const softwareSchema = {
     audienceType: 'Hospitais e clínicas',
   },
   description:
-    'Plataforma de gestão de escalas e plantões médicos com foco em continuidade assistencial e governança operacional.',
+    'Plataforma de gestão de escalas e confirmações de plantão com foco em continuidade assistencial e governança operacional.',
 }
 
 export default function MarketingHomePage() {

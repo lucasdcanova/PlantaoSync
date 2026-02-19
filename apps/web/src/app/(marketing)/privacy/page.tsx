@@ -4,7 +4,7 @@ import { MarketingShell } from '@/components/marketing/marketing-shell'
 export const metadata: Metadata = {
   title: 'Política de Privacidade',
   description:
-    'Entenda como o AgendaPlantão coleta, utiliza e protege dados em operações de escalas médicas.',
+    'Entenda como o CONFIRMA PLANTÃO coleta, utiliza e protege dados em operações de escalas médicas.',
   alternates: {
     canonical: '/privacy',
   },
@@ -42,7 +42,7 @@ export default function PrivacyPage() {
   return (
     <MarketingShell
       title="Política de Privacidade"
-      description="Transparência sobre como tratamos dados no AgendaPlantão."
+      description="Transparência sobre como tratamos dados no CONFIRMA PLANTÃO."
     >
       <div className="rounded-2xl border border-border bg-card p-6 shadow-card md:p-8">
         <p className="text-sm text-muted-foreground">

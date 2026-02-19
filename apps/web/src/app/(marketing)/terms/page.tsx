@@ -4,7 +4,7 @@ import { MarketingShell } from '@/components/marketing/marketing-shell'
 export const metadata: Metadata = {
   title: 'Termos de Uso',
   description:
-    'Regras de uso da plataforma AgendaPlantão para organizações de saúde, equipes assistenciais e gestores.',
+    'Regras de uso da plataforma CONFIRMA PLANTÃO para organizações de saúde, equipes assistenciais e gestores.',
   alternates: {
     canonical: '/terms',
   },
@@ -14,7 +14,7 @@ const sections = [
   {
     title: '1. Escopo do serviço',
     content:
-      'O AgendaPlantão fornece software para planejamento de escalas, confirmação de plantões e acompanhamento de indicadores operacionais.',
+      'O CONFIRMA PLANTÃO fornece software para planejamento de escalas, confirmação de plantões e acompanhamento de indicadores operacionais.',
   },
   {
     title: '2. Conta e responsabilidade',
@@ -29,7 +29,7 @@ const sections = [
   {
     title: '4. Propriedade intelectual',
     content:
-      'Código, marca, elementos visuais e documentação do AgendaPlantão são protegidos por direitos autorais e não podem ser reproduzidos sem autorização.',
+      'Código, marca, elementos visuais e documentação do CONFIRMA PLANTÃO são protegidos por direitos autorais e não podem ser reproduzidos sem autorização.',
   },
   {
     title: '5. Encerramento e exportação',

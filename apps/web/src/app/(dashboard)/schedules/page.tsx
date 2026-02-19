@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn, formatDate, SHIFT_STATUS_CONFIG } from '@/lib/utils'
+import { DEMO_SCHEDULES } from '@/lib/demo-data'
 import Link from 'next/link'
 import type { Schedule } from '@agendaplantao/shared'
 
@@ -18,33 +19,7 @@ function useSchedules() {
   return useQuery({
     queryKey: ['schedules'],
     queryFn: async (): Promise<Schedule[]> => {
-      // Mock data
-      return [
-        {
-          id: '1', organizationId: 'org1', locationId: 'loc1',
-          title: 'Cobertura UTI Adulto - Ciclo Fevereiro 2026',
-          startDate: '2026-02-01', endDate: '2026-02-28',
-          status: 'PUBLISHED', publishedAt: '2026-01-28',
-          createdAt: '2026-01-28', updatedAt: '2026-01-28',
-          location: { id: 'loc1', name: 'UTI Adulto' },
-        },
-        {
-          id: '2', organizationId: 'org1', locationId: 'loc2',
-          title: 'Cobertura Pronto-Socorro - Ciclo Fevereiro 2026',
-          startDate: '2026-02-01', endDate: '2026-02-28',
-          status: 'PUBLISHED', publishedAt: '2026-01-30',
-          createdAt: '2026-01-30', updatedAt: '2026-01-30',
-          location: { id: 'loc2', name: 'Pronto-Socorro' },
-        },
-        {
-          id: '3', organizationId: 'org1', locationId: 'loc1',
-          title: 'Cobertura UTI Adulto - Planejamento Março 2026',
-          startDate: '2026-03-01', endDate: '2026-03-31',
-          status: 'DRAFT',
-          createdAt: '2026-02-10', updatedAt: '2026-02-10',
-          location: { id: 'loc1', name: 'UTI Adulto' },
-        },
-      ]
+      return DEMO_SCHEDULES
     },
   })
 }

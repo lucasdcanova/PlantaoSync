@@ -3,408 +3,301 @@
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
-  ArrowRight,
-  CheckCircle,
-  Calendar,
-  Bell,
-  BarChart3,
-  Shield,
-  Building2,
   Activity,
-  Handshake,
-  Users,
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  MapPin,
+  Repeat2,
+  ShieldCheck,
   Stethoscope,
-  BadgeDollarSign,
 } from 'lucide-react'
+import { ProductLogo } from '@/components/brand/product-logo'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { BRAND_NAME } from '@/lib/brand'
 
-const outcomes = [
-  { value: 'Risco visível', label: 'antecipe falta de cobertura' },
-  { value: 'Fluxo único', label: 'publicação, convite e confirmação' },
-  { value: 'Histórico auditável', label: 'decisões por unidade e turno' },
-  { value: 'Visão executiva', label: 'assistencial + financeira no mesmo painel' },
-]
-
-const features = [
+const pillars = [
   {
-    icon: Activity,
-    title: 'Painel de continuidade assistencial',
-    desc: 'Veja gargalos de cobertura antes que virem urgência operacional.',
-  },
-  {
-    icon: Bell,
-    title: 'Convocação com prioridade real',
-    desc: 'Acione profissionais certos por especialidade, unidade e criticidade.',
-  },
-  {
-    icon: CheckCircle,
-    title: 'Confirmação com rastreabilidade',
-    desc: 'Cada aceite, recusa ou cancelamento fica registrado para auditoria.',
-  },
-  {
-    icon: Building2,
-    title: 'Operação multiunidade',
-    desc: 'Padronize escala em hospitais, clínicas e unidades satélite.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Cobertura e custo no mesmo lugar',
-    desc: 'Decida com dados combinando risco assistencial e impacto financeiro.',
-  },
-  {
-    icon: Shield,
-    title: 'Governança e compliance nativos',
-    desc: 'Permissões por perfil, trilha de eventos e controles orientados a LGPD.',
-  },
-]
-
-const roleBlocks = [
-  {
+    title: 'Clareza clínica',
+    description: 'Prioridades assistenciais visíveis sem ruído visual.',
     icon: Stethoscope,
-    title: 'Direção clínica',
-    copy: 'Acompanhe cobertura crítica por unidade e reduza improviso em plantões sensíveis.',
   },
   {
-    icon: Users,
-    title: 'Coordenação de escala',
-    copy: 'Troque planilhas e grupos dispersos por um fluxo único, claro e rastreável.',
+    title: 'Confiança operacional',
+    description: 'Cobertura, confirmação e rastreabilidade no mesmo fluxo.',
+    icon: ShieldCheck,
   },
   {
-    icon: BadgeDollarSign,
-    title: 'Financeiro e controladoria',
-    copy: 'Conecte custo de plantão com status de cobertura para decidir com previsibilidade.',
+    title: 'Decisão rápida',
+    description: 'Risco, custo e histórico com leitura imediata.',
+    icon: Activity,
   },
 ]
 
-const deploymentModels = [
+const steps = [
   {
-    name: 'Núcleo Assistencial',
-    description: 'Para operações que precisam sair do improviso sem travar a rotina.',
-    highlights: ['Escalas e convites centralizados', 'Confirmação com trilha de decisões', 'Onboarding guiado'],
-    cta: 'Iniciar diagnóstico',
+    title: 'Publicar ciclo de plantão',
+    description: 'Coordenação define unidade, janela crítica e regras de elegibilidade.',
+    status: 'Planejado',
+    color: 'bg-status-info',
   },
   {
-    name: 'Operação Multiunidade',
-    description: 'Para grupos com hospitais e clínicas em diferentes níveis de maturidade.',
-    highlights: ['Governança por unidade e perfil', 'Visão consolidada de cobertura', 'Relatórios para comitês'],
-    cta: 'Falar com especialista',
-    featured: true,
+    title: 'Confirmar profissionais',
+    description: 'Médicos recebem oportunidades, aceitam escala e registram trocas.',
+    status: 'Em andamento',
+    color: 'bg-status-warning',
   },
   {
-    name: 'Rede Hospitalar',
-    description: 'Para ambientes de alta complexidade com demanda de compliance ampliado.',
-    highlights: ['Padrão operacional em rede', 'Parâmetros de risco assistencial', 'Plano de implantação dedicado'],
-    cta: 'Solicitar proposta',
-  },
-]
-
-const faqItems = [
-  {
-    question: 'Quanto tempo para substituir o fluxo atual de planilhas e mensagens?',
-    answer:
-      'O primeiro ciclo costuma entrar em operação em poucos dias, com apoio do time de implantação e migração gradual por unidade.',
-  },
-  {
-    question: 'A plataforma atende hospitais e clínicas com perfis diferentes?',
-    answer:
-      'Sim. Você pode configurar regras e visões por unidade, especialidade e tipo de cobertura, mantendo governança central.',
-  },
-  {
-    question: 'Como a direção acompanha risco de cobertura em tempo real?',
-    answer:
-      'O painel destaca pendências críticas, confirmações e lacunas por período, facilitando ação antes da ruptura.',
+    title: 'Fechar cobertura com auditoria',
+    description: 'Direção acompanha decisões por turno com trilha completa.',
+    status: 'Concluído',
+    color: 'bg-status-success',
   },
 ]
 
 export function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-              <Calendar className="h-4 w-4" />
+      <header className="sticky top-0 z-50 border-b border-border/80 bg-background/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-md bg-card p-1 shadow-card">
+              <ProductLogo variant="mark" className="h-full w-full" imageClassName="h-full w-full" priority />
             </div>
-            <span className="font-display text-base font-semibold">AgendaPlantão</span>
-          </div>
+            <span className="hidden text-sm font-semibold tracking-wide text-foreground sm:block">{BRAND_NAME}</span>
+          </Link>
 
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <Link href="#diferenciais" className="transition-colors hover:text-foreground">
-              Diferenciais
+            <Link href="#visao" className="hover:text-foreground">
+              Visão
             </Link>
-            <Link href="#implantacao" className="transition-colors hover:text-foreground">
-              Implantação
+            <Link href="#fluxo" className="hover:text-foreground">
+              Fluxo
             </Link>
-            <Link href="#faq" className="transition-colors hover:text-foreground">
+            <Link href="#faq" className="hover:text-foreground">
               FAQ
             </Link>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" asChild>
               <Link href="/login">Entrar</Link>
             </Button>
-            <Button className="bg-brand-600 text-white shadow-brand hover:bg-brand-700" size="sm" asChild>
-              <Link href="/register">
-                Ver demonstração
-                <ArrowRight className="ml-1 h-3.5 w-3.5" />
-              </Link>
+            <Button size="sm" className="bg-brand-700 text-white hover:bg-brand-800" asChild>
+              <Link href="/register">Solicitar demonstração</Link>
             </Button>
           </div>
         </div>
       </header>
 
-      <section className="relative overflow-hidden px-6 pb-24 pt-20 md:pt-32">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-0 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-brand-500/10 blur-3xl" />
-        </div>
+      <main>
+        <section className="relative overflow-hidden px-4 pb-20 pt-16 sm:px-6 sm:pt-20">
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute left-1/2 top-[-180px] h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-brand-200/60 blur-3xl" />
+            <div className="absolute right-[-120px] top-20 h-[320px] w-[320px] rounded-full bg-status-info/10 blur-3xl" />
+          </div>
 
-        <div className="relative mx-auto max-w-5xl text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          >
-            <Badge className="mb-6 border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-300">
-              Para hospitais e clínicas que tratam escala como operação crítica
-            </Badge>
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, type: 'spring', stiffness: 300, damping: 30 }}
-            className="font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl"
-          >
-            Escala médica sob controle
-            <br />
-            <span className="text-gradient">antes da crise do plantão</span>
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.18, type: 'spring', stiffness: 300, damping: 30 }}
-            className="mx-auto mt-6 max-w-3xl text-lg text-muted-foreground"
-          >
-            O AgendaPlantão conecta direção clínica, coordenação e operação em um fluxo único para
-            prever lacunas, fechar cobertura com agilidade e manter continuidade assistencial com
-            rastreabilidade real.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25, type: 'spring', stiffness: 300, damping: 30 }}
-            className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
-          >
-            <Button
-              size="lg"
-              className="gap-2 bg-brand-600 px-8 text-white shadow-brand glow-brand hover:bg-brand-700"
-              asChild
-            >
-              <Link href="/register">
-                Quero mapear minha operação
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <p className="text-sm text-muted-foreground">Diagnóstico inicial guiado | sem cartão de crédito</p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, type: 'spring', stiffness: 300, damping: 30 }}
-            className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2"
-          >
-            {outcomes.map((item, i) => (
+          <div className="relative mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+            <div>
+              <Badge className="border-brand-200 bg-brand-50 text-brand-800">SaaS para hospitais e clínicas</Badge>
               <motion.div
-                key={item.label}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + i * 0.06, type: 'spring', stiffness: 380, damping: 28 }}
-                className="rounded-xl border border-border bg-card p-5 text-left shadow-card"
+                transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+                className="mt-5"
               >
-                <p className="font-display text-xl font-bold text-brand-600">{item.value}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{item.label}</p>
+                <ProductLogo variant="full" className="max-w-[280px] sm:max-w-[340px]" imageClassName="w-full h-auto" priority />
               </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
 
-      <section id="diferenciais" className="bg-muted/30 px-6 py-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-16 text-center">
-            <h2 className="font-display text-3xl font-bold text-foreground">
-              Da escala reativa para uma operação previsível
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              Um sistema pensado para continuidade assistencial, governança e decisão rápida.
-            </p>
-          </div>
+              <motion.h1
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                className="mt-6 max-w-2xl font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl"
+              >
+                Escala médica com confirmação em tempo real e governança por turno.
+              </motion.h1>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature, i) => (
+              <motion.p
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                className="mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg"
+              >
+                Unifique direção clínica, coordenação e equipe assistencial em um fluxo que reduz improviso,
+                acelera confirmação e protege continuidade de cobertura.
+              </motion.p>
+
               <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.06, type: 'spring', stiffness: 380, damping: 28 }}
-                className="group rounded-xl border border-border bg-card p-6 shadow-card card-hover"
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                className="mt-8 flex flex-wrap gap-3"
               >
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition-transform group-hover:scale-110 dark:bg-brand-900/20">
-                  <feature.icon className="h-5 w-5" />
-                </div>
-                <h3 className="font-display font-semibold text-foreground">{feature.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{feature.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="px-6 py-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-12 text-center">
-            <h2 className="font-display text-3xl font-bold text-foreground">Uma narrativa para cada decisor</h2>
-            <p className="mt-3 text-muted-foreground">
-              A mesma base operacional, com visões que fazem sentido para quem decide.
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-3">
-            {roleBlocks.map((block) => (
-              <div key={block.title} className="rounded-2xl border border-border bg-card p-6 shadow-card">
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-900/30 dark:text-brand-300">
-                  <block.icon className="h-5 w-5" />
-                </div>
-                <h3 className="font-display text-xl font-semibold text-foreground">{block.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{block.copy}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="implantacao" className="bg-muted/30 px-6 py-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-12 text-center">
-            <h2 className="font-display text-3xl font-bold text-foreground">Modelos de implantação</h2>
-            <p className="mt-3 text-muted-foreground">
-              Escolha o formato mais aderente ao seu momento operacional.
-            </p>
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-3">
-            {deploymentModels.map((model) => (
-              <div
-                key={model.name}
-                className={`rounded-2xl border p-6 shadow-card ${
-                  model.featured
-                    ? 'border-brand-300 bg-brand-50/40 dark:border-brand-800 dark:bg-brand-900/20'
-                    : 'border-border bg-card'
-                }`}
-              >
-                {model.featured && (
-                  <Badge className="mb-4 border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-                    Recomendado para operação em crescimento
-                  </Badge>
-                )}
-
-                <h3 className="font-display text-xl font-semibold text-foreground">{model.name}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{model.description}</p>
-
-                <ul className="mt-5 space-y-2">
-                  {model.highlights.map((item) => (
-                    <li key={item} className="flex items-center gap-2 text-sm text-foreground">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-
-                <Button
-                  asChild
-                  className={`mt-6 w-full ${
-                    model.featured
-                      ? 'bg-brand-600 text-white shadow-brand hover:bg-brand-700'
-                      : 'bg-foreground text-background hover:bg-foreground/90'
-                  }`}
-                >
-                  <Link href="/register">{model.cta}</Link>
+                <Button size="lg" className="bg-brand-700 text-white shadow-brand hover:bg-brand-800" asChild>
+                  <Link href="/register" className="gap-2">
+                    Iniciar diagnóstico de escala
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
                 </Button>
+                <Button size="lg" variant="outline" asChild>
+                  <Link href="/login">Ver ambiente interno</Link>
+                </Button>
+              </motion.div>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              className="card-base rounded-xl p-6"
+            >
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Janela crítica</p>
+              <div className="mt-3 space-y-3">
+                <article className="card-compact rounded-md p-4">
+                  <p className="text-xs text-muted-foreground">22:00 · #PLT920024</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">Plantão UTI Adulto</p>
+                  <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5 text-brand-700" />
+                    Hospital São Gabriel · Ala B
+                  </p>
+                  <div className="mt-3 flex items-center justify-between">
+                    <Badge className="border-red-200 bg-red-50 text-red-700">Cobertura urgente</Badge>
+                    <span className="status-dot bg-status-urgent animate-pulse-soft" />
+                  </div>
+                </article>
+                <article className="card-compact rounded-md p-4">
+                  <p className="text-xs text-muted-foreground">07:00 · #TRC330012</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">Solicitação de troca</p>
+                  <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Repeat2 className="h-3.5 w-3.5 text-status-warning" />
+                    Aguardando decisão da coordenação
+                  </p>
+                  <div className="mt-3 flex items-center justify-between">
+                    <Badge className="border-amber-200 bg-amber-50 text-amber-700">Pendente</Badge>
+                    <span className="status-dot bg-status-warning" />
+                  </div>
+                </article>
               </div>
-            ))}
+            </motion.div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section id="faq" className="px-6 py-24">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-10 text-center">
-            <h2 className="font-display text-3xl font-bold text-foreground">Perguntas que surgem na decisão</h2>
-            <p className="mt-3 text-muted-foreground">Respostas objetivas para time assistencial e gestão.</p>
+        <section id="visao" className="px-4 pb-20 sm:px-6">
+          <div className="mx-auto max-w-7xl">
+            <div className="grid gap-4 md:grid-cols-3">
+              {pillars.map((pillar, index) => (
+                <motion.article
+                  key={pillar.title}
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.05, duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                  className="card-base card-hover p-6"
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-md bg-brand-50 text-brand-700">
+                    <pillar.icon className="h-5 w-5" />
+                  </div>
+                  <h2 className="mt-4 font-display text-xl font-semibold text-foreground">{pillar.title}</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">{pillar.description}</p>
+                </motion.article>
+              ))}
+            </div>
           </div>
+        </section>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            {faqItems.map((item) => (
-              <article key={item.question} className="rounded-xl border border-border bg-card p-5 shadow-card">
-                <h3 className="font-display text-base font-semibold text-foreground">{item.question}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{item.answer}</p>
-              </article>
-            ))}
+        <section id="fluxo" className="px-4 pb-20 sm:px-6">
+          <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="card-base p-6">
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Visão executiva</p>
+              <h3 className="mt-3 font-display text-2xl font-bold text-foreground">
+                Da convocação ao fechamento com histórico auditável.
+              </h3>
+              <p className="mt-3 text-sm text-muted-foreground">
+                A operação ganha previsibilidade com status semânticos, timeline por horário e confirmação em
+                poucos toques.
+              </p>
+              <div className="mt-6 space-y-3 text-sm text-muted-foreground">
+                <p className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-status-success" />
+                  Confirmação de plantão com trilha de decisão.
+                </p>
+                <p className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-status-urgent" />
+                  Alertas críticos com prioridade visual imediata.
+                </p>
+                <p className="flex items-center gap-2">
+                  <Clock3 className="h-4 w-4 text-status-info" />
+                  Timeline diária para leitura rápida por setor.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {steps.map((step, index) => (
+                <motion.article
+                  key={step.title}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.06, duration: 0.24, ease: [0.4, 0, 0.2, 1] }}
+                  className="card-base p-5"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`timeline-bar ${step.color}`} />
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{step.status}</p>
+                      <h4 className="mt-1 text-base font-semibold text-foreground">{step.title}</h4>
+                      <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
+                    </div>
+                  </div>
+                </motion.article>
+              ))}
+            </div>
           </div>
+        </section>
 
-          <div className="mt-8 text-center">
-            <Button variant="outline" asChild>
-              <Link href="/faq">Acessar FAQ completo</Link>
-            </Button>
+        <section id="faq" className="px-4 pb-20 sm:px-6">
+          <div className="mx-auto max-w-4xl card-base rounded-xl p-8 text-center">
+            <h3 className="font-display text-3xl font-bold text-foreground">Comece com um ciclo real da sua operação</h3>
+            <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground">
+              Estruture confirmação, trocas e cobertura crítica com o padrão visual e operacional que o time
+              clínico consegue usar no primeiro dia.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Button size="lg" className="bg-brand-700 text-white shadow-brand hover:bg-brand-800" asChild>
+                <Link href="/register">Solicitar diagnóstico guiado</Link>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <Link href="/faq">Ler perguntas frequentes</Link>
+              </Button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      <section className="px-6 py-24">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="mx-auto max-w-3xl rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-12 text-center text-white shadow-brand"
-        >
-          <h2 className="font-display text-3xl font-bold">Escala previsível com menos improviso</h2>
-          <p className="mt-4 text-brand-100/85">
-            Se a sua operação depende de plantão, você precisa de controle antes da ruptura.
-          </p>
-          <Button size="lg" className="mt-8 gap-2 bg-white text-brand-700 shadow-lg hover:bg-brand-50" asChild>
-            <Link href="/register">
-              Agendar diagnóstico de escala
-              <Handshake className="h-4 w-4" />
-            </Link>
-          </Button>
-        </motion.div>
-      </section>
-
-      <footer className="border-t border-border px-6 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm text-muted-foreground sm:flex-row">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-brand-600" />
-            <span className="font-display font-semibold text-foreground">AgendaPlantão</span>
+      <footer className="border-t border-border/80 px-4 py-8 sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 text-sm text-muted-foreground sm:flex-row">
+          <div className="flex items-center gap-3">
+            <div className="h-7 w-7 rounded-md bg-card p-1 shadow-card">
+              <ProductLogo variant="mark" className="h-full w-full" imageClassName="h-full w-full" />
+            </div>
+            <span className="font-semibold text-foreground">{BRAND_NAME}</span>
           </div>
-          <div className="flex gap-6">
-            <Link href="/privacy" className="transition-colors hover:text-foreground">
+          <div className="flex items-center gap-5">
+            <Link href="/privacy" className="hover:text-foreground">
               Privacidade
             </Link>
-            <Link href="/terms" className="transition-colors hover:text-foreground">
+            <Link href="/terms" className="hover:text-foreground">
               Termos
             </Link>
-            <Link href="/lgpd" className="transition-colors hover:text-foreground">
+            <Link href="/lgpd" className="hover:text-foreground">
               LGPD
             </Link>
           </div>
-          <p>© 2026 AgendaPlantão. Todos os direitos reservados.</p>
+          <p>© 2026 {BRAND_NAME}. Todos os direitos reservados.</p>
         </div>
       </footer>
     </div>

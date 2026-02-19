@@ -1,82 +1,59 @@
-import { View, Text, ScrollView, RefreshControl, Pressable, useColorScheme } from 'react-native'
+import { useEffect, useMemo, useState } from 'react'
+import { Pressable, RefreshControl, ScrollView, Text, View, useColorScheme } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useQuery } from '@tanstack/react-query'
 import { MotiView } from 'moti'
-import { Bell, MapPin, Clock, DollarSign, ChevronRight, CheckCircle } from 'lucide-react-native'
-import { router } from 'expo-router'
 import * as Haptics from 'expo-haptics'
-import { useState } from 'react'
+import { router, useLocalSearchParams } from 'expo-router'
+import { Bell, CalendarDays, CheckCircle, DollarSign, Filter, MapPin } from 'lucide-react-native'
+import { useMobileDoctorDemoStore } from '../../store/doctor-demo-store'
+import { useMobileAuthStore } from '../../store/auth-store'
 
-const BRAND = '#6366f1'
+const BRAND = '#4ECDC4'
 const GREEN = '#22c55e'
-
-interface AvailableShift {
-  id: string
-  scheduleTitle: string
-  locationName: string
-  date: string
-  startTime: string
-  endTime: string
-  specialty?: string
-  valuePerShift: number
-  spotsLeft: number
-}
-
-function useAvailableShifts() {
-  return useQuery<AvailableShift[]>({
-    queryKey: ['available-shifts'],
-    queryFn: async () => [
-      {
-        id: '1',
-        scheduleTitle: 'Escala UTI — Fevereiro',
-        locationName: 'UTI Adulto',
-        date: '2026-02-20',
-        startTime: '07:00',
-        endTime: '19:00',
-        specialty: 'Medicina Intensiva',
-        valuePerShift: 120000,
-        spotsLeft: 1,
-      },
-      {
-        id: '2',
-        scheduleTitle: 'Escala UTI — Fevereiro',
-        locationName: 'Pronto-Socorro',
-        date: '2026-02-21',
-        startTime: '19:00',
-        endTime: '07:00',
-        specialty: 'Medicina de Emergência',
-        valuePerShift: 150000,
-        spotsLeft: 2,
-      },
-    ],
-  })
-}
 
 function formatCurrency(cents: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100)
 }
 
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
+  const date = new Date(`${dateStr}T00:00:00`)
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
 
-export default function HomeScreen() {
+export default function AvailableShiftsScreen() {
   const insets = useSafeAreaInsets()
-  const colorScheme = useColorScheme()
-  const isDark = colorScheme === 'dark'
+  const params = useLocalSearchParams<{ sector?: string }>()
+  const isDark = useColorScheme() === 'dark'
+  const user = useMobileAuthStore((state) => state.user)
+  const sectors = useMobileDoctorDemoStore((state) => state.sectors)
+  const availableShifts = useMobileDoctorDemoStore((state) => state.availableShifts)
+  const claimShift = useMobileDoctorDemoStore((state) => state.claimShift)
   const [refreshing, setRefreshing] = useState(false)
-  const { data: shifts, refetch } = useAvailableShifts()
+  const [selectedSector, setSelectedSector] = useState(params.sector ?? 'all')
 
-  const bg      = isDark ? '#09090f' : '#f8faff'
-  const card    = isDark ? '#111120' : '#ffffff'
-  const border  = isDark ? '#1e2035' : '#e2e8f0'
-  const text    = isDark ? '#f0f4ff' : '#0f172a'
-  const muted   = isDark ? '#a0aec0' : '#64748b'
+  useEffect(() => {
+    if (params.sector) {
+      setSelectedSector(params.sector)
+    }
+  }, [params.sector])
+
+  const filteredShifts = useMemo(
+    () =>
+      availableShifts.filter((shift) =>
+        selectedSector === 'all' ? true : shift.sectorId === selectedSector,
+      ),
+    [availableShifts, selectedSector],
+  )
+
+  const bg = isDark ? '#09090f' : '#f8faff'
+  const card = isDark ? '#111120' : '#ffffff'
+  const border = isDark ? '#1e2035' : '#e2e8f0'
+  const text = isDark ? '#f0f4ff' : '#0f172a'
+  const muted = isDark ? '#a0aec0' : '#64748b'
 
   const onRefresh = async () => {
     setRefreshing(true)
-    await refetch()
+    await new Promise((resolve) => setTimeout(resolve, 500))
     setRefreshing(false)
   }
 
@@ -85,157 +62,187 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND} />}
-        showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 20, paddingBottom: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View>
-              <Text style={{ fontSize: 13, color: muted }}>Bom dia,</Text>
-              <Text style={{ fontSize: 22, fontWeight: '700', color: text, letterSpacing: -0.5 }}>
-                Dra. Ana Costa 👋
+              <Text style={{ fontSize: 13, color: muted }}>Bem-vinda,</Text>
+              <Text style={{ fontSize: 22, fontWeight: '700', color: text }}>
+                {user?.name ?? 'Médica Demo'}
               </Text>
             </View>
-            <Pressable
+            <View
               style={{
-                width: 40, height: 40, borderRadius: 20,
-                backgroundColor: card, borderWidth: 1, borderColor: border,
-                alignItems: 'center', justifyContent: 'center',
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: border,
+                backgroundColor: card,
               }}
             >
               <Bell size={18} color={muted} />
-              <View style={{
-                position: 'absolute', top: 8, right: 8,
-                width: 8, height: 8, borderRadius: 4,
-                backgroundColor: BRAND, borderWidth: 1.5, borderColor: card,
-              }} />
-            </Pressable>
+            </View>
           </View>
         </View>
 
-        {/* Quick stats */}
-        <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 24 }}>
-          {[
-            { label: 'Este mês', value: 'R$ 4.800', color: GREEN },
-            { label: 'Confirmados', value: '4 plantões', color: BRAND },
-          ].map((stat, i) => (
-            <MotiView
-              key={stat.label}
-              from={{ opacity: 0, translateY: 12 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={{ delay: i * 80, type: 'spring', damping: 20 }}
-              style={{ flex: 1 }}
-            >
-              <View style={{
-                backgroundColor: card, borderRadius: 16, padding: 16,
-                borderWidth: 1, borderColor: border,
-                shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: isDark ? 0.3 : 0.06, shadowRadius: 8,
-              }}>
-                <Text style={{ fontSize: 11, color: muted, marginBottom: 4 }}>{stat.label}</Text>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: stat.color }}>{stat.value}</Text>
-              </View>
-            </MotiView>
-          ))}
+        <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flex: 1, backgroundColor: card, borderRadius: 14, borderWidth: 1, borderColor: border, padding: 14 }}>
+              <Text style={{ fontSize: 11, color: muted }}>Disponíveis agora</Text>
+              <Text style={{ marginTop: 4, fontSize: 18, fontWeight: '800', color: text }}>
+                {availableShifts.length} plantões
+              </Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: card, borderRadius: 14, borderWidth: 1, borderColor: border, padding: 14 }}>
+              <Text style={{ fontSize: 11, color: muted }}>Setores com vaga</Text>
+              <Text style={{ marginTop: 4, fontSize: 18, fontWeight: '800', color: text }}>
+                {sectors.filter((sector) => sector.openShifts > 0).length}
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {/* Available shifts */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: text, marginBottom: 10 }}>Filtrar por setor</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Pressable
+                onPress={() => setSelectedSector('all')}
+                style={{
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: selectedSector === 'all' ? '#9DE6E1' : border,
+                  backgroundColor: selectedSector === 'all' ? '#E8F8F7' : card,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                }}
+              >
+                <Text style={{ fontSize: 12, color: selectedSector === 'all' ? '#1F9188' : muted, fontWeight: '600' }}>
+                  Todos
+                </Text>
+              </Pressable>
+              {sectors.map((sector) => (
+                <Pressable
+                  key={sector.id}
+                  onPress={() => setSelectedSector(sector.id)}
+                  style={{
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: selectedSector === sector.id ? '#9DE6E1' : border,
+                    backgroundColor: selectedSector === sector.id ? '#E8F8F7' : card,
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                  }}
+                >
+                  <Text style={{ fontSize: 12, color: selectedSector === sector.id ? '#1F9188' : muted, fontWeight: '600' }}>
+                    {sector.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+
         <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
           <Text style={{ fontSize: 16, fontWeight: '700', color: text, marginBottom: 12 }}>
-            Plantões Disponíveis
+            Plantões disponíveis
           </Text>
 
-          {shifts?.map((shift, i) => (
+          {filteredShifts.map((shift, i) => (
             <MotiView
               key={shift.id}
-              from={{ opacity: 0, translateY: 16 }}
+              from={{ opacity: 0, translateY: 14 }}
               animate={{ opacity: 1, translateY: 0 }}
-              transition={{ delay: i * 100 + 100, type: 'spring', damping: 20 }}
+              transition={{ delay: i * 70, type: 'spring', damping: 20 }}
               style={{ marginBottom: 12 }}
             >
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                  router.push(`/shift/${shift.id}`)
-                }}
+                onPress={() => router.push(`/shift/${shift.id}`)}
                 style={({ pressed }) => ({
                   backgroundColor: card,
                   borderRadius: 16,
-                  padding: 16,
                   borderWidth: 1,
                   borderColor: border,
+                  padding: 16,
                   opacity: pressed ? 0.95 : 1,
-                  transform: [{ scale: pressed ? 0.985 : 1 }],
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: isDark ? 0.25 : 0.06,
-                  shadowRadius: 12,
                 })}
               >
-                {/* Header row */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: text }} numberOfLines={1}>
-                      {formatDate(shift.date)} · {shift.startTime}–{shift.endTime}
-                    </Text>
-                    {shift.specialty && (
-                      <Text style={{ fontSize: 12, color: BRAND, marginTop: 2 }}>{shift.specialty}</Text>
-                    )}
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: text }}>{shift.sectorName}</Text>
+                    <Text style={{ fontSize: 12, color: BRAND, marginTop: 2 }}>{shift.specialty}</Text>
                   </View>
-                  <View style={{
-                    backgroundColor: shift.spotsLeft <= 1 ? '#fef3c7' : '#f0fdf4',
-                    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99,
-                  }}>
-                    <Text style={{
-                      fontSize: 11, fontWeight: '600',
-                      color: shift.spotsLeft <= 1 ? '#d97706' : '#16a34a',
-                    }}>
-                      {shift.spotsLeft} vaga{shift.spotsLeft !== 1 ? 's' : ''}
+                  <View style={{ backgroundColor: '#E8F8F7', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={{ fontSize: 11, color: '#1F9188', fontWeight: '700' }}>
+                      {shift.spotsLeft} vaga{shift.spotsLeft > 1 ? 's' : ''}
                     </Text>
                   </View>
                 </View>
 
-                {/* Info row */}
-                <View style={{ flexDirection: 'row', gap: 16 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <MapPin size={13} color={muted} />
-                    <Text style={{ fontSize: 12, color: muted }}>{shift.locationName}</Text>
+                <View style={{ gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <CalendarDays size={13} color={muted} />
+                    <Text style={{ fontSize: 12, color: muted }}>
+                      {formatDate(shift.date)} · {shift.startTime} - {shift.endTime}
+                    </Text>
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <MapPin size={13} color={muted} />
+                    <Text style={{ fontSize: 12, color: muted }}>{shift.issuedBy}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <DollarSign size={13} color={GREEN} />
-                    <Text style={{ fontSize: 12, color: GREEN, fontWeight: '600' }}>
+                    <Text style={{ fontSize: 12, color: GREEN, fontWeight: '700' }}>
                       {formatCurrency(shift.valuePerShift)}
                     </Text>
                   </View>
                 </View>
 
-                {/* Confirm button */}
                 <Pressable
-                  onPress={async (e) => {
-                    e.stopPropagation()
+                  onPress={async (event) => {
+                    event.stopPropagation()
+                    claimShift(shift.id)
                     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-                    // Confirmar plantão
                   }}
                   style={({ pressed }) => ({
-                    marginTop: 14,
-                    backgroundColor: pressed ? '#4f46e5' : BRAND,
+                    marginTop: 12,
                     borderRadius: 12,
-                    paddingVertical: 11,
+                    paddingVertical: 10,
                     alignItems: 'center',
-                    flexDirection: 'row',
                     justifyContent: 'center',
+                    flexDirection: 'row',
                     gap: 6,
-                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                    backgroundColor: pressed ? '#2BB5AB' : BRAND,
                   })}
                 >
-                  <CheckCircle size={16} color="#fff" />
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
-                    Confirmar Plantão
-                  </Text>
+                  <CheckCircle size={15} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Assumir plantão</Text>
                 </Pressable>
               </Pressable>
             </MotiView>
           ))}
+
+          {filteredShifts.length === 0 && (
+            <View
+              style={{
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: border,
+                borderStyle: 'dashed',
+                backgroundColor: card,
+                padding: 20,
+                alignItems: 'center',
+              }}
+            >
+              <Filter size={18} color={muted} />
+              <Text style={{ fontSize: 13, color: muted, marginTop: 8, textAlign: 'center' }}>
+                Nenhum plantão disponível para o setor selecionado.
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>

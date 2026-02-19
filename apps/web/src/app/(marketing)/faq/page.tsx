@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 export const metadata: Metadata = {
   title: 'FAQ sobre Gestão de Escalas Médicas',
   description:
-    'Perguntas frequentes sobre implantação, segurança, cobertura e operação do AgendaPlantão para hospitais e clínicas.',
+    'Perguntas frequentes sobre implantação, segurança, cobertura e operação do CONFIRMA PLANTÃO para hospitais e clínicas.',
   alternates: {
     canonical: '/faq',
   },
@@ -22,7 +22,7 @@ const faqItems = [
   {
     question: 'A plataforma atende hospital e clínica na mesma operação?',
     answer:
-      'Sim. O AgendaPlantão permite separar regras por unidade, especialidade e nível de criticidade, mantendo gestão centralizada para a direção.',
+      'Sim. O CONFIRMA PLANTÃO permite separar regras por unidade, especialidade e nível de criticidade, mantendo gestão centralizada para a direção.',
   },
   {
     question: 'Como reduzir faltas de cobertura sem aumentar improviso?',

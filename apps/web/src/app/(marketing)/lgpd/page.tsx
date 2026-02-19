@@ -4,7 +4,7 @@ import { MarketingShell } from '@/components/marketing/marketing-shell'
 export const metadata: Metadata = {
   title: 'Conformidade LGPD',
   description:
-    'Diretrizes de tratamento de dados pessoais no AgendaPlantão em conformidade com a Lei Geral de Proteção de Dados.',
+    'Diretrizes de tratamento de dados pessoais no CONFIRMA PLANTÃO em conformidade com a Lei Geral de Proteção de Dados.',
   alternates: {
     canonical: '/lgpd',
   },
@@ -14,7 +14,7 @@ const sections = [
   {
     title: 'Controlador e operador',
     content:
-      'No contexto de uso da plataforma, a organização contratante atua como controladora dos dados. O AgendaPlantão atua como operador para execução das atividades contratadas.',
+      'No contexto de uso da plataforma, a organização contratante atua como controladora dos dados. O CONFIRMA PLANTÃO atua como operador para execução das atividades contratadas.',
   },
   {
     title: 'Bases legais aplicáveis',
@@ -42,7 +42,7 @@ export default function LgpdPage() {
   return (
     <MarketingShell
       title="Conformidade LGPD"
-      description="Como o AgendaPlantão apoia sua operação no cumprimento da Lei Geral de Proteção de Dados."
+      description="Como o CONFIRMA PLANTÃO apoia sua operação no cumprimento da Lei Geral de Proteção de Dados."
     >
       <div className="rounded-2xl border border-border bg-card p-6 shadow-card md:p-8">
         <p className="text-sm text-muted-foreground">

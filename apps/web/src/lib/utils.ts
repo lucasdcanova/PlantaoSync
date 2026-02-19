@@ -43,7 +43,7 @@ export const SHIFT_STATUS_CONFIG: Record<ScheduleStatus, StatusStyle> = {
   PUBLISHED: {
     label: 'Publicada',
     color:
-      'border border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900 dark:bg-brand-900/30 dark:text-brand-300',
+      'border border-brand-200 bg-brand-50 text-brand-800 dark:border-brand-900 dark:bg-brand-900/30 dark:text-brand-300',
   },
   CLOSED: {
     label: 'Fechada',

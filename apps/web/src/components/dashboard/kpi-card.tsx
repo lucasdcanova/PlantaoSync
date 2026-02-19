@@ -18,24 +18,24 @@ interface KpiCardProps {
 
 const colorMap = {
   brand: {
-    icon:    'text-brand-600 dark:text-brand-400',
+    icon:    'text-brand-700 dark:text-brand-300',
     bg:      'bg-brand-50 dark:bg-brand-900/20',
-    trend:   'text-brand-600',
+    trend:   'text-brand-700',
   },
   green: {
-    icon:    'text-green-600 dark:text-green-400',
+    icon:    'text-status-success',
     bg:      'bg-green-50 dark:bg-green-900/20',
-    trend:   'text-green-600',
+    trend:   'text-status-success',
   },
   amber: {
-    icon:    'text-amber-600 dark:text-amber-400',
+    icon:    'text-status-warning',
     bg:      'bg-amber-50 dark:bg-amber-900/20',
-    trend:   'text-amber-600',
+    trend:   'text-status-warning',
   },
   red: {
-    icon:    'text-red-600 dark:text-red-400',
+    icon:    'text-status-urgent',
     bg:      'bg-red-50 dark:bg-red-900/20',
-    trend:   'text-red-600',
+    trend:   'text-status-urgent',
   },
 }
 
@@ -53,7 +53,7 @@ export function KpiCard({
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5 shadow-card">
+      <div className="card-base rounded-lg p-5">
         <div className="flex items-center justify-between mb-4">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-9 w-9 rounded-lg" />
@@ -69,7 +69,7 @@ export function KpiCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 380, damping: 28, delay: index * 0.06 }}
-      className="group rounded-xl border border-border bg-card p-5 shadow-card card-hover"
+      className="group card-base card-hover rounded-lg p-5"
     >
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">{title}</span>
@@ -92,7 +92,7 @@ export function KpiCard({
       {(subtitle || trend) && (
         <div className="mt-1 flex items-center gap-2">
           {trend && (
-            <span className={cn('text-xs font-medium', trend.value >= 0 ? 'text-green-600' : 'text-red-600')}>
+            <span className={cn('text-xs font-medium', trend.value >= 0 ? 'text-status-success' : 'text-status-urgent')}>
               {trend.value >= 0 ? '↑' : '↓'} {Math.abs(trend.value)}%
             </span>
           )}

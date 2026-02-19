@@ -7,13 +7,29 @@ import { z } from 'zod'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Eye, EyeOff, Calendar, ArrowRight, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ProductLogo } from '@/components/brand/product-logo'
+import { API_BASE_URL } from '@/lib/env'
+import {
+  DEMO_DOCTOR_ACCESS_TOKEN,
+  DEMO_DOCTOR_EMAIL,
+  DEMO_DOCTOR_PASSWORD,
+  DEMO_DOCTOR_USER,
+  DEMO_MANAGER_ACCESS_TOKEN,
+  DEMO_MANAGER_EMAIL,
+  DEMO_MANAGER_PASSWORD,
+  DEMO_MANAGER_USER,
+  isDoctorDemoCredential,
+  isManagerDemoCredential,
+} from '@/lib/demo-data'
+import { useDoctorDemoStore } from '@/store/doctor-demo.store'
 import { useAuthStore } from '@/store/auth.store'
 import { cn } from '@/lib/utils'
+import { BRAND_NAME } from '@/lib/brand'
 
 const loginSchema = z.object({
   email:    z.string().email('E-mail inválido'),
@@ -26,6 +42,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
   const { setUser, setAccessToken } = useAuthStore()
+  const validateRegisteredCredential = useDoctorDemoStore((state) => state.validateRegisteredCredential)
 
   const {
     register,
@@ -34,8 +51,38 @@ export default function LoginPage() {
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) })
 
   const onSubmit = async (data: LoginForm) => {
+    if (isManagerDemoCredential(data.email, data.password)) {
+      setUser(DEMO_MANAGER_USER)
+      setAccessToken(DEMO_MANAGER_ACCESS_TOKEN)
+      router.push('/overview')
+      toast.success(`Bem-vindo, ${DEMO_MANAGER_USER.name.split(' ')[0]}!`)
+      return
+    }
+
+    if (isDoctorDemoCredential(data.email, data.password)) {
+      setUser(DEMO_DOCTOR_USER)
+      setAccessToken(DEMO_DOCTOR_ACCESS_TOKEN)
+      router.push('/doctor')
+      toast.success(`Bem-vinda, ${DEMO_DOCTOR_USER.name.split(' ')[1]}!`)
+      return
+    }
+
+    const invitedDoctor = validateRegisteredCredential(data.email, data.password)
+    if (invitedDoctor) {
+      setUser({
+        ...DEMO_DOCTOR_USER,
+        id: invitedDoctor.id,
+        name: invitedDoctor.fullName,
+        email: invitedDoctor.email,
+      })
+      setAccessToken(`${DEMO_DOCTOR_ACCESS_TOKEN}-${invitedDoctor.id}`)
+      router.push('/doctor')
+      toast.success(`Bem-vindo, ${invitedDoctor.fullName.split(' ')[0]}!`)
+      return
+    }
+
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -50,7 +97,7 @@ export default function LoginPage() {
       const { user, accessToken } = await res.json()
       setUser(user)
       setAccessToken(accessToken)
-      router.push('/overview')
+      router.push(user.role === 'PROFESSIONAL' ? '/doctor' : '/overview')
       toast.success(`Bem-vindo, ${user.name.split(' ')[0]}!`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao fazer login')
@@ -64,14 +111,9 @@ export default function LoginPage() {
         initial={{ opacity: 0, x: -32 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600 p-12 text-white"
+        className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-[linear-gradient(145deg,#1a1d23_0%,#22313a_55%,#2bb5ab_140%)] p-12 text-white"
       >
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-            <Calendar className="h-5 w-5" />
-          </div>
-          <span className="font-display text-xl font-semibold">AgendaPlantão</span>
-        </div>
+        <ProductLogo variant="full" className="max-w-[300px]" imageClassName="w-full h-auto" priority />
 
         <div>
           <motion.blockquote
@@ -81,11 +123,11 @@ export default function LoginPage() {
             className="space-y-4"
           >
             <p className="font-display text-3xl font-bold leading-tight">
-              Escala médica com <br />
-              <span className="text-brand-200">governança em tempo real</span>
+              Confirme cobertura crítica <br />
+              <span className="text-brand-100">antes da ruptura do plantão</span>
             </p>
             <p className="text-brand-100/80 text-base max-w-sm">
-              Centralize cobertura, confirmação e risco assistencial em um painel único para direção e coordenação.
+              Centralize escala, confirmação, troca e histórico em uma visão única para direção clínica e coordenação.
             </p>
           </motion.blockquote>
 
@@ -108,7 +150,7 @@ export default function LoginPage() {
           </motion.div>
         </div>
 
-        <p className="text-xs text-brand-200/60">© 2026 AgendaPlantão · LGPD Compliant</p>
+        <p className="text-xs text-brand-100/70">© 2026 {BRAND_NAME} · Conforme LGPD</p>
       </motion.div>
 
       {/* Right panel — form */}
@@ -120,11 +162,11 @@ export default function LoginPage() {
       >
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
-          <div className="mb-8 flex items-center gap-2 lg:hidden">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-              <Calendar className="h-4 w-4" />
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <div className="h-9 w-9 rounded-md bg-card p-1 shadow-card">
+              <ProductLogo variant="mark" className="h-full w-full" imageClassName="h-full w-full" />
             </div>
-            <span className="font-display text-base font-semibold">AgendaPlantão</span>
+            <span className="font-display text-base font-semibold">{BRAND_NAME}</span>
           </div>
 
           <motion.div
@@ -165,7 +207,7 @@ export default function LoginPage() {
                 <Label htmlFor="password">Senha</Label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-brand-600 hover:underline"
+                  className="text-xs text-brand-800 hover:underline"
                 >
                   Esqueci minha senha
                 </Link>
@@ -195,7 +237,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-brand-600 hover:bg-brand-700 text-white shadow-brand gap-2"
+              className="w-full bg-brand-700 hover:bg-brand-800 text-white shadow-brand gap-2"
             >
               {isSubmitting ? (
                 <>
@@ -218,7 +260,7 @@ export default function LoginPage() {
             className="mt-6 text-center text-sm text-muted-foreground"
           >
             Ainda não tem um ambiente configurado?{' '}
-            <Link href="/register" className="font-medium text-brand-600 hover:underline">
+            <Link href="/register" className="font-medium text-brand-800 hover:underline">
               Iniciar diagnóstico
             </Link>
           </motion.p>
@@ -229,7 +271,39 @@ export default function LoginPage() {
             transition={{ delay: 0.35 }}
             className="mt-2 text-center text-xs text-muted-foreground"
           >
-            Demo: <code className="text-brand-600">gestor@demo.com</code> / <code className="text-brand-600">Senha@123</code>
+            Gestor demo: <code className="text-brand-800">{DEMO_MANAGER_EMAIL}</code> /{' '}
+            <code className="text-brand-800">{DEMO_MANAGER_PASSWORD}</code>
+          </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.37 }}
+            className="mt-1 text-center text-xs text-muted-foreground"
+          >
+            Médico demo: <code className="text-brand-800">{DEMO_DOCTOR_EMAIL}</code> /{' '}
+            <code className="text-brand-800">{DEMO_DOCTOR_PASSWORD}</code>
+          </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="mt-1 text-center text-[11px] text-muted-foreground/80"
+          >
+            Acesso de demonstração funciona mesmo sem API ou banco ativos.
+          </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.45 }}
+            className="mt-2 text-center text-xs text-muted-foreground"
+          >
+            Recebeu convite do gestor?{' '}
+            <Link href="/invite" className="font-medium text-brand-800 hover:underline">
+              Cadastre-se no hospital
+            </Link>
           </motion.p>
         </div>
       </motion.div>
