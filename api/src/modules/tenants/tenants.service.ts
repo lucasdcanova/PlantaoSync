@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { UpdateOrganizationDto } from './dto/update-organization.dto'
-import { PLAN_PRICES } from '../../../packages/shared/src/constants/plans'
+import { PLAN_PRICES } from '../../shared-constants'
 import { BillingCycle } from '@prisma/client'
 
 @Injectable()

@@ -92,7 +92,7 @@ export class NotificationsProcessor extends WorkerHost {
         type: 'SYSTEM',
         title: payload.title,
         body: payload.body,
-        data: payload.data ?? undefined,
+        ...(payload.data !== undefined && { data: payload.data as object }),
         sentAt: new Date(),
       },
     })
@@ -167,7 +167,7 @@ export class NotificationsProcessor extends WorkerHost {
           type: 'SYSTEM' as const,
           title: payload.title,
           body: payload.body,
-          data: payload.data ?? undefined,
+          ...(payload.data !== undefined && { data: payload.data as object }),
           sentAt: new Date(),
         })),
         skipDuplicates: true,

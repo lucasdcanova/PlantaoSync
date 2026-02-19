@@ -143,7 +143,7 @@ export class NotificationsService {
         type: type as any,
         title,
         body,
-        data: data ?? undefined,
+        ...(data !== undefined && { data: data as object }),
       },
     })
   }

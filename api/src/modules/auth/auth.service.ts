@@ -11,8 +11,7 @@ import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
 import * as bcrypt from 'bcryptjs'
 import { v4 as uuidv4 } from 'uuid'
-import { addDays } from 'date-fns'
-import { TRIAL_DAYS } from '../../../packages/shared/src/constants/plans'
+import { TRIAL_DAYS, addDays } from '../../shared-constants'
 
 @Injectable()
 export class AuthService {

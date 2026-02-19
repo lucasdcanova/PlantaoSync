@@ -8,7 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 import { InviteUserDto } from './dto/invite-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { UserFiltersDto } from './dto/user-filters.dto'
-import { PLAN_LIMITS } from '../../../packages/shared/src/constants/plans'
+import { PLAN_LIMITS } from '../../shared-constants'
 import { Plan, UserRole } from '@prisma/client'
 
 @Injectable()

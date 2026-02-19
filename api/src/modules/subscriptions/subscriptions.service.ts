@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
-import { PLAN_LIMITS } from '../../../../packages/shared/src/constants/plans'
+import { PLAN_LIMITS } from '../../shared-constants'
 import type { Plan } from '@prisma/client'
 
 @Injectable()

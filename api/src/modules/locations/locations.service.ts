@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service'
 import { CreateLocationDto } from './dto/create-location.dto'
 import { UpdateLocationDto } from './dto/update-location.dto'
-import { PLAN_LIMITS } from '../../../packages/shared/src/constants/plans'
+import { PLAN_LIMITS } from '../../shared-constants'
 import { Plan } from '@prisma/client'
 
 @Injectable()

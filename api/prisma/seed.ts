@@ -1,6 +1,17 @@
 import { PrismaClient } from '@prisma/client'
 import * as bcrypt from 'bcryptjs'
-import { addDays, addHours, startOfToday } from 'date-fns'
+
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date)
+  d.setDate(d.getDate() + days)
+  return d
+}
+
+function startOfToday(): Date {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
+}
 
 const prisma = new PrismaClient()
 
