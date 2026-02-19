@@ -18,24 +18,24 @@ import { cn } from '@/lib/utils'
 const registerSchema = z
   .object({
     name: z.string().min(2, 'Informe seu nome completo'),
-    organizationName: z.string().min(2, 'Informe o nome da organizacao'),
+    organizationName: z.string().min(2, 'Informe o nome da organização'),
     organizationSlug: z
       .string()
       .trim()
-      .regex(/^[a-z0-9-]*$/, 'Use apenas letras minusculas, numeros e hifen')
+      .regex(/^[a-z0-9-]*$/, 'Use apenas letras minúsculas, números e hífen')
       .optional()
       .or(z.literal('')),
     phone: z.string().max(20, 'Telefone muito longo').optional().or(z.literal('')),
-    email: z.string().email('E-mail invalido'),
+    email: z.string().email('E-mail inválido'),
     password: z
       .string()
-      .min(8, 'Senha deve ter no minimo 8 caracteres')
-      .regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Use maiusculas, minusculas e numeros'),
+      .min(8, 'Senha deve ter no mínimo 8 caracteres')
+      .regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Use maiúsculas, minúsculas e números'),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ['confirmPassword'],
-    message: 'As senhas nao conferem',
+    message: 'As senhas não conferem',
   })
 
 type RegisterForm = z.infer<typeof registerSchema>
@@ -94,7 +94,7 @@ export default function RegisterPage() {
         const err = await res.json().catch(() => null)
         const message = Array.isArray(err?.message)
           ? err.message.join(', ')
-          : err?.message ?? 'Nao foi possivel criar a conta'
+          : err?.message ?? 'Não foi possível criar a conta'
         throw new Error(message)
       }
 
@@ -120,26 +120,26 @@ export default function RegisterPage() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
             <Calendar className="h-5 w-5" />
           </div>
-          <span className="font-display text-xl font-semibold">AgendaPlantao</span>
+          <span className="font-display text-xl font-semibold">AgendaPlantão</span>
         </div>
 
         <div className="space-y-6">
           <div>
             <h1 className="font-display text-3xl font-bold leading-tight">
-              Crie sua organizacao
+              Estruture sua operação
               <br />
-              <span className="text-brand-200">em menos de 2 minutos</span>
+              <span className="text-brand-200">de escala com previsibilidade</span>
             </h1>
             <p className="mt-3 max-w-sm text-brand-100/85">
-              Centralize escalas, notificacoes e confirmacoes em um unico fluxo.
+              Configure o ambiente da instituição e troque urgência reativa por planejamento assistencial.
             </p>
           </div>
 
           <div className="grid gap-3">
             {[
-              'Publicacao de escalas com poucos cliques',
-              'Confirmacao de plantao em tempo real',
-              'Visibilidade completa de custos e ocupacao',
+              'Convocação orientada por criticidade e especialidade',
+              'Trilha de confirmação e cancelamento por profissional',
+              'Leitura conjunta de cobertura assistencial e custo',
             ].map((item) => (
               <div
                 key={item}
@@ -151,7 +151,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <p className="text-xs text-brand-200/70">Teste gratis por 7 dias · sem cartao</p>
+        <p className="text-xs text-brand-200/70">Diagnóstico inicial guiado · sem cartão</p>
       </motion.div>
 
       <motion.div
@@ -165,13 +165,13 @@ export default function RegisterPage() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
               <Calendar className="h-4 w-4" />
             </div>
-            <span className="font-display text-base font-semibold">AgendaPlantao</span>
+            <span className="font-display text-base font-semibold">AgendaPlantão</span>
           </div>
 
           <div>
-            <h2 className="font-display text-2xl font-bold text-foreground">Criar conta</h2>
+            <h2 className="font-display text-2xl font-bold text-foreground">Criar ambiente da instituição</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Configure sua organizacao e acesse o painel imediatamente
+              Em poucos passos, sua equipe entra com o fluxo de escala padronizado
             </p>
           </div>
 
@@ -189,10 +189,10 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="organizationName">Organizacao</Label>
+              <Label htmlFor="organizationName">Organização</Label>
               <Input
                 id="organizationName"
-                placeholder="Hospital Sao Lucas"
+                placeholder="Hospital São Lucas"
                 {...register('organizationName')}
                 className={cn(errors.organizationName && 'border-destructive focus-visible:ring-destructive')}
                 onBlur={() => {
@@ -209,10 +209,10 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="organizationSlug">Slug da organizacao</Label>
+              <Label htmlFor="organizationSlug">Slug da organização</Label>
               <Input
                 id="organizationSlug"
-                placeholder="hospital-sao-lucas"
+                placeholder="hospital-são-lucas"
                 {...register('organizationSlug')}
                 className={cn(errors.organizationSlug && 'border-destructive focus-visible:ring-destructive')}
               />
@@ -315,11 +315,11 @@ export default function RegisterPage() {
 
           <p className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="h-3.5 w-3.5 text-green-600" />
-            Dados protegidos e em conformidade com a LGPD
+            Dados protegidos com trilha de acesso e conformidade LGPD
           </p>
 
           <p className="mt-3 text-center text-sm text-muted-foreground">
-            Ja tem uma conta?{' '}
+            Já possui acesso liberado?{' '}
             <Link href="/login" className="font-medium text-brand-600 hover:underline">
               Fazer login
             </Link>

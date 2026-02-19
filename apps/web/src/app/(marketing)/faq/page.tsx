@@ -1,41 +1,51 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { MarketingShell } from '@/components/marketing/marketing-shell'
 import { Button } from '@/components/ui/button'
 
+export const metadata: Metadata = {
+  title: 'FAQ sobre Gestão de Escalas Médicas',
+  description:
+    'Perguntas frequentes sobre implantação, segurança, cobertura e operação do AgendaPlantão para hospitais e clínicas.',
+  alternates: {
+    canonical: '/faq',
+  },
+}
+
 const faqItems = [
   {
-    question: 'Em quanto tempo consigo colocar a operacao no ar?',
+    question: 'Quanto tempo para implantar um software de escalas médicas no hospital?',
     answer:
-      'A maioria das equipes configura usuarios, locais e primeira escala no mesmo dia. O fluxo foi desenhado para onboarding rapido.',
+      'A implantação pode iniciar por uma unidade piloto. Em geral, o primeiro ciclo entra em operação em poucos dias, com migração gradual para as demais áreas.',
   },
   {
-    question: 'A plataforma funciona para hospitais e clinicas?',
+    question: 'A plataforma atende hospital e clínica na mesma operação?',
     answer:
-      'Sim. A estrutura de organizacoes, locais e equipes permite operar diferentes modelos de escala, com governanca centralizada.',
+      'Sim. O AgendaPlantão permite separar regras por unidade, especialidade e nível de criticidade, mantendo gestão centralizada para a direção.',
   },
   {
-    question: 'Existe aplicativo para confirmar plantoes?',
+    question: 'Como reduzir faltas de cobertura sem aumentar improviso?',
     answer:
-      'Sim. O profissional recebe notificacao e confirma o plantao com um clique, reduzindo troca de mensagens paralelas.',
+      'Com alertas de risco, priorização de convocação e visão de pendências em tempo real. O objetivo é agir antes da ruptura do plantão.',
   },
   {
-    question: 'Como funciona seguranca e LGPD?',
+    question: 'Existe rastreabilidade das decisões de escala?',
     answer:
-      'Aplicamos segregacao por organizacao, trilha de alteracoes e controles de acesso por perfil. O produto foi construindo considerando compliance desde o inicio.',
+      'Sim. Publicação, convites, aceite, recusa e cancelamento ficam registrados para auditoria e alinhamento entre operação e governança.',
   },
   {
-    question: 'Posso começar sem cartao de credito?',
+    question: 'Como funciona segurança e LGPD?',
     answer:
-      'Sim. O periodo de teste nao exige cartao e voce pode cancelar antes da migracao para um plano pago.',
+      'A solução opera com segregação por organização, permissão por perfil e trilha de eventos, apoiando práticas de conformidade e segurança da informação.',
   },
 ]
 
 export default function FaqPage() {
   return (
     <MarketingShell
-      title="Perguntas Frequentes"
-      description="Respostas diretas para as duvidas mais comuns antes de iniciar sua operacao no AgendaPlantao."
+      title="Perguntas frequentes"
+      description="Respostas objetivas para quem precisa decidir sobre gestão de plantão com foco assistencial, operacional e financeiro."
     >
       <div className="grid gap-4">
         {faqItems.map((item) => (
@@ -47,14 +57,14 @@ export default function FaqPage() {
       </div>
 
       <div className="mt-10 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-8 text-white shadow-brand">
-        <h3 className="font-display text-2xl font-bold">Ainda ficou alguma duvida?</h3>
+        <h3 className="font-display text-2xl font-bold">Quer avaliar sua operação atual?</h3>
         <p className="mt-2 text-brand-100/90">
-          Comece o teste gratuito e acompanhe a implementacao com apoio do nosso time.
+          Mapeie gargalos de cobertura, processo de convocação e governança com nosso diagnóstico inicial.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Button asChild className="bg-white text-brand-700 hover:bg-brand-50">
             <Link href="/register">
-              Criar conta
+              Iniciar diagnóstico
               <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </Button>

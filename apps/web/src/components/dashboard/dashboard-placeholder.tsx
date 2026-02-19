@@ -32,7 +32,7 @@ export function DashboardPlaceholderPage({
         <div className="mx-auto max-w-4xl rounded-2xl border border-border bg-card p-6 shadow-card md:p-8">
           <Badge className="border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900 dark:bg-brand-900/30 dark:text-brand-300">
             <Sparkles className="mr-1 h-3.5 w-3.5" />
-            Area pronta para evolucao
+            Módulo estratégico em estruturação
           </Badge>
 
           <div className="mt-5 flex items-start gap-4">

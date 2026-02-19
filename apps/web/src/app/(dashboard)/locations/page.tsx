@@ -5,16 +5,16 @@ export default function LocationsPage() {
   return (
     <DashboardPlaceholderPage
       title="Locais"
-      subtitle="Unidades, setores e pontos de plantao"
-      description="Organize os ambientes de trabalho para distribuir escalas por hospital, unidade e especialidade."
+      subtitle="Unidades, setores e níveis de criticidade"
+      description="Organize a operação por ambiente assistencial para distribuir cobertura com prioridade clínica real."
       icon={<MapPin className="h-5 w-5" />}
       highlights={[
-        'Cadastro de unidades com dados de contato',
-        'Separacao por setor para escalas mais precisas',
-        'Visao consolidada de cobertura por local',
-        'Base pronta para relatorios operacionais',
+        'Mapa de unidades com setores e perfis de demanda',
+        'Classificação de criticidade por local e turno',
+        'Padronização de cobertura entre hospitais e clínicas',
+        'Base para comparativos de desempenho por unidade',
       ]}
-      primaryAction={{ label: 'Voltar para overview', href: '/overview' }}
+      primaryAction={{ label: 'Voltar para central', href: '/overview' }}
     />
   )
 }

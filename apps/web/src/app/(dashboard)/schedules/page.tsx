@@ -22,7 +22,7 @@ function useSchedules() {
       return [
         {
           id: '1', organizationId: 'org1', locationId: 'loc1',
-          title: 'Escala UTI — Fevereiro 2026',
+          title: 'Cobertura UTI Adulto - Ciclo Fevereiro 2026',
           startDate: '2026-02-01', endDate: '2026-02-28',
           status: 'PUBLISHED', publishedAt: '2026-01-28',
           createdAt: '2026-01-28', updatedAt: '2026-01-28',
@@ -30,7 +30,7 @@ function useSchedules() {
         },
         {
           id: '2', organizationId: 'org1', locationId: 'loc2',
-          title: 'Escala Pronto-Socorro — Fevereiro 2026',
+          title: 'Cobertura Pronto-Socorro - Ciclo Fevereiro 2026',
           startDate: '2026-02-01', endDate: '2026-02-28',
           status: 'PUBLISHED', publishedAt: '2026-01-30',
           createdAt: '2026-01-30', updatedAt: '2026-01-30',
@@ -38,7 +38,7 @@ function useSchedules() {
         },
         {
           id: '3', organizationId: 'org1', locationId: 'loc1',
-          title: 'Escala UTI — Março 2026',
+          title: 'Cobertura UTI Adulto - Planejamento Março 2026',
           startDate: '2026-03-01', endDate: '2026-03-31',
           status: 'DRAFT',
           createdAt: '2026-02-10', updatedAt: '2026-02-10',
@@ -59,7 +59,7 @@ export default function SchedulesPage() {
 
   return (
     <PageTransition>
-      <Header title="Escalas" subtitle="Gerencie as escalas de plantão" />
+      <Header title="Escalas" subtitle="Planeje cobertura por unidade e turno" />
 
       <div className="p-6 space-y-6">
         {/* Toolbar */}
@@ -67,7 +67,7 @@ export default function SchedulesPage() {
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar escala..."
+              placeholder="Buscar por ciclo, unidade ou setor..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -78,7 +78,7 @@ export default function SchedulesPage() {
           </Button>
           <Button className="bg-brand-600 hover:bg-brand-700 text-white shadow-brand gap-2">
             <Plus className="h-4 w-4" />
-            Nova Escala
+            Novo Ciclo de Escala
           </Button>
         </div>
 
@@ -163,7 +163,7 @@ export default function SchedulesPage() {
             <Calendar className="mx-auto h-12 w-12 text-muted-foreground/40 mb-4" />
             <p className="text-muted-foreground font-medium">Nenhuma escala encontrada</p>
             <p className="text-sm text-muted-foreground/70 mt-1">
-              Crie a primeira escala clicando em "Nova Escala"
+              Inicie um novo ciclo clicando em \"Novo Ciclo de Escala\"
             </p>
           </motion.div>
         )}

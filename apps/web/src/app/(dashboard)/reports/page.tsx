@@ -4,17 +4,17 @@ import { DashboardPlaceholderPage } from '@/components/dashboard/dashboard-place
 export default function ReportsPage() {
   return (
     <DashboardPlaceholderPage
-      title="Relatorios"
-      subtitle="Indicadores de desempenho e operacao"
-      description="Acompanhe ocupacao, produtividade e consistencia de confirmacoes com visao executiva por periodo."
+      title="Relatórios"
+      subtitle="Cobertura, produtividade e risco por período"
+      description="Gere leituras executivas para comitês assistenciais e operacionais com foco em decisão rápida."
       icon={<BarChart3 className="h-5 w-5" />}
       highlights={[
-        'Taxa de ocupacao por unidade e periodo',
-        'Tempo medio entre publicacao e confirmacao',
-        'Comparativo de custo previsto vs realizado',
-        'Exportacao para analise externa',
+        'Cobertura por unidade, especialidade e janela de risco',
+        'Tempo médio entre convocação e confirmação efetiva',
+        'Comparativo entre planejamento e execução da escala',
+        'Exportação para auditoria interna e governança',
       ]}
-      primaryAction={{ label: 'Ver financeiro', href: '/finances' }}
+      primaryAction={{ label: 'Abrir financeiro', href: '/finances' }}
     />
   )
 }

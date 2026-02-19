@@ -17,15 +17,15 @@ export function MarketingShell({ title, description, children }: MarketingShellP
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white shadow-brand">
               <Calendar className="h-4 w-4" />
             </div>
-            <span className="font-display text-base font-semibold text-foreground">AgendaPlantao</span>
+            <span className="font-display text-base font-semibold text-foreground">AgendaPlantão</span>
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <Link href="/#features" className="transition-colors hover:text-foreground">
-              Funcionalidades
+            <Link href="/#diferenciais" className="transition-colors hover:text-foreground">
+              Diferenciais
             </Link>
-            <Link href="/#pricing" className="transition-colors hover:text-foreground">
-              Precos
+            <Link href="/#implantacao" className="transition-colors hover:text-foreground">
+              Implantação
             </Link>
             <Link href="/faq" className="transition-colors hover:text-foreground">
               FAQ
@@ -37,7 +37,7 @@ export function MarketingShell({ title, description, children }: MarketingShellP
               <Link href="/login">Entrar</Link>
             </Button>
             <Button size="sm" className="bg-brand-600 text-white shadow-brand hover:bg-brand-700" asChild>
-              <Link href="/register">Criar Conta</Link>
+              <Link href="/register">Ver demonstração</Link>
             </Button>
           </div>
         </div>
@@ -70,7 +70,7 @@ export function MarketingShell({ title, description, children }: MarketingShellP
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm text-muted-foreground sm:flex-row">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-brand-600" />
-            <span className="font-display font-semibold text-foreground">AgendaPlantao</span>
+            <span className="font-display font-semibold text-foreground">AgendaPlantão</span>
           </div>
           <div className="flex gap-6">
             <Link href="/privacy" className="transition-colors hover:text-foreground">
@@ -83,7 +83,7 @@ export function MarketingShell({ title, description, children }: MarketingShellP
               LGPD
             </Link>
           </div>
-          <p>© 2026 AgendaPlantao. Todos os direitos reservados.</p>
+          <p>© 2026 AgendaPlantão. Todos os direitos reservados.</p>
         </div>
       </footer>
     </div>

@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 const forgotSchema = z.object({
-  email: z.string().email('E-mail invalido'),
+  email: z.string().email('E-mail inválido'),
 })
 
 type ForgotForm = z.infer<typeof forgotSchema>
@@ -27,7 +27,7 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = async (data: ForgotForm) => {
     await new Promise((resolve) => setTimeout(resolve, 600))
-    toast.success(`Se houver conta para ${data.email}, enviaremos instrucoes por e-mail.`)
+    toast.success(`Se houver conta para ${data.email}, enviaremos instruções por e-mail.`)
   }
 
   return (
@@ -37,9 +37,9 @@ export default function ForgotPasswordPage() {
           <MailCheck className="h-5 w-5" />
         </div>
 
-        <h1 className="font-display text-2xl font-bold text-foreground">Recuperar acesso</h1>
+        <h1 className="font-display text-2xl font-bold text-foreground">Restaurar acesso da operação</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Informe o e-mail da sua conta para receber os proximos passos.
+          Informe o e-mail institucional para receber as instruções de redefinição.
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
             disabled={isSubmitting}
             className="w-full bg-brand-600 text-white shadow-brand hover:bg-brand-700"
           >
-            {isSubmitting ? 'Enviando...' : 'Enviar instrucoes'}
+            {isSubmitting ? 'Enviando...' : 'Receber instruções'}
           </Button>
         </form>
 
@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
           className="mt-6 inline-flex items-center gap-2 text-sm text-brand-600 transition-colors hover:text-brand-700"
         >
           <ArrowLeft className="h-4 w-4" />
-          Voltar para login
+          Voltar para acesso
         </Link>
       </div>
     </div>

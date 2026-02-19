@@ -5,16 +5,16 @@ export default function ProfessionalsPage() {
   return (
     <DashboardPlaceholderPage
       title="Profissionais"
-      subtitle="Cadastro e acompanhamento da equipe"
-      description="Gerencie medicos, especialidades, disponibilidade e historico de participacao em escalas."
+      subtitle="Elegibilidade, disponibilidade e histórico assistencial"
+      description="Consolide quem pode cobrir cada tipo de plantão e reduza convocações desalinhadas com perfil clínico."
       icon={<Users className="h-5 w-5" />}
       highlights={[
-        'Base centralizada de profissionais e especialidades',
-        'Historico de confirmacoes e cancelamentos por pessoa',
-        'Busca rapida por disponibilidade e perfil',
-        'Permissoes por papel na organizacao',
+        'Matriz de especialidade, unidade e aptidão',
+        'Histórico de aceite, recusa e cancelamento por profissional',
+        'Visão de disponibilidade para antecipar gargalos',
+        'Base única para coordenação e direção clínica',
       ]}
-      primaryAction={{ label: 'Ver escalas', href: '/schedules' }}
+      primaryAction={{ label: 'Ver ciclos de escala', href: '/schedules' }}
     />
   )
 }

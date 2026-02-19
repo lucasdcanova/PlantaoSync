@@ -34,10 +34,10 @@ function useRecentActivity() {
     queryKey: ['recent-activity'],
     queryFn: async () => {
       return [
-        { id: '1', type: 'confirmation', message: 'Dra. Ana Costa confirmou plantão na UTI', time: new Date(Date.now() - 5 * 60 * 1000) },
-        { id: '2', type: 'schedule',     message: 'Escala de março foi publicada',           time: new Date(Date.now() - 32 * 60 * 1000) },
-        { id: '3', type: 'confirmation', message: 'Dr. Carlos Mendes confirmou plantão',      time: new Date(Date.now() - 2 * 60 * 60 * 1000) },
-        { id: '4', type: 'alert',        message: 'Plantão de 15/03 ainda sem confirmação',  time: new Date(Date.now() - 3 * 60 * 60 * 1000) },
+        { id: '1', type: 'confirmation', message: 'Dra. Ana Costa confirmou cobertura na UTI Adulto', time: new Date(Date.now() - 5 * 60 * 1000) },
+        { id: '2', type: 'schedule',     message: 'Ciclo de escala da Clínica Médica foi publicado',   time: new Date(Date.now() - 32 * 60 * 1000) },
+        { id: '3', type: 'confirmation', message: 'Dr. Carlos Mendes assumiu plantão noturno',         time: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+        { id: '4', type: 'alert',        message: 'Turno de 15/03 ainda requer confirmação final',     time: new Date(Date.now() - 3 * 60 * 60 * 1000) },
       ]
     },
   })
@@ -49,40 +49,40 @@ export default function OverviewPage() {
 
   const kpis = [
     {
-      title:    'Profissionais Ativos',
+      title:    'Profissionais Aptos',
       value:    stats?.totalProfessionals ?? 0,
       icon:     Users,
       color:    'brand' as const,
-      subtitle: 'na organização',
+      subtitle: 'na operação atual',
     },
     {
-      title:    'Escalas Publicadas',
+      title:    'Escalas em Curso',
       value:    stats?.activeSchedules ?? 0,
       icon:     Calendar,
       color:    'green' as const,
-      subtitle: 'este mês',
+      subtitle: 'com acompanhamento ativo',
     },
     {
-      title:    'Confirmações na Semana',
+      title:    'Confirmações da Semana',
       value:    stats?.confirmedThisWeek ?? 0,
       icon:     CheckCircle,
       color:    'green' as const,
-      trend:    { value: 12, label: 'vs. semana anterior' },
+      trend:    { value: 12, label: 'frente ao ciclo anterior' },
     },
     {
-      title:    'Custo Mensal',
+      title:    'Custo Projetado',
       value:    stats ? formatCurrency(stats.monthlyCost) : '—',
       icon:     DollarSign,
       color:    'amber' as const,
-      subtitle: 'total de plantões',
+      subtitle: 'escalas em andamento',
     },
   ]
 
   return (
     <PageTransition>
       <Header
-        title="Visão Geral"
-        subtitle={`Hoje, ${formatDate(new Date(), "EEEE, dd 'de' MMMM")}`}
+        title="Central Operacional"
+        subtitle={`Panorama de cobertura - ${formatDate(new Date(), "EEEE, dd 'de' MMMM")}`}
       />
 
       <div className="p-6 space-y-8">
@@ -90,7 +90,7 @@ export default function OverviewPage() {
         <section>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Indicadores
+              Pulso da Operação
             </h2>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -110,7 +110,7 @@ export default function OverviewPage() {
             className="lg:col-span-1 rounded-xl border border-border bg-card p-5 shadow-card"
           >
             <h3 className="font-display text-sm font-semibold text-foreground mb-4">
-              Taxa de Ocupação
+              Cobertura Assistencial
             </h3>
             {statsLoading ? (
               <div className="space-y-2">
@@ -136,11 +136,11 @@ export default function OverviewPage() {
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <AlertCircle className="h-3 w-3 text-amber-500" />
-                    {stats?.pendingConfirmations} pendentes
+                    {stats?.pendingConfirmations} pendências
                   </span>
                   <span className="flex items-center gap-1">
                     <CheckCircle className="h-3 w-3 text-green-500" />
-                    {stats?.confirmedThisWeek} confirmados
+                    {stats?.confirmedThisWeek} confirmações
                   </span>
                 </div>
               </div>
@@ -155,7 +155,7 @@ export default function OverviewPage() {
             className="lg:col-span-2 rounded-xl border border-border bg-card p-5 shadow-card"
           >
             <h3 className="font-display text-sm font-semibold text-foreground mb-4">
-              Atividade Recente
+              Movimentos Recentes
             </h3>
             {activityLoading ? (
               <div className="space-y-3">

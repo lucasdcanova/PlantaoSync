@@ -4,23 +4,39 @@ import { GeistMono } from 'geist/font/mono'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from 'sonner'
 import { QueryProvider } from '@/lib/query-provider'
+import { getSiteUrl } from '@/lib/site'
 import './globals.css'
+
+const baseUrl = getSiteUrl()
 
 export const metadata: Metadata = {
   title: {
-    default: 'AgendaPlantão — Gestão Inteligente de Escalas Médicas',
+    default: 'AgendaPlantão',
     template: '%s | AgendaPlantão',
   },
   description:
-    'Plataforma SaaS para gestão de escalas e plantões médicos. Reduza 80% do tempo de gestão. Notificações em tempo real. Confirmação com 1 clique.',
-  keywords: ['escalas médicas', 'plantões', 'gestão hospitalar', 'SaaS saúde'],
+    'Plataforma de gestão de escalas e plantões para hospitais e clínicas com foco em previsibilidade operacional e continuidade assistencial.',
+  keywords: ['escala médica', 'gestão de plantões', 'software hospitalar', 'sistema para clínicas'],
   authors: [{ name: 'AgendaPlantão' }],
   creator: 'AgendaPlantão',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://agendaplantao.com.br'),
+  metadataBase: new URL(baseUrl),
   openGraph: {
+    title: 'AgendaPlantão',
+    description:
+      'Gestão de escalas médicas com governança, rastreabilidade e visão operacional para hospitais e clínicas.',
+    url: baseUrl,
     type: 'website',
     locale: 'pt_BR',
     siteName: 'AgendaPlantão',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'AgendaPlantão',
+    description:
+      'Escalas médicas com previsibilidade de cobertura e controle operacional em um único painel.',
+  },
+  alternates: {
+    canonical: '/',
   },
   manifest: '/manifest.json',
   appleWebApp: {

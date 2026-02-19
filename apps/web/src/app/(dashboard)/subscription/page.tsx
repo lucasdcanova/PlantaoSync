@@ -5,16 +5,16 @@ export default function SubscriptionPage() {
   return (
     <DashboardPlaceholderPage
       title="Plano"
-      subtitle="Assinatura e limites da sua organizacao"
-      description="Visualize o status atual do plano, consumo e proximos passos para escalar a operacao."
+      subtitle="Capacidade contratada e limites operacionais"
+      description="Monitore uso da plataforma e projete expansão da operação de escala com previsibilidade."
       icon={<CreditCard className="h-5 w-5" />}
       highlights={[
-        'Visao de limites por recurso',
-        'Status da assinatura e ciclo de cobranca',
-        'Historico resumido de alteracoes de plano',
-        'Recomendacoes para crescimento da equipe',
+        'Visão de recursos utilizados por ciclo operacional',
+        'Status da assinatura e período de renovação',
+        'Histórico de evolução de plano e capacidade',
+        'Recomendações para ampliar cobertura com segurança',
       ]}
-      primaryAction={{ label: 'Falar com comercial', href: '/faq' }}
+      primaryAction={{ label: 'Falar com especialista', href: '/faq' }}
     />
   )
 }

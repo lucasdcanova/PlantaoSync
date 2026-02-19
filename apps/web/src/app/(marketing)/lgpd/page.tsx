@@ -1,30 +1,40 @@
+import type { Metadata } from 'next'
 import { MarketingShell } from '@/components/marketing/marketing-shell'
+
+export const metadata: Metadata = {
+  title: 'Conformidade LGPD',
+  description:
+    'Diretrizes de tratamento de dados pessoais no AgendaPlantão em conformidade com a Lei Geral de Proteção de Dados.',
+  alternates: {
+    canonical: '/lgpd',
+  },
+}
 
 const sections = [
   {
     title: 'Controlador e operador',
     content:
-      'No contexto de uso da plataforma, a organizacao contratante atua como controladora dos dados. O AgendaPlantao atua como operador para execucao das atividades contratadas.',
+      'No contexto de uso da plataforma, a organização contratante atua como controladora dos dados. O AgendaPlantão atua como operador para execução das atividades contratadas.',
   },
   {
-    title: 'Bases legais aplicaveis',
+    title: 'Bases legais aplicáveis',
     content:
-      'O tratamento ocorre com base em execucao contratual, cumprimento de obrigacao legal e legitimo interesse para seguranca da informacao e continuidade operacional.',
+      'O tratamento ocorre com base em execução contratual, cumprimento de obrigação legal e legítimo interesse para segurança da informação e continuidade operacional.',
   },
   {
-    title: 'Medidas tecnicas e administrativas',
+    title: 'Medidas técnicas e administrativas',
     content:
-      'Aplicamos segregacao por tenant, controles de permissao por perfil, registros de auditoria, mecanismos de autenticacao e monitoramento de eventos de risco.',
+      'Aplicamos segregação por tenant, controles de permissão por perfil, registros de auditoria, mecanismos de autenticação e monitoramento de eventos de risco.',
   },
   {
     title: 'Atendimento aos titulares',
     content:
-      'Solicitacoes de titulares devem ser encaminhadas pelo controlador. Nosso time apoia a operacao com meios tecnicos para levantamento, correcao e eliminacao quando cabivel.',
+      'Solicitações de titulares devem ser encaminhadas pelo controlador. Nosso time apoia a operação com meios técnicos para levantamento, correção e eliminação quando cabível.',
   },
   {
-    title: 'Retencao e governanca',
+    title: 'Retenção e governança',
     content:
-      'A retencao respeita necessidade operacional, obrigacoes legais e politica de governanca acordada com a organizacao contratante.',
+      'A retencao respeita necessidade operacional, obrigações legais e política de governança acordada com a organização contratante.',
   },
 ]
 
@@ -32,7 +42,7 @@ export default function LgpdPage() {
   return (
     <MarketingShell
       title="Conformidade LGPD"
-      description="Como o AgendaPlantao apoia sua operacao no cumprimento da Lei Geral de Protecao de Dados."
+      description="Como o AgendaPlantão apoia sua operação no cumprimento da Lei Geral de Proteção de Dados."
     >
       <div className="rounded-2xl border border-border bg-card p-6 shadow-card md:p-8">
         <p className="text-sm text-muted-foreground">

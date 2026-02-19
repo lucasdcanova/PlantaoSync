@@ -81,11 +81,11 @@ export default function LoginPage() {
             className="space-y-4"
           >
             <p className="font-display text-3xl font-bold leading-tight">
-              Gestão de escalas <br />
-              <span className="text-brand-200">simplificada ao máximo</span>
+              Escala médica com <br />
+              <span className="text-brand-200">governança em tempo real</span>
             </p>
             <p className="text-brand-100/80 text-base max-w-sm">
-              Reduza até 80% do tempo gasto com planilhas e WhatsApp. Publique escalas em segundos.
+              Centralize cobertura, confirmação e risco assistencial em um painel único para direção e coordenação.
             </p>
           </motion.blockquote>
 
@@ -96,12 +96,12 @@ export default function LoginPage() {
             className="mt-8 grid grid-cols-3 gap-4"
           >
             {[
-              { value: '500+', label: 'Hospitais' },
-              { value: '10K+', label: 'Profissionais' },
-              { value: '98%', label: 'Satisfação' },
+              { value: 'Cobertura', label: 'priorizada por criticidade' },
+              { value: 'Fluxo único', label: 'convite até confirmação' },
+              { value: 'Histórico', label: 'auditável por unidade' },
             ].map((stat) => (
               <div key={stat.label} className="rounded-xl bg-white/10 p-4 text-center backdrop-blur-sm">
-                <p className="font-display text-2xl font-bold">{stat.value}</p>
+                <p className="font-display text-base font-bold">{stat.value}</p>
                 <p className="text-xs text-brand-200 mt-1">{stat.label}</p>
               </div>
             ))}
@@ -132,9 +132,9 @@ export default function LoginPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, type: 'spring', stiffness: 380, damping: 28 }}
           >
-            <h1 className="font-display text-2xl font-bold text-foreground">Bem-vindo de volta</h1>
+            <h1 className="font-display text-2xl font-bold text-foreground">Acesse sua central operacional</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Entre com sua conta para continuar
+              Entre para acompanhar cobertura e decisões de plantão em tempo real
             </p>
           </motion.div>
 
@@ -217,9 +217,9 @@ export default function LoginPage() {
             transition={{ delay: 0.3 }}
             className="mt-6 text-center text-sm text-muted-foreground"
           >
-            Não tem uma conta?{' '}
+            Ainda não tem um ambiente configurado?{' '}
             <Link href="/register" className="font-medium text-brand-600 hover:underline">
-              Começar gratuitamente
+              Iniciar diagnóstico
             </Link>
           </motion.p>
 

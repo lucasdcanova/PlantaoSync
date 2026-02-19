@@ -4,17 +4,17 @@ import { DashboardPlaceholderPage } from '@/components/dashboard/dashboard-place
 export default function SettingsPage() {
   return (
     <DashboardPlaceholderPage
-      title="Configuracoes"
-      subtitle="Preferencias da organizacao e seguranca"
-      description="Ajuste parametros de notificacao, identidade visual e regras internas para padronizar a operacao."
+      title="Configurações"
+      subtitle="Políticas operacionais e segurança da plataforma"
+      description="Defina regras de notificação, acesso e governança para manter o padrão operacional em toda a instituição."
       icon={<Settings className="h-5 w-5" />}
       highlights={[
-        'Preferencias gerais da organizacao',
-        'Controle de notificacoes por canal',
-        'Politicas de acesso e perfil de usuario',
-        'Configuracoes para auditoria operacional',
+        'Perfis de acesso por papel assistencial e administrativo',
+        'Parâmetros de notificação por tipo de evento',
+        'Padrões de governança para unidades da organização',
+        'Configurações para trilha de auditoria e conformidade',
       ]}
-      primaryAction={{ label: 'Voltar para overview', href: '/overview' }}
+      primaryAction={{ label: 'Voltar para central', href: '/overview' }}
     />
   )
 }
