@@ -33,16 +33,16 @@ import { Button } from '@/components/ui/button'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import { useDoctorDemoStore } from '@/store/doctor-demo.store'
 
-type DoctorLens = 'financeiro' | 'assistencial'
 type TimelineWindow = '4s' | 'mes'
+type HoursWindow = 'semana' | 'mes'
 
 export default function DoctorOverviewPage() {
   const availableShifts = useDoctorDemoStore((state) => state.availableShifts)
   const myShifts = useDoctorDemoStore((state) => state.myShifts)
   const swapRequests = useDoctorDemoStore((state) => state.swapRequests)
 
-  const [lens, setLens] = useState<DoctorLens>('financeiro')
   const [timelineWindow, setTimelineWindow] = useState<TimelineWindow>('mes')
+  const [hoursWindow, setHoursWindow] = useState<HoursWindow>('semana')
   const [activeSwapSlice, setActiveSwapSlice] = useState(0)
 
   const now = new Date()
@@ -50,6 +50,16 @@ export default function DoctorOverviewPage() {
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
   const parseShiftDateTime = (date: string, time: string) => new Date(`${date}T${time}:00`)
+
+  const getShiftDurationHours = (date: string, startTime: string, endTime: string) => {
+    const start = parseShiftDateTime(date, startTime)
+    const end = parseShiftDateTime(date, endTime)
+    if (end <= start) {
+      end.setDate(end.getDate() + 1)
+    }
+
+    return (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+  }
 
   const monthShifts = myShifts.filter((shift) => {
     const shiftDate = parseISO(shift.date)
@@ -112,40 +122,70 @@ export default function DoctorOverviewPage() {
     return timelineWindow === '4s' ? merged.slice(0, 4) : merged
   }, [monthOpportunities, monthShifts, timelineWindow])
 
-  const assistentialSeries = useMemo(() => {
-    const grouped = new Map<
-      string,
-      { name: string; shifts: number; value: number; loadScore: number }
-    >()
+  const workedShifts = useMemo(
+    () =>
+      myShifts.filter((shift) => {
+        if (shift.status === 'CANCELADO') return false
+        return parseShiftDateTime(shift.date, shift.startTime) <= now
+      }),
+    [myShifts, now],
+  )
 
-    monthShifts.forEach((shift) => {
-      const current = grouped.get(shift.sectorName)
-      const loadWeight = shift.patientLoad === 'Alta' ? 3 : shift.patientLoad === 'Moderada' ? 2 : 1
+  const hoursWorkedSeries = useMemo(() => {
+    if (hoursWindow === 'semana') {
+      const dayBuckets = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - index))
+        const key = date.toISOString().slice(0, 10)
 
-      if (current) {
-        current.shifts += 1
-        current.value += shift.value
-        current.loadScore += loadWeight
-        return
-      }
-
-      grouped.set(shift.sectorName, {
-        name: shift.sectorName,
-        shifts: 1,
-        value: shift.value,
-        loadScore: loadWeight,
+        return {
+          key,
+          label: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+          hours: 0,
+        }
       })
+
+      const dayMap = new Map(dayBuckets.map((bucket) => [bucket.key, bucket]))
+
+      workedShifts.forEach((shift) => {
+        const bucket = dayMap.get(shift.date.slice(0, 10))
+        if (!bucket) return
+        bucket.hours += getShiftDurationHours(shift.date, shift.startTime, shift.endTime)
+      })
+
+      return dayBuckets.map((bucket) => ({
+        label: bucket.label,
+        hours: Number(bucket.hours.toFixed(1)),
+      }))
+    }
+
+    const monthBuckets = Array.from({ length: 5 }, (_, index) => ({
+      label: `S${index + 1}`,
+      hours: 0,
+    }))
+
+    workedShifts.forEach((shift) => {
+      const date = parseISO(shift.date)
+      const inCurrentMonth = date >= monthStart && date < monthEnd
+      if (!inCurrentMonth) return
+
+      const weekIndex = Math.min(4, Math.max(0, Math.ceil(date.getDate() / 7) - 1))
+      monthBuckets[weekIndex].hours += getShiftDurationHours(
+        shift.date,
+        shift.startTime,
+        shift.endTime,
+      )
     })
 
-    return Array.from(grouped.values())
-      .map((item) => ({
-        name: item.name,
-        shifts: item.shifts,
-        pressure: Math.min(100, Math.round((item.loadScore / Math.max(1, item.shifts * 3)) * 100)),
-        value: item.value,
-      }))
-      .sort((a, b) => b.shifts - a.shifts)
-  }, [monthShifts])
+    return monthBuckets.map((bucket) => ({
+      ...bucket,
+      hours: Number(bucket.hours.toFixed(1)),
+    }))
+  }, [getShiftDurationHours, hoursWindow, monthEnd, monthStart, now, workedShifts])
+
+  const totalWorkedHours = useMemo(
+    () => Number(hoursWorkedSeries.reduce((sum, point) => sum + point.hours, 0).toFixed(1)),
+    [hoursWorkedSeries],
+  )
 
   const swapSeries = useMemo(() => {
     const statusCount = swapRequests.reduce<Record<string, number>>((acc, item) => {
@@ -337,7 +377,9 @@ export default function DoctorOverviewPage() {
         </article>
         <article className="border-border bg-card shadow-card rounded-2xl border p-5">
           <div className="flex items-center gap-1">
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">Trocas pendentes</p>
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">
+              Trocas pendentes
+            </p>
             <InfoTooltip
               title="Trocas Pendentes"
               description="Solicitações de troca de plantão que ainda aguardam resposta sua ou da coordenação. Trocas não respondidas podem expirar automaticamente."
@@ -349,7 +391,9 @@ export default function DoctorOverviewPage() {
         </article>
         <article className="border-border bg-card shadow-card rounded-2xl border p-5">
           <div className="flex items-center gap-1">
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">Upside de receita</p>
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">
+              Upside de receita
+            </p>
             <InfoTooltip
               title="Upside de Receita"
               description="Valor acumulado das 3 melhores oportunidades abertas disponíveis neste mês. Representa o ganho adicional que você pode alcançar confirmando esses plantões."
@@ -369,115 +413,87 @@ export default function DoctorOverviewPage() {
             <div>
               <div className="flex items-center gap-1.5">
                 <h2 className="font-display text-foreground text-lg font-bold">
-                  Radar interativo de desempenho
+                  Horas trabalhadas
                 </h2>
                 <InfoTooltip
-                  title={lens === 'financeiro' ? 'Radar Financeiro' : 'Radar Assistencial'}
-                  description={
-                    lens === 'financeiro'
-                      ? 'Compara semana a semana: Confirmado = ganhos já garantidos pelos seus plantões aceitos; Potencial = Confirmado + valor das oportunidades abertas ainda disponíveis.'
-                      : 'Plantões = número de turnos realizados por setor neste mês; Pressão % = índice de complexidade calculado pela carga de pacientes (Baixa=1pt, Moderada=2pt, Alta=3pt).'
-                  }
+                  title="Horas trabalhadas"
+                  description="Visualize sua carga real de horas em plantões já realizados. No filtro semanal, cada barra representa um dia; no filtro mensal, a soma é agrupada por semana."
                   side="top"
                 />
               </div>
               <p className="text-muted-foreground text-xs">
-                Alterne entre foco financeiro e assistencial para navegar pelos indicadores.
+                Acompanhe sua carga horária com granularidade semanal ou mensal.
               </p>
             </div>
-            <div className="border-border bg-background inline-flex rounded-full border p-1">
-              <button
-                type="button"
-                onClick={() => setLens('financeiro')}
-                className={cn(
-                  'rounded-full px-3 py-1 text-[11px] font-medium transition-all',
-                  lens === 'financeiro'
-                    ? 'bg-foreground text-background'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                Financeiro
-              </button>
-              <button
-                type="button"
-                onClick={() => setLens('assistencial')}
-                className={cn(
-                  'rounded-full px-3 py-1 text-[11px] font-medium transition-all',
-                  lens === 'assistencial'
-                    ? 'bg-foreground text-background'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                Assistencial
-              </button>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="text-[11px]">
+                {totalWorkedHours.toFixed(1)}h
+              </Badge>
+
+              <div className="border-border bg-background inline-flex rounded-full border p-1">
+                <button
+                  type="button"
+                  onClick={() => setHoursWindow('semana')}
+                  className={cn(
+                    'rounded-full px-3 py-1 text-[11px] font-medium transition-all',
+                    hoursWindow === 'semana'
+                      ? 'bg-foreground text-background'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  Semana
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHoursWindow('mes')}
+                  className={cn(
+                    'rounded-full px-3 py-1 text-[11px] font-medium transition-all',
+                    hoursWindow === 'mes'
+                      ? 'bg-foreground text-background'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  Mês
+                </button>
+              </div>
             </div>
           </div>
 
           <div className="mt-5 h-72">
             <ResponsiveContainer width="100%" height="100%">
-              {lens === 'financeiro' ? (
-                <AreaChart data={financialSeries}>
-                  <defs>
-                    <linearGradient id="doctorFinanceConfirmed" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4ecdc4" stopOpacity={0.45} />
-                      <stop offset="95%" stopColor="#4ecdc4" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" opacity={0.2} />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis hide />
-                  <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{
-                      borderRadius: '10px',
-                      border: '1px solid rgba(148, 163, 184, 0.3)',
-                      boxShadow: '0 12px 28px rgba(15, 23, 42, 0.12)',
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="projected"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    fillOpacity={0}
-                    name="Potencial"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="confirmed"
-                    stroke="#2bb5ab"
-                    strokeWidth={2}
-                    fill="url(#doctorFinanceConfirmed)"
-                    name="Confirmado"
-                  />
-                </AreaChart>
-              ) : (
-                <BarChart data={assistentialSeries} barGap={12}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" opacity={0.2} />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                    interval={0}
-                  />
-                  <YAxis hide />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: '10px',
-                      border: '1px solid rgba(148, 163, 184, 0.3)',
-                      boxShadow: '0 12px 28px rgba(15, 23, 42, 0.12)',
-                    }}
-                  />
-                  <Bar dataKey="shifts" name="Plantões" fill="#4ecdc4" radius={[8, 8, 0, 0]} />
-                  <Bar dataKey="pressure" name="Pressão %" fill="#f59e0b" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              )}
+              <BarChart data={hoursWorkedSeries} barGap={12}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" opacity={0.2} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={0}
+                />
+                <YAxis
+                  tick={{ fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(value: number) => `${value}h`}
+                  width={36}
+                />
+                <Tooltip
+                  formatter={(value: number) => [`${value.toFixed(1)} horas`, 'Carga horária']}
+                  contentStyle={{
+                    borderRadius: '10px',
+                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                    boxShadow: '0 12px 28px rgba(15, 23, 42, 0.12)',
+                  }}
+                />
+                <Bar
+                  dataKey="hours"
+                  name="Horas trabalhadas"
+                  fill="#2bb5ab"
+                  radius={[8, 8, 0, 0]}
+                  maxBarSize={hoursWindow === 'semana' ? 30 : 42}
+                />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </article>

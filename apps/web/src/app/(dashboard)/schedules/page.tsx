@@ -352,7 +352,7 @@ export default function SchedulesPage() {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-foreground text-lg font-bold">
-                  Visão mensal de plantões em aberto
+                  Visão geral das escalas de plantão
                 </h2>
                 <p className="text-muted-foreground text-sm">
                   Navegue por escala e setor para localizar rapidamente dias com maior risco.

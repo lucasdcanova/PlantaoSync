@@ -45,7 +45,7 @@ export function BottomNav({ items, isActive: customIsActive }: BottomNavProps) {
                             )}
                         >
                             {/* Active indicator orb — animated between items */}
-                            <div className="bottom-nav-icon-wrap">
+                            <div className="bottom-nav-content-wrap">
                                 <AnimatePresence mode="wait">
                                     {active && (
                                         <motion.div
@@ -63,23 +63,29 @@ export function BottomNav({ items, isActive: customIsActive }: BottomNavProps) {
                                         />
                                     )}
                                 </AnimatePresence>
-                                <Icon
-                                    className={cn(
-                                        'bottom-nav-icon-v2',
-                                        active ? 'text-white' : 'text-muted-foreground',
-                                    )}
-                                />
+                                <motion.div
+                                    className="bottom-nav-inner relative z-10 flex flex-col items-center pointer-events-none"
+                                    animate={{ y: active ? -12 : 0 }}
+                                    transition={{ type: 'spring', stiffness: 380, damping: 28, mass: 0.8 }}
+                                >
+                                    <Icon
+                                        className={cn(
+                                            'bottom-nav-icon-v2 mb-1',
+                                            active ? 'text-white' : 'text-muted-foreground',
+                                        )}
+                                    />
+                                    <motion.span
+                                        className="bottom-nav-label-v2 whitespace-nowrap"
+                                        animate={{
+                                            color: active ? '#ffffff' : 'var(--color-text-muted)',
+                                            fontWeight: active ? 600 : 500,
+                                        }}
+                                        transition={{ duration: 0.2 }}
+                                    >
+                                        {item.label}
+                                    </motion.span>
+                                </motion.div>
                             </div>
-                            <motion.span
-                                className="bottom-nav-label-v2"
-                                animate={{
-                                    color: active ? 'var(--color-teal-dark)' : 'var(--color-text-muted)',
-                                    fontWeight: active ? 600 : 500,
-                                }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                {item.label}
-                            </motion.span>
                         </Link>
                     )
                 })}
