@@ -1002,6 +1002,8 @@ docs(api): add swagger annotations to shifts module
 test(notifications): add push delivery tracking tests
 ```
 
+> **ATENÇÃO — Workflow Multi-Agente:** O dono pode trabalhar com vários agentes de IA simultaneamente (Claude, Gemini, Codex, Cursor, etc.). Por isso, **todo agente DEVE fazer `git commit` + `git push` imediatamente após qualquer alteração**, identificando qual agente realizou o commit. Veja a Seção 15 para as regras completas.
+
 #### Nomenclatura
 - **Arquivos:** kebab-case (`shift-confirmation.service.ts`)
 - **Classes/Interfaces:** PascalCase (`ShiftConfirmation`)
@@ -1235,6 +1237,108 @@ NODE_ENV=production node server.js
 9. **Acessibilidade** — ARIA labels, contraste mínimo AA, navegação por teclado
 10. **Exportação PDF** — hospitais precisam de relatórios para auditorias regulatórias
 11. **Deploy unificado** — backend e frontend rodam no mesmo serviço Render via `server.js`; para debug use o Render CLI (`render logs`)
+
+---
+
+## 15. Workflow Multi-Agente — Regras de Git OBRIGATÓRIAS
+
+> Este projeto é desenvolvido com **múltiplos agentes de IA trabalhando em paralelo** (Claude, Gemini, Codex, Cursor, e outros). Para evitar conflitos e manter o histórico rastreável, **todos os agentes devem seguir estas regras sem exceção**.
+
+### 15.1 Regra de Ouro
+
+**Todo agente que fizer qualquer alteração em qualquer arquivo DEVE, imediatamente após a alteração:**
+
+1. `git add` nos arquivos modificados
+2. `git commit` com mensagem identificando o agente
+3. `git push origin main`
+
+Não existe "vou commitar depois" ou "vou agrupar alterações". **Cada sessão de trabalho termina com um push.**
+
+### 15.2 Formato de Commit com Identificação do Agente
+
+O trailer `Co-Authored-By` identifica qual agente fez o commit. Use exatamente o formato abaixo conforme o agente:
+
+```
+<tipo>(<escopo>): <descrição breve do que foi feito>
+
+Co-Authored-By: Claude Sonnet <claude@anthropic.com>
+```
+
+#### Identificadores por Agente
+
+| Agente | Trailer obrigatório no commit |
+|--------|-------------------------------|
+| **Claude** (Anthropic / Claude Code) | `Co-Authored-By: Claude Sonnet <claude@anthropic.com>` |
+| **Gemini** (Google) | `Co-Authored-By: Gemini <gemini@google.com>` |
+| **Codex / ChatGPT** (OpenAI) | `Co-Authored-By: OpenAI Codex <codex@openai.com>` |
+| **Cursor** (Cursor AI) | `Co-Authored-By: Cursor AI <cursor@cursor.sh>` |
+| **Copilot** (GitHub) | `Co-Authored-By: GitHub Copilot <copilot@github.com>` |
+| **Outro agente** | `Co-Authored-By: <Nome do Agente> <identificador>` |
+
+#### Exemplos de commits válidos
+
+```bash
+# Claude fazendo uma correção de bug
+git commit -m "fix(auth): corrigir refresh token expirado
+
+Co-Authored-By: Claude Sonnet <claude@anthropic.com>"
+
+# Gemini adicionando uma feature
+git commit -m "feat(schedules): adicionar filtro por especialidade
+
+Co-Authored-By: Gemini <gemini@google.com>"
+
+# Codex refatorando um componente
+git commit -m "refactor(ui): simplificar componente de calendário
+
+Co-Authored-By: OpenAI Codex <codex@openai.com>"
+```
+
+### 15.3 Procedimento Completo Passo a Passo
+
+Todo agente deve executar exatamente esta sequência ao finalizar qualquer trabalho:
+
+```bash
+# 1. Ver o que foi alterado
+git status
+
+# 2. Adicionar os arquivos relevantes (nunca usar git add -A às cegas)
+git add <arquivo1> <arquivo2> ...
+
+# 3. Commitar com identificação do agente
+git commit -m "$(cat <<'EOF'
+<tipo>(<escopo>): <descrição>
+
+Co-Authored-By: <Nome do Agente> <email-do-agente>
+EOF
+)"
+
+# 4. Push imediato
+git push origin main
+```
+
+### 15.4 Resolução de Conflitos
+
+Como múltiplos agentes podem trabalhar simultaneamente, conflitos de merge podem ocorrer:
+
+1. **Antes de começar qualquer trabalho:** `git pull origin main` para ter o código mais recente
+2. **Se o push falhar por conflito:**
+   ```bash
+   git pull --rebase origin main
+   # Resolver conflitos manualmente se necessário
+   git push origin main
+   ```
+3. **Nunca usar `--force` no push** sem autorização explícita do dono
+4. **Em caso de conflito complexo:** parar e avisar o dono antes de prosseguir
+
+### 15.5 O Que NÃO Fazer
+
+- ❌ Fazer alterações sem commitar
+- ❌ Acumular várias alterações em um único commit ao final da sessão
+- ❌ Usar `git add .` ou `git add -A` sem revisar o que está sendo adicionado
+- ❌ Omitir o trailer `Co-Authored-By` no commit
+- ❌ Fazer push sem ter feito pull primeiro quando há trabalho paralelo
+- ❌ Ignorar erros de push — sempre resolver antes de continuar
 
 ---
 
