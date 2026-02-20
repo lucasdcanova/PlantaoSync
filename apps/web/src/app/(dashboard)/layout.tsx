@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Sidebar } from '@/components/layout/sidebar'
 import { MobileNav } from '@/components/layout/mobile-nav'
+import { StatusBarSync } from '@/components/layout/status-bar-sync'
 
 export const metadata: Metadata = {
   robots: {
@@ -11,12 +12,11 @@ export const metadata: Metadata = {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-[100dvh] overflow-hidden bg-background">
+    <div className="bg-background flex min-h-[100dvh] overflow-hidden">
+      <StatusBarSync color="#ffffff" />
       <Sidebar />
-      <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
-        <div className="mx-auto w-full max-w-[1680px]">
-          {children}
-        </div>
+      <main className="flex-1 overflow-y-auto pb-24 lg:pb-0">
+        <div className="mx-auto w-full max-w-[1680px]">{children}</div>
       </main>
       <MobileNav />
     </div>

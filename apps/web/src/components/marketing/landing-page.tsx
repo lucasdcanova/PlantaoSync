@@ -28,22 +28,30 @@ export function LandingPage() {
   if (isPWA) return null
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background min-h-screen">
       {/* Header */}
-      <header className="fixed top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl">
+      <header className="border-border/60 bg-background/80 fixed top-0 z-50 w-full border-b backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="logo-container-light !rounded-lg !p-1.5 !shadow-subtle">
-              <ProductLogo variant="mark" className="h-6 w-6" imageClassName="h-full w-full" priority />
+          <Link href="/" aria-label={BRAND_NAME} className="inline-flex items-center">
+            <div className="border-border/70 flex h-9 w-9 items-center justify-center rounded-full border bg-white/70">
+              <ProductLogo
+                variant="mark"
+                className="h-5 w-5"
+                imageClassName="h-full w-full"
+                priority
+              />
             </div>
-            <span className="text-sm font-semibold tracking-tight text-foreground">{BRAND_NAME}</span>
           </Link>
 
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
               <Link href="/login">Entrar</Link>
             </Button>
-            <Button size="sm" className="bg-brand-700 text-white hover:bg-brand-800 shadow-brand" asChild>
+            <Button
+              size="sm"
+              className="bg-brand-700 hover:bg-brand-800 shadow-brand text-white"
+              asChild
+            >
               <Link href="/register">Começar</Link>
             </Button>
           </div>
@@ -55,8 +63,8 @@ export function LandingPage() {
         <section className="relative flex min-h-[100dvh] flex-col items-center justify-center px-4 pt-14 text-center">
           {/* Subtle gradient orbs */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute left-1/2 top-1/3 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-200/30 blur-[100px]" />
-            <div className="absolute right-1/4 bottom-1/4 h-[280px] w-[280px] rounded-full bg-brand-100/40 blur-[80px]" />
+            <div className="bg-brand-200/30 absolute left-1/2 top-1/3 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]" />
+            <div className="bg-brand-100/40 absolute bottom-1/4 right-1/4 h-[280px] w-[280px] rounded-full blur-[80px]" />
           </div>
 
           <motion.div
@@ -67,20 +75,28 @@ export function LandingPage() {
           >
             {/* Logo */}
             <div className="mx-auto mb-8 !inline-flex !p-3">
-              <ProductLogo variant="full" className="h-16 w-auto" imageClassName="h-full w-auto" priority />
+              <ProductLogo
+                variant="full"
+                className="w-[372px] max-w-[calc(100vw-2rem)]"
+                imageClassName="h-auto w-full"
+                priority
+              />
             </div>
 
-            <h1 className="font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
-              Escala médica{' '}
-              <span className="text-gradient">sob controle</span>
+            <h1 className="font-display text-foreground text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+              Escala médica <span className="text-gradient">sob controle</span>
             </h1>
 
-            <p className="mx-auto mt-5 max-w-lg text-base text-muted-foreground sm:text-lg leading-relaxed">
+            <p className="text-muted-foreground mx-auto mt-5 max-w-lg text-base leading-relaxed sm:text-lg">
               Confirme plantões, gerencie trocas e acompanhe cobertura crítica em tempo real.
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <Button size="lg" className="bg-brand-700 text-white shadow-brand hover:bg-brand-800 gap-2 w-full sm:w-auto" asChild>
+              <Button
+                size="lg"
+                className="bg-brand-700 shadow-brand hover:bg-brand-800 w-full gap-2 text-white sm:w-auto"
+                asChild
+              >
                 <Link href="/register">
                   Começar gratuitamente
                   <ArrowRight className="h-4 w-4" />
@@ -97,11 +113,11 @@ export function LandingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.5 }}
-            className="relative z-10 mt-16 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground"
+            className="text-muted-foreground relative z-10 mt-16 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm"
           >
             {['Sem cartão de crédito', 'Implementação em 24h', 'Conforme LGPD'].map((item) => (
               <span key={item} className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-brand-600" />
+                <CheckCircle2 className="text-brand-600 h-3.5 w-3.5" />
                 {item}
               </span>
             ))}
@@ -115,15 +131,18 @@ export function LandingPage() {
               {[
                 {
                   title: 'Para a Direção',
-                  description: 'Visão consolidada de cobertura, custos projetados e decisões auditáveis por turno.',
+                  description:
+                    'Visão consolidada de cobertura, custos projetados e decisões auditáveis por turno.',
                 },
                 {
                   title: 'Para a Coordenação',
-                  description: 'Publique escalas, receba confirmações e gerencie substituições em poucos cliques.',
+                  description:
+                    'Publique escalas, receba confirmações e gerencie substituições em poucos cliques.',
                 },
                 {
                   title: 'Para o Médico',
-                  description: 'Confirme plantões, solicite trocas e acompanhe ganhos direto do celular.',
+                  description:
+                    'Confirme plantões, solicite trocas e acompanhe ganhos direto do celular.',
                 },
               ].map((card, i) => (
                 <motion.article
@@ -134,8 +153,12 @@ export function LandingPage() {
                   transition={{ delay: i * 0.08, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                   className="card-base p-6"
                 >
-                  <h2 className="font-display text-base font-semibold text-foreground">{card.title}</h2>
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{card.description}</p>
+                  <h2 className="font-display text-foreground text-base font-semibold">
+                    {card.title}
+                  </h2>
+                  <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+                    {card.description}
+                  </p>
                 </motion.article>
               ))}
             </div>
@@ -145,14 +168,18 @@ export function LandingPage() {
         {/* CTA */}
         <section className="px-4 pb-24 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <h3 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
+            <h3 className="font-display text-foreground text-2xl font-bold sm:text-3xl">
               Comece com um ciclo real
             </h3>
-            <p className="mt-3 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-3 text-sm">
               Configure sua primeira escala em minutos. Sem complexidade.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Button size="lg" className="bg-brand-700 text-white shadow-brand hover:bg-brand-800" asChild>
+              <Button
+                size="lg"
+                className="bg-brand-700 shadow-brand hover:bg-brand-800 text-white"
+                asChild
+              >
                 <Link href="/register">Solicitar demonstração</Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
@@ -164,13 +191,13 @@ export function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border/60 px-4 py-8 sm:px-6">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm text-muted-foreground sm:flex-row">
+      <footer className="border-border/60 border-t px-4 py-8 sm:px-6">
+        <div className="text-muted-foreground mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm sm:flex-row">
           <div className="flex items-center gap-2.5">
-            <div className="logo-container-light !rounded-lg !p-1 !shadow-subtle">
+            <div className="logo-container-light !shadow-subtle !rounded-lg !p-1">
               <ProductLogo variant="mark" className="h-5 w-5" imageClassName="h-full w-full" />
             </div>
-            <span className="font-medium text-foreground">{BRAND_NAME}</span>
+            <span className="text-foreground font-medium">{BRAND_NAME}</span>
           </div>
           <div className="flex items-center gap-5">
             <Link href="/privacy" className="hover:text-foreground">

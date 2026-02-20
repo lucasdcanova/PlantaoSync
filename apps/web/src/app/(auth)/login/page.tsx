@@ -42,7 +42,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
   const { setUser, setAccessToken, isAuthenticated, user } = useAuthStore()
-  const validateRegisteredCredential = useDoctorDemoStore((state) => state.validateRegisteredCredential)
+  const validateRegisteredCredential = useDoctorDemoStore(
+    (state) => state.validateRegisteredCredential,
+  )
 
   // Auto-redirect if already authenticated
   useEffect(() => {
@@ -115,7 +117,7 @@ export default function LoginPage() {
     <div className="flex min-h-[100dvh] items-center justify-center px-4 py-12">
       {/* Subtle background */}
       <div className="pointer-events-none fixed inset-0">
-        <div className="absolute left-1/2 top-1/3 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-100/40 blur-[100px]" />
+        <div className="bg-brand-100/40 absolute left-1/2 top-1/3 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]" />
       </div>
 
       <motion.div
@@ -127,20 +129,23 @@ export default function LoginPage() {
         {/* Logo and title */}
         <div className="mb-8 text-center">
           <div className="mx-auto mb-5 !inline-flex !p-2.5">
-            <ProductLogo variant="full" className="h-12 w-auto" imageClassName="h-full w-auto" priority />
+            <ProductLogo
+              variant="full"
+              className="w-[278px] max-w-[calc(100vw-2rem)]"
+              imageClassName="h-auto w-full"
+              priority
+            />
           </div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-            Entrar
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Acesse sua central de plantões
-          </p>
+          <h1 className="font-display text-foreground text-2xl font-bold tracking-tight">Entrar</h1>
+          <p className="text-muted-foreground mt-1.5 text-sm">Acesse sua central de plantões</p>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs font-medium">E-mail</Label>
+            <Label htmlFor="email" className="text-xs font-medium">
+              E-mail
+            </Label>
             <Input
               id="email"
               type="email"
@@ -148,22 +153,19 @@ export default function LoginPage() {
               autoComplete="email"
               {...register('email')}
               className={cn(
-                'h-11 rounded-xl bg-card',
-                errors.email && 'border-destructive focus-visible:ring-destructive'
+                'bg-card h-11 rounded-xl',
+                errors.email && 'border-destructive focus-visible:ring-destructive',
               )}
             />
-            {errors.email && (
-              <p className="text-xs text-destructive">{errors.email.message}</p>
-            )}
+            {errors.email && <p className="text-destructive text-xs">{errors.email.message}</p>}
           </div>
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-xs font-medium">Senha</Label>
-              <Link
-                href="/forgot-password"
-                className="text-xs text-brand-700 hover:text-brand-800"
-              >
+              <Label htmlFor="password" className="text-xs font-medium">
+                Senha
+              </Label>
+              <Link href="/forgot-password" className="text-brand-700 hover:text-brand-800 text-xs">
                 Esqueceu?
               </Link>
             </div>
@@ -175,27 +177,27 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 {...register('password')}
                 className={cn(
-                  'h-11 rounded-xl bg-card pr-10',
-                  errors.password && 'border-destructive focus-visible:ring-destructive'
+                  'bg-card h-11 rounded-xl pr-10',
+                  errors.password && 'border-destructive focus-visible:ring-destructive',
                 )}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             {errors.password && (
-              <p className="text-xs text-destructive">{errors.password.message}</p>
+              <p className="text-destructive text-xs">{errors.password.message}</p>
             )}
           </div>
 
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full h-11 rounded-xl bg-brand-700 hover:bg-brand-800 text-white shadow-brand gap-2 font-medium"
+            className="bg-brand-700 hover:bg-brand-800 shadow-brand h-11 w-full gap-2 rounded-xl font-medium text-white"
           >
             {isSubmitting ? (
               <>
@@ -213,29 +215,33 @@ export default function LoginPage() {
 
         {/* Links */}
         <div className="mt-6 space-y-2 text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Primeira vez?{' '}
-            <Link href="/register" className="font-medium text-brand-700 hover:text-brand-800">
+            <Link href="/register" className="text-brand-700 hover:text-brand-800 font-medium">
               Criar conta
             </Link>
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Recebeu convite?{' '}
-            <Link href="/invite" className="font-medium text-brand-700 hover:text-brand-800">
+            <Link href="/invite" className="text-brand-700 hover:text-brand-800 font-medium">
               Cadastre-se no hospital
             </Link>
           </p>
         </div>
 
         {/* Demo credentials */}
-        <div className="mt-8 rounded-xl border border-border/60 bg-card/50 p-4 text-center">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground mb-2">Acesso demonstração</p>
-          <div className="space-y-1 text-xs text-muted-foreground">
+        <div className="border-border/60 bg-card/50 mt-8 rounded-xl border p-4 text-center">
+          <p className="text-muted-foreground mb-2 text-[11px] font-medium uppercase tracking-wider">
+            Acesso demonstração
+          </p>
+          <div className="text-muted-foreground space-y-1 text-xs">
             <p>
-              Gestor: <code className="text-brand-700">{DEMO_MANAGER_EMAIL}</code> / <code className="text-brand-700">{DEMO_MANAGER_PASSWORD}</code>
+              Gestor: <code className="text-brand-700">{DEMO_MANAGER_EMAIL}</code> /{' '}
+              <code className="text-brand-700">{DEMO_MANAGER_PASSWORD}</code>
             </p>
             <p>
-              Médico: <code className="text-brand-700">{DEMO_DOCTOR_EMAIL}</code> / <code className="text-brand-700">{DEMO_DOCTOR_PASSWORD}</code>
+              Médico: <code className="text-brand-700">{DEMO_DOCTOR_EMAIL}</code> /{' '}
+              <code className="text-brand-700">{DEMO_DOCTOR_PASSWORD}</code>
             </p>
           </div>
         </div>
