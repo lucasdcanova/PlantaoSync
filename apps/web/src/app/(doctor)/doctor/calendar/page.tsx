@@ -202,7 +202,7 @@ export default function DoctorCalendarPage() {
                                             <div className="flex items-start justify-between gap-2">
                                                 <div>
                                                     <p className="font-medium text-foreground text-sm">{shift.sectorName}</p>
-                                                    <p className="text-xs text-muted-foreground mt-0.5">{shift.specialty}</p>
+                                                    <p className="text-xs text-muted-foreground mt-0.5">Carga: {shift.patientLoad}</p>
                                                 </div>
                                                 <Badge className={cn(
                                                     'text-[10px]',
