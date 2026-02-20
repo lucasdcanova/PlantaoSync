@@ -1,7 +1,18 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Search, Filter, Calendar, MapPin, Clock, PencilLine, Sparkles } from 'lucide-react'
+import {
+  Plus,
+  Search,
+  Filter,
+  Calendar,
+  MapPin,
+  Clock,
+  PencilLine,
+  Sparkles,
+  Users,
+  Phone,
+} from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Header } from '@/components/layout/header'
 import { PageTransition, StaggerList, StaggerItem } from '@/components/shared/page-transition'
@@ -9,7 +20,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { cn, formatDate, SHIFT_STATUS_CONFIG } from '@/lib/utils'
-import { DEMO_DOCTOR_AVAILABLE_SHIFTS, DEMO_LOCATIONS } from '@/lib/demo-data'
+import {
+  DEMO_DOCTOR_AVAILABLE_SHIFTS,
+  DEMO_LOCATIONS,
+  DEMO_MANAGER_ASSIGNED_SHIFTS,
+} from '@/lib/demo-data'
 import { useSchedulesStore } from '@/store/schedules.store'
 import Link from 'next/link'
 
@@ -39,6 +54,18 @@ type OpenDayEntry = {
   notes?: string
 }
 
+type AssignedDayEntry = {
+  id: string
+  professionalId: string
+  professionalName: string
+  professionalPhone: string
+  specialty: string
+  assignmentSource: 'Escala fixa' | 'Troca aprovada'
+  sectorName: string
+  startTime: string
+  endTime: string
+}
+
 function toISODate(year: number, month: number, day: number) {
   const mm = String(month + 1).padStart(2, '0')
   const dd = String(day).padStart(2, '0')
@@ -51,6 +78,22 @@ function getDaysInMonth(year: number, month: number) {
 
 function getFirstDayOfMonth(year: number, month: number) {
   return new Date(year, month, 1).getDay()
+}
+
+function getShiftWindow(date: string, startTime: string, endTime: string) {
+  const start = new Date(`${date}T${startTime}:00`)
+  const end = new Date(`${date}T${endTime}:00`)
+
+  if (end <= start) {
+    end.setDate(end.getDate() + 1)
+  }
+
+  return { start, end }
+}
+
+function isShiftActiveNow(date: string, startTime: string, endTime: string, now: Date) {
+  const { start, end } = getShiftWindow(date, startTime, endTime)
+  return now >= start && now < end
 }
 
 export default function SchedulesPage() {
@@ -107,6 +150,7 @@ export default function SchedulesPage() {
 
     DEMO_LOCATIONS.forEach((location) => source.add(location.name))
     DEMO_DOCTOR_AVAILABLE_SHIFTS.forEach((shift) => source.add(shift.sectorName))
+    DEMO_MANAGER_ASSIGNED_SHIFTS.forEach((shift) => source.add(shift.sectorName))
 
     return ['all', ...Array.from(source)]
   }, [selectedSchedule])
@@ -188,11 +232,89 @@ export default function SchedulesPage() {
     return map
   }, [openEntriesByDay])
 
+  const assignedEntriesByDay = useMemo(() => {
+    const map = new Map<number, AssignedDayEntry[]>()
+
+    if (!selectedSchedule) return map
+
+    DEMO_MANAGER_ASSIGNED_SHIFTS.forEach((assignedShift) => {
+      if (assignedShift.scheduleId !== selectedSchedule.id) return
+      if (selectedSector !== 'all' && assignedShift.sectorName !== selectedSector) return
+
+      const date = new Date(`${assignedShift.date}T00:00:00`)
+      const sameMonth = date.getFullYear() === year && date.getMonth() === month
+      if (!sameMonth) return
+
+      const day = date.getDate()
+      const entries = map.get(day) ?? []
+
+      entries.push({
+        id: assignedShift.id,
+        professionalId: assignedShift.professionalId,
+        professionalName: assignedShift.professionalName,
+        professionalPhone: assignedShift.professionalPhone,
+        specialty: assignedShift.specialty,
+        assignmentSource: assignedShift.assignmentSource,
+        sectorName: assignedShift.sectorName,
+        startTime: assignedShift.startTime,
+        endTime: assignedShift.endTime,
+      })
+
+      map.set(day, entries)
+    })
+
+    map.forEach((entries, day) => {
+      entries.sort((a, b) =>
+        `${a.startTime}-${a.professionalName}`.localeCompare(
+          `${b.startTime}-${b.professionalName}`,
+        ),
+      )
+      map.set(day, entries)
+    })
+
+    return map
+  }, [selectedSchedule, selectedSector, year, month])
+
+  const assignedCountByDay = useMemo(() => {
+    const map = new Map<number, number>()
+
+    assignedEntriesByDay.forEach((entries, day) => {
+      map.set(day, entries.length)
+    })
+
+    return map
+  }, [assignedEntriesByDay])
+
+  const professionalsOnDutyNow = useMemo(() => {
+    if (!selectedSchedule) return []
+
+    const now = new Date()
+
+    return DEMO_MANAGER_ASSIGNED_SHIFTS.filter((assignedShift) => {
+      if (assignedShift.scheduleId !== selectedSchedule.id) return false
+      if (selectedSector !== 'all' && assignedShift.sectorName !== selectedSector) return false
+
+      return isShiftActiveNow(
+        assignedShift.date,
+        assignedShift.startTime,
+        assignedShift.endTime,
+        now,
+      )
+    }).sort((a, b) =>
+      `${a.sectorName}-${a.professionalName}`.localeCompare(
+        `${b.sectorName}-${b.professionalName}`,
+      ),
+    )
+  }, [selectedSchedule, selectedSector])
+
   const calendarDays: Array<number | null> = []
   for (let index = 0; index < firstDay; index += 1) calendarDays.push(null)
   for (let day = 1; day <= daysInMonth; day += 1) calendarDays.push(day)
 
-  const selectedDayEntries = selectedDay ? (openEntriesByDay.get(selectedDay) ?? []) : []
+  const selectedDayOpenEntries = selectedDay ? (openEntriesByDay.get(selectedDay) ?? []) : []
+  const selectedDayAssignedEntries = selectedDay
+    ? (assignedEntriesByDay.get(selectedDay) ?? [])
+    : []
 
   return (
     <>
@@ -319,7 +441,9 @@ export default function SchedulesPage() {
                         dateIso <= selectedSchedule.endDate.slice(0, 10)
 
                       const openCount = openCountByDay.get(day) ?? 0
+                      const assignedCount = assignedCountByDay.get(day) ?? 0
                       const hasEntries = openEntriesByDay.has(day)
+                      const hasAssigned = assignedEntriesByDay.has(day)
                       const isSelected = selectedDay === day
 
                       return (
@@ -340,6 +464,12 @@ export default function SchedulesPage() {
                         >
                           <span className="text-[11px] font-medium">{day}</span>
 
+                          {hasAssigned && (
+                            <span className="absolute right-1 top-1 rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-semibold text-green-700">
+                              {assignedCount} escal.
+                            </span>
+                          )}
+
                           {hasEntries && (
                             <span className="bg-brand-600 absolute bottom-1.5 left-1/2 -translate-x-1/2 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white">
                               {openCount} abertos
@@ -359,46 +489,150 @@ export default function SchedulesPage() {
                         : 'Selecione um dia'}
                     </h3>
                     <span className="text-muted-foreground text-xs">
-                      {selectedDayEntries.length} item(ns)
+                      {selectedDayAssignedEntries.length} escalados ·{' '}
+                      {selectedDayOpenEntries.length} disponíveis
                     </span>
                   </div>
 
-                  {selectedDay ? (
-                    selectedDayEntries.length > 0 ? (
-                      selectedDayEntries.map((entry) => (
-                        <div
-                          key={entry.id}
-                          className="border-border bg-card rounded-lg border px-3 py-2 text-sm"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-foreground font-medium">{entry.sectorName}</p>
-                            <Badge
-                              className={cn(
-                                'text-[10px]',
-                                entry.kind === 'extra'
-                                  ? 'border-amber-200 bg-amber-50 text-amber-700'
-                                  : 'border-brand-200 bg-brand-50 text-brand-700',
-                              )}
-                            >
-                              {entry.kind === 'extra' ? 'Turno extra' : 'Aberto'}
-                            </Badge>
+                  <div className="border-border bg-card rounded-lg border px-3 py-3">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p className="text-foreground text-sm font-medium">Em plantão agora</p>
+                      <Badge className="border-green-200 bg-green-50 text-[10px] text-green-700">
+                        {professionalsOnDutyNow.length} ativo(s)
+                      </Badge>
+                    </div>
+
+                    {professionalsOnDutyNow.length > 0 ? (
+                      <div className="space-y-2">
+                        {professionalsOnDutyNow.map((onDuty) => (
+                          <div
+                            key={onDuty.id}
+                            className="border-border bg-background rounded-md border px-2.5 py-2"
+                          >
+                            <p className="text-foreground text-xs font-semibold">
+                              {onDuty.professionalName}
+                            </p>
+                            <p className="text-muted-foreground mt-0.5 text-[11px]">
+                              {onDuty.sectorName} · {onDuty.startTime} - {onDuty.endTime}
+                            </p>
                           </div>
-                          <p className="text-muted-foreground mt-1 text-xs">
-                            {entry.startTime} - {entry.endTime} · {entry.slots} vaga(s)
-                          </p>
-                          {entry.notes && (
-                            <p className="text-muted-foreground mt-1 text-xs">{entry.notes}</p>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="border-border bg-card text-muted-foreground rounded-lg border border-dashed px-3 py-4 text-sm">
-                        Não há plantões em aberto para este dia com o filtro atual.
+                        ))}
                       </div>
-                    )
+                    ) : (
+                      <p className="text-muted-foreground text-xs">
+                        Nenhum médico em plantão no momento para este filtro.
+                      </p>
+                    )}
+                  </div>
+
+                  {selectedDay ? (
+                    <div className="space-y-3">
+                      <div className="border-border bg-card rounded-lg border p-3">
+                        <div className="mb-2 flex items-center justify-between">
+                          <h4 className="text-foreground flex items-center gap-1.5 text-sm font-semibold">
+                            <Users className="text-brand-500 h-3.5 w-3.5" />
+                            Médicos escalados no dia
+                          </h4>
+                          <Badge className="border-brand-200 bg-brand-50 text-brand-700 text-[10px]">
+                            {selectedDayAssignedEntries.length} médico(s)
+                          </Badge>
+                        </div>
+
+                        {selectedDayAssignedEntries.length > 0 ? (
+                          <div className="space-y-2">
+                            {selectedDayAssignedEntries.map((entry) => (
+                              <div
+                                key={entry.id}
+                                className="border-border bg-background rounded-md border px-2.5 py-2"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-foreground text-xs font-semibold">
+                                    {entry.professionalName}
+                                  </p>
+                                  <Badge
+                                    className={cn(
+                                      'text-[10px]',
+                                      entry.assignmentSource === 'Troca aprovada'
+                                        ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                        : 'border-green-200 bg-green-50 text-green-700',
+                                    )}
+                                  >
+                                    {entry.assignmentSource}
+                                  </Badge>
+                                </div>
+                                <p className="text-muted-foreground mt-0.5 text-[11px]">
+                                  {entry.sectorName} · {entry.startTime} - {entry.endTime}
+                                </p>
+                                <p className="text-muted-foreground mt-0.5 text-[11px]">
+                                  {entry.specialty}
+                                </p>
+                                <p className="text-muted-foreground mt-0.5 inline-flex items-center gap-1 text-[11px]">
+                                  <Phone className="h-3 w-3" />
+                                  {entry.professionalPhone}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="border-border bg-background text-muted-foreground rounded-md border border-dashed px-3 py-3 text-xs">
+                            Nenhum médico escalado para este dia com o filtro atual.
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="border-border bg-card rounded-lg border p-3">
+                        <div className="mb-2 flex items-center justify-between">
+                          <h4 className="text-foreground text-sm font-semibold">
+                            Disponíveis para troca/cobertura
+                          </h4>
+                          <Badge className="border-amber-200 bg-amber-50 text-[10px] text-amber-700">
+                            {selectedDayOpenEntries.length} item(ns)
+                          </Badge>
+                        </div>
+
+                        {selectedDayOpenEntries.length > 0 ? (
+                          <div className="space-y-2">
+                            {selectedDayOpenEntries.map((entry) => (
+                              <div
+                                key={entry.id}
+                                className="border-border bg-background rounded-md border px-2.5 py-2"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-foreground text-xs font-semibold">
+                                    {entry.sectorName}
+                                  </p>
+                                  <Badge
+                                    className={cn(
+                                      'text-[10px]',
+                                      entry.kind === 'extra'
+                                        ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                        : 'border-brand-200 bg-brand-50 text-brand-700',
+                                    )}
+                                  >
+                                    {entry.kind === 'extra' ? 'Turno extra' : 'Aberto'}
+                                  </Badge>
+                                </div>
+                                <p className="text-muted-foreground mt-1 text-[11px]">
+                                  {entry.startTime} - {entry.endTime} · {entry.slots} vaga(s)
+                                </p>
+                                {entry.notes && (
+                                  <p className="text-muted-foreground mt-1 text-[11px]">
+                                    {entry.notes}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="border-border bg-background text-muted-foreground rounded-md border border-dashed px-3 py-3 text-xs">
+                            Não há plantões disponíveis para troca/cobertura neste dia.
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   ) : (
                     <div className="border-border bg-card text-muted-foreground rounded-lg border border-dashed px-3 py-4 text-sm">
-                      Clique em um dia no calendário para visualizar os plantões em aberto.
+                      Clique em um dia para visualizar médicos escalados e vagas disponíveis.
                     </div>
                   )}
                 </article>
