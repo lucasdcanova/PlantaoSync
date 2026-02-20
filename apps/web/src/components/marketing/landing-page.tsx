@@ -66,8 +66,8 @@ export function LandingPage() {
             className="relative z-10 max-w-2xl"
           >
             {/* Logo */}
-            <div className="mx-auto mb-8 logo-container-light !inline-flex !p-3 !rounded-2xl">
-              <ProductLogo variant="mark" className="h-12 w-12" imageClassName="h-full w-full" priority />
+            <div className="mx-auto mb-8 !inline-flex !p-3">
+              <ProductLogo variant="full" className="h-16 w-auto" imageClassName="h-full w-auto" priority />
             </div>
 
             <h1 className="font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">

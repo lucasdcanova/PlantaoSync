@@ -5,7 +5,6 @@ import * as SplashScreen from 'expo-splash-screen'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useColorScheme } from 'react-native'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -20,8 +19,6 @@ const queryClient = new QueryClient({
 })
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme()
-
   useEffect(() => {
     // Fonts and assets loaded — hide splash
     SplashScreen.hideAsync()
@@ -43,7 +40,7 @@ export default function RootLayout() {
             />
             <Stack.Screen name="notifications" />
           </Stack>
-          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+          <StatusBar style="dark" backgroundColor="#ffffff" translucent={false} />
         </BottomSheetModalProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>

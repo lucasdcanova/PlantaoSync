@@ -61,10 +61,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f8fafb' },
-    { media: '(prefers-color-scheme: dark)', color: '#0c0f14' },
-  ],
+  themeColor: '#f8fafb',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -77,8 +74,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${outfit.variable} font-sans`}>
         <ThemeProvider
           attribute="data-theme"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          enableSystem={false}
+          forcedTheme="light"
           disableTransitionOnChange={false}
         >
           <QueryProvider>

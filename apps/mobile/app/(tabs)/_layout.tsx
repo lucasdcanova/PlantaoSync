@@ -1,5 +1,5 @@
 import { Tabs, router } from 'expo-router'
-import { useColorScheme, View, Text, Platform } from 'react-native'
+import { View, Platform } from 'react-native'
 import { BlurView } from 'expo-blur'
 import { useEffect } from 'react'
 import { Home, Calendar, ClipboardList, Repeat, User } from 'lucide-react-native'
@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useMobileAuthStore } from '../../store/auth-store'
 
 const BRAND = '#4ECDC4'
-const BRAND_MUTED = '#65D4CD'
 
 function TabIcon({
   icon: Icon,
@@ -40,10 +39,41 @@ function TabIcon({
   )
 }
 
+function HighlightedTabIcon({
+  icon: Icon,
+  focused,
+}: {
+  icon: React.ComponentType<any>
+  focused: boolean
+}) {
+  return (
+    <View
+      style={{
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: BRAND,
+        shadowColor: BRAND,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+        transform: [{ translateY: -12 }],
+      }}
+    >
+      <Icon
+        size={24}
+        color="#ffffff"
+        strokeWidth={2.5}
+      />
+    </View>
+  )
+}
+
 export default function TabLayout() {
-  const colorScheme = useColorScheme()
   const insets = useSafeAreaInsets()
-  const isDark = colorScheme === 'dark'
   const isAuthenticated = useMobileAuthStore((state) => state.isAuthenticated)
 
   useEffect(() => {
@@ -64,8 +94,8 @@ export default function TabLayout() {
         tabBarStyle: {
           position: 'absolute',
           borderTopWidth: 0.5,
-          borderTopColor: isDark ? '#1e2035' : '#e2e8f0',
-          backgroundColor: isDark ? 'rgba(9, 9, 15, 0.92)' : 'rgba(255, 255, 255, 0.92)',
+          borderTopColor: '#e2e8f0',
+          backgroundColor: 'rgba(255, 255, 255, 0.96)',
           height: 60 + insets.bottom,
           paddingBottom: insets.bottom,
           shadowColor: '#000',
@@ -78,7 +108,7 @@ export default function TabLayout() {
           Platform.OS === 'ios' ? (
             <BlurView
               intensity={80}
-              tint={isDark ? 'dark' : 'light'}
+              tint="light"
               style={{ flex: 1 }}
             />
           ) : null,
@@ -98,7 +128,7 @@ export default function TabLayout() {
         options={{
           title: 'Setores',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon={Calendar} label="Calendário" focused={focused} />
+            <HighlightedTabIcon icon={Calendar} focused={focused} />
           ),
         }}
       />

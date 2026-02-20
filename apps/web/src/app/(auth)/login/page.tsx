@@ -126,8 +126,8 @@ export default function LoginPage() {
       >
         {/* Logo and title */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 logo-container-light !inline-flex !p-2.5 !rounded-2xl">
-            <ProductLogo variant="mark" className="h-10 w-10" imageClassName="h-full w-full" priority />
+          <div className="mx-auto mb-5 !inline-flex !p-2.5">
+            <ProductLogo variant="full" className="h-12 w-auto" imageClassName="h-full w-auto" priority />
           </div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
             Entrar
