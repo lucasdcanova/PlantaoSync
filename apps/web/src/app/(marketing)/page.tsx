@@ -6,23 +6,28 @@ import { BRAND_NAME } from '@/lib/brand'
 const baseUrl = getSiteUrl()
 
 export const metadata: Metadata = {
-  title: 'Software de Escalas e Confirmação de Plantões para Hospitais e Clínicas',
+  title: 'Gestão de Escalas Médicas com Confirmação em Tempo Real | CONFIRMA PLANTÃO',
   description:
-    'Gestão de escalas médicas com confirmação em tempo real. Antecipe lacunas, valide cobertura com rastreabilidade e decida com visão operacional e financeira.',
+    'Substitua planilhas e WhatsApp por uma plataforma completa de gestão de escalas e plantões. Confirmação em 1 toque, cobertura em tempo real, financeiro integrado. Conforme LGPD.',
   keywords: [
     'software de escalas médicas',
-    'gestão de plantões',
-    'sistema para hospitais e clínicas',
-    'escala hospitalar',
-    'continuidade assistencial',
+    'gestão de plantões hospitalares',
+    'sistema de escalas para hospitais e clínicas',
+    'confirmação de plantão online',
+    'escala hospitalar digital',
+    'cobertura assistencial em tempo real',
+    'substituição de planilha de escala médica',
+    'software médico SaaS',
+    'gestão de cobertura de plantão',
+    'rastreabilidade de escalas ANVISA CFM',
   ],
   alternates: {
     canonical: '/',
   },
   openGraph: {
-    title: 'Escala médica sob controle com confirmação em tempo real',
+    title: 'Gestão de Escalas Médicas com Confirmação em Tempo Real',
     description:
-      'Uma central operacional para direção clínica, coordenação e financeiro atuarem com previsibilidade de cobertura e confirmação imediata.',
+      'Da planilha para o controle total em 24 horas. Confirme plantões, gerencie trocas e feche o mês com relatórios prontos.',
     url: baseUrl,
     siteName: BRAND_NAME,
     locale: 'pt_BR',
@@ -30,9 +35,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${BRAND_NAME} | Escala médica com governança operacional`,
+    title: `${BRAND_NAME} | Escala médica sem planilha`,
     description:
-      'Antecipe lacunas, reduza improviso e mantenha rastreabilidade de ponta a ponta na operação de plantão.',
+      'Confirmação de plantão em 1 toque. Dashboard de cobertura em tempo real. Financeiro integrado. Para hospitais, UPAs e clínicas.',
   },
 }
 
@@ -41,20 +46,93 @@ const softwareSchema = {
   '@type': 'SoftwareApplication',
   name: BRAND_NAME,
   applicationCategory: 'BusinessApplication',
-  operatingSystem: 'Web',
+  operatingSystem: 'Web, iOS, Android',
   inLanguage: 'pt-BR',
-  offers: {
-    '@type': 'Offer',
-    price: '0',
-    priceCurrency: 'BRL',
-    description: 'Diagnóstico inicial gratuito',
-  },
+  offers: [
+    {
+      '@type': 'Offer',
+      name: 'Plano Básico',
+      price: '297',
+      priceCurrency: 'BRL',
+      description: 'Até 15 profissionais, 1 unidade',
+    },
+    {
+      '@type': 'Offer',
+      name: 'Plano Premium',
+      price: '597',
+      priceCurrency: 'BRL',
+      description: 'Até 30 profissionais, 2 unidades',
+    },
+    {
+      '@type': 'Offer',
+      name: 'Plano Enterprise',
+      price: '1197',
+      priceCurrency: 'BRL',
+      description: 'Até 100 profissionais, 8 unidades',
+    },
+  ],
   audience: {
     '@type': 'BusinessAudience',
-    audienceType: 'Hospitais e clínicas',
+    audienceType: 'Hospitais, UPAs e clínicas médicas',
   },
   description:
-    'Plataforma de gestão de escalas e confirmações de plantão com foco em continuidade assistencial e governança operacional.',
+    'Plataforma SaaS de gestão de escalas e confirmação de plantões médicos com cobertura em tempo real, financeiro integrado e conformidade LGPD.',
+  featureList: [
+    'Confirmação de plantão em 1 toque via push notification',
+    'Dashboard de cobertura em tempo real por setor e especialidade',
+    'Gestão de trocas com rastreabilidade completa',
+    'Controle financeiro integrado por plantão e profissional',
+    'Relatórios exportáveis em PDF e Excel',
+    'Auditoria completa para ANVISA e CFM',
+    'Conforme LGPD e normas de segurança da informação',
+  ],
+}
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Quanto tempo leva para colocar a primeira escala no ar?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'A maioria das equipes coloca a primeira escala no ar em menos de 24 horas. O cadastro inicial leva cerca de 30 minutos para configurar unidades, setores e profissionais.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Os médicos precisam baixar algum aplicativo?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'O CONFIRMA PLANTÃO funciona como PWA (Progressive Web App). O médico pode confirmar plantões diretamente pelo navegador do celular, sem precisar instalar nada.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Como funciona a migração das planilhas atuais?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Oferecemos importação em lote via Excel para profissionais, setores e escalas históricas. O time de suporte acompanha o processo nos planos Premium e Enterprise.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Tem integração com sistemas HIS?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'A API de integração está disponível para os planos Enterprise, permitindo sincronizar com sistemas como MV, Tasy, Soul MV e outros HIS.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Como a plataforma garante conformidade com LGPD?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'O CONFIRMA PLANTÃO opera com isolamento de dados por organização (row-level security), coleta de consentimento, logs de auditoria e APIs para exportação e exclusão de dados. Toda a infraestrutura usa criptografia AES-256.',
+      },
+    },
+  ],
 }
 
 export default function MarketingHomePage() {
@@ -63,6 +141,10 @@ export default function MarketingHomePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
       <LandingPage />
     </>
