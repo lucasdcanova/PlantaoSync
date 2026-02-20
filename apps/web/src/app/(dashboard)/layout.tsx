@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { Sidebar } from '@/components/layout/sidebar'
 import { MobileNav } from '@/components/layout/mobile-nav'
-import { RouteTransition } from '@/components/layout/route-transition'
 import { StatusBarSync } from '@/components/layout/status-bar-sync'
 
 export const metadata: Metadata = {
@@ -17,9 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <StatusBarSync color="#ffffff" />
       <Sidebar />
       <main className="flex-1 overflow-y-auto pb-24 lg:pb-0">
-        <div className="mx-auto w-full max-w-[1680px]">
-          <RouteTransition>{children}</RouteTransition>
-        </div>
+        <div className="mx-auto w-full max-w-[1680px]">{children}</div>
       </main>
       <MobileNav />
     </div>
