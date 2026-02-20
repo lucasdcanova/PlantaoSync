@@ -1,4 +1,4 @@
-# AgendaPlantão — Guia de Desenvolvimento
+# CONFIRMA PLANTÃO — Guia de Desenvolvimento
 
 > Plataforma SaaS B2B de gestão de escalas e plantões médicos hospitalares.
 > Referência de produto analisada: Agendoctor.com
@@ -8,7 +8,7 @@
 
 ## 1. Visão do Produto
 
-**AgendaPlantão** substitui a gestão manual de escalas (planilhas + WhatsApp) por uma plataforma automatizada que conecta gestores hospitalares a profissionais de saúde.
+**CONFIRMA PLANTÃO** substitui a gestão manual de escalas (planilhas + WhatsApp) por uma plataforma automatizada que conecta gestores hospitalares a profissionais de saúde.
 
 ### Perfis de Usuário
 | Perfil | Plataforma Principal | Papel |
@@ -1039,7 +1039,7 @@ POST   /api/v1/schedules/:id/publish  # ação especial
 ### 10.1 Manifest
 ```json
 {
-  "name": "AgendaPlantão",
+  "name": "CONFIRMA PLANTÃO",
   "short_name": "Plantão",
   "description": "Gestão inteligente de escalas médicas",
   "start_url": "/",

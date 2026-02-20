@@ -1,52 +1,36 @@
 services:
-  # ── Frontend (Next.js) ──────────────────────────────────────────────
+  # ── Unified server (NestJS API + Next.js Frontend) ──────────────────
   - type: web
     name: plantaosync
     runtime: node
-    region: ohio
-    plan: free
-    buildCommand: |
-      corepack enable &&
-      pnpm install --frozen-lockfile &&
-      pnpm run build --filter=web...
-    startCommand: cd apps/web && npx next start -p $PORT
-    envVars:
-      - key: NODE_VERSION
-        value: "20"
-      - key: NEXT_PUBLIC_APP_ENV
-        value: production
-      - key: NEXT_PUBLIC_APP_URL
-        value: https://plantaosync.onrender.com
-      - key: NEXT_PUBLIC_API_URL
-        value: https://plantaosync-api.onrender.com
-      - key: NEXT_PUBLIC_WS_URL
-        value: wss://plantaosync-api.onrender.com
-
-  # ── Backend (NestJS) ────────────────────────────────────────────────
-  - type: web
-    name: plantaosync-api
-    runtime: node
-    region: ohio
-    plan: free
-    buildCommand: |
-      corepack enable &&
+    region: oregon
+    plan: starter
+    buildCommand: >-
+      npm install -g pnpm &&
       pnpm install --frozen-lockfile &&
       pnpm --filter=api run db:generate &&
+      pnpm run build --filter=web... &&
       pnpm --filter=api run build
-    startCommand: cd api && node dist/src/main.js
+    startCommand: node server.js
     envVars:
       - key: NODE_VERSION
         value: "20"
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: "3001"
       - key: APP_URL
-        sync: false
+        value: https://plantaosync.onrender.com
       - key: FRONTEND_URL
-        sync: false
+        value: https://plantaosync.onrender.com
       - key: CORS_ORIGINS
-        sync: false
+        value: https://plantaosync.onrender.com
+      - key: NEXT_PUBLIC_APP_ENV
+        value: production
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://plantaosync.onrender.com
+      - key: NEXT_PUBLIC_API_URL
+        value: https://plantaosync.onrender.com
+      - key: NEXT_PUBLIC_WS_URL
+        value: wss://plantaosync.onrender.com
       - key: DATABASE_URL
         sync: false
       - key: DIRECT_URL

@@ -43,6 +43,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/',
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
   manifest: '/manifest.json',
   icons: {
     icon: '/brand/logo-mark-square.png',

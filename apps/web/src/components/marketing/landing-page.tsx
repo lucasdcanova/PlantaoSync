@@ -18,6 +18,13 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { BRAND_NAME } from '@/lib/brand'
 
+const stableTransformTemplate = (_: Record<string, unknown>, generatedTransform?: string) => {
+  if (!generatedTransform) return 'translateZ(0)'
+  return generatedTransform.includes('translateZ(')
+    ? generatedTransform
+    : `${generatedTransform} translateZ(0)`
+}
+
 const pillars = [
   {
     title: 'Clareza clínica',
@@ -103,6 +110,7 @@ export function LandingPage() {
             <div>
               <Badge className="border-brand-200 bg-brand-50 text-brand-800">SaaS para hospitais e clínicas</Badge>
               <motion.div
+                transformTemplate={stableTransformTemplate}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
@@ -112,6 +120,7 @@ export function LandingPage() {
               </motion.div>
 
               <motion.h1
+                transformTemplate={stableTransformTemplate}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
@@ -121,6 +130,7 @@ export function LandingPage() {
               </motion.h1>
 
               <motion.p
+                transformTemplate={stableTransformTemplate}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
@@ -131,6 +141,7 @@ export function LandingPage() {
               </motion.p>
 
               <motion.div
+                transformTemplate={stableTransformTemplate}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
@@ -149,6 +160,7 @@ export function LandingPage() {
             </div>
 
             <motion.div
+              transformTemplate={stableTransformTemplate}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
@@ -191,6 +203,7 @@ export function LandingPage() {
               {pillars.map((pillar, index) => (
                 <motion.article
                   key={pillar.title}
+                  transformTemplate={stableTransformTemplate}
                   initial={{ opacity: 0, y: 12 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
@@ -239,6 +252,7 @@ export function LandingPage() {
               {steps.map((step, index) => (
                 <motion.article
                   key={step.title}
+                  transformTemplate={stableTransformTemplate}
                   initial={{ opacity: 0, x: -10 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
