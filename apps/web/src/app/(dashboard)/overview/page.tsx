@@ -57,7 +57,7 @@ export default function OverviewPage() {
       value: stats?.confirmedThisWeek ?? 0,
       icon: CheckCircle,
       color: 'green' as const,
-      trend: { value: 12, label: 'vs. ciclo anterior' },
+      trend: { value: 12, label: 'vs. mês anterior' },
     },
     {
       title: 'Custo Projetado',

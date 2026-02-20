@@ -25,14 +25,14 @@ export default function ScheduleDetailsPage({ params }: { params: { id: string }
 
   return (
     <>
-      <Header title="Detalhes do Ciclo" subtitle="Visão consolidada de cobertura por período" />
+      <Header title="Detalhes do Mês" subtitle="Visão consolidada de cobertura mensal" />
 
       <div className="p-6">
         <div className="mx-auto max-w-4xl space-y-5">
           <Button asChild variant="ghost" className="w-fit gap-2">
             <Link href="/schedules">
               <ArrowLeft className="h-4 w-4" />
-              Voltar para ciclos
+              Voltar para meses
             </Link>
           </Button>
 
@@ -41,7 +41,7 @@ export default function ScheduleDetailsPage({ params }: { params: { id: string }
               <div>
                 <h2 className="font-display text-2xl font-bold text-foreground">{schedule.title}</h2>
                 <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                  {schedule.description ?? 'Sem descrição cadastrada para este ciclo.'}
+                  {schedule.description ?? 'Sem descrição cadastrada para este mês.'}
                 </p>
               </div>
               <Badge className={status.color}>{status.label}</Badge>

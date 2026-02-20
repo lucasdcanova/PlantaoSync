@@ -43,7 +43,7 @@ export default function ProfessionalsPage() {
             <p className="mt-2 font-display text-2xl font-bold text-foreground">{avgAcceptance}%</p>
           </div>
           <div className="rounded-xl border border-border bg-card p-5 shadow-card">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Indisponíveis no ciclo</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Indisponíveis no mês</p>
             <p className="mt-2 font-display text-2xl font-bold text-foreground">{unavailableCount}</p>
           </div>
         </section>

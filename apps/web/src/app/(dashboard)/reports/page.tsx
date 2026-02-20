@@ -6,7 +6,7 @@ export default function ReportsPage() {
     <>
       <Header
         title="Relatórios"
-        subtitle="Cobertura, produtividade e risco por período"
+        subtitle="Cobertura, produtividade e risco por mês"
       />
 
       <div className="space-y-6 p-6">
@@ -21,7 +21,7 @@ export default function ReportsPage() {
         </section>
 
         <section className="rounded-2xl border border-border bg-card p-6 shadow-card">
-          <h2 className="font-display text-lg font-bold text-foreground">Destaques operacionais do período</h2>
+          <h2 className="font-display text-lg font-bold text-foreground">Destaques operacionais do mês</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Bloco pronto para diretoria clínica, coordenação e governança assistencial.
           </p>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { CalendarDays, Clock3, Repeat2, ArrowRight } from 'lucide-react'
+import { parseISO } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useDoctorDemoStore } from '@/store/doctor-demo.store'
@@ -12,11 +13,30 @@ export default function DoctorOverviewPage() {
   const myShifts = useDoctorDemoStore((state) => state.myShifts)
   const swapRequests = useDoctorDemoStore((state) => state.swapRequests)
 
-  const upcoming = myShifts
-    .filter((shift) => new Date(shift.date) >= new Date('2026-02-20'))
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+
+  const parseShiftDateTime = (date: string, time: string) => new Date(`${date}T${time}:00`)
+
+  const monthShifts = myShifts.filter((shift) => {
+    const shiftDate = parseISO(shift.date)
+    return shiftDate >= monthStart && shiftDate < monthEnd
+  })
+
+  const upcoming = monthShifts
+    .filter((shift) => parseShiftDateTime(shift.date, shift.startTime) >= now)
+    .sort(
+      (a, b) =>
+        parseShiftDateTime(a.date, a.startTime).getTime() -
+        parseShiftDateTime(b.date, b.startTime).getTime(),
+    )
     .slice(0, 3)
+
+  const confirmedInMonth = monthShifts.filter((shift) => shift.status !== 'CANCELADO').length
   const pendingSwaps = swapRequests.filter((swap) => swap.status === 'PENDENTE').length
-  const monthProjection = upcoming.reduce((sum, shift) => sum + shift.value, 0)
+  const monthProjection = monthShifts.reduce((sum, shift) => sum + shift.value, 0)
+  const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 
   return (
     <div className="space-y-6">
@@ -27,9 +47,9 @@ export default function DoctorOverviewPage() {
           <p className="text-xs text-muted-foreground">abertos para confirmação</p>
         </article>
         <article className="rounded-2xl border border-border bg-card p-5 shadow-card">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Próximos confirmados</p>
-          <p className="mt-2 font-display text-2xl font-bold text-foreground">{upcoming.length}</p>
-          <p className="text-xs text-muted-foreground">já no seu painel</p>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Confirmados no mês</p>
+          <p className="mt-2 font-display text-2xl font-bold text-foreground">{confirmedInMonth}</p>
+          <p className="text-xs text-muted-foreground">{monthLabel}</p>
         </article>
         <article className="rounded-2xl border border-border bg-card p-5 shadow-card">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Trocas pendentes</p>
@@ -37,9 +57,9 @@ export default function DoctorOverviewPage() {
           <p className="text-xs text-muted-foreground">aguardando decisão</p>
         </article>
         <article className="rounded-2xl border border-border bg-card p-5 shadow-card">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Projeção do ciclo</p>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Projeção do mês</p>
           <p className="mt-2 font-display text-2xl font-bold text-foreground">{formatCurrency(monthProjection)}</p>
-          <p className="text-xs text-muted-foreground">com base nos próximos plantões</p>
+          <p className="text-xs text-muted-foreground">com base nos plantões de {monthLabel}</p>
         </article>
       </section>
 
@@ -108,7 +128,7 @@ export default function DoctorOverviewPage() {
 
             {upcoming.length === 0 && (
               <div className="rounded-xl border border-dashed border-border bg-background p-6 text-center text-sm text-muted-foreground">
-                Nenhum plantão confirmado no momento.
+                Nenhum plantão confirmado para o restante deste mês.
               </div>
             )}
           </div>

@@ -42,7 +42,7 @@ export default function SchedulesPage() {
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar por ciclo, unidade ou setor..."
+              placeholder="Buscar por mês, unidade ou setor..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -53,7 +53,7 @@ export default function SchedulesPage() {
           </Button>
           <Button className="bg-brand-600 hover:bg-brand-700 text-white shadow-brand gap-2">
             <Plus className="h-4 w-4" />
-            Novo Ciclo de Escala
+            Nova Escala Mensal
           </Button>
         </div>
 
@@ -138,7 +138,7 @@ export default function SchedulesPage() {
             <Calendar className="mx-auto h-12 w-12 text-muted-foreground/40 mb-4" />
             <p className="text-muted-foreground font-medium">Nenhuma escala encontrada</p>
             <p className="text-sm text-muted-foreground/70 mt-1">
-              Inicie um novo ciclo clicando em \"Novo Ciclo de Escala\"
+              Inicie um novo mês clicando em \"Nova Escala Mensal\"
             </p>
           </motion.div>
         )}

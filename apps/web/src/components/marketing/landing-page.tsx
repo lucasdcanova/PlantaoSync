@@ -166,7 +166,7 @@ export function LandingPage() {
         <section className="px-4 pb-24 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <h3 className="font-display text-foreground text-2xl font-bold sm:text-3xl">
-              Comece com um ciclo real
+              Comece com um mês real
             </h3>
             <p className="text-muted-foreground mt-3 text-sm">
               Configure sua primeira escala em minutos. Sem complexidade.

@@ -67,7 +67,7 @@ export const DEMO_SCHEDULES: Schedule[] = [
     id: '1',
     organizationId: 'org-demo',
     locationId: 'loc-uti',
-    title: 'Cobertura UTI Adulto - Ciclo Fevereiro 2026',
+    title: 'Cobertura UTI Adulto - Fevereiro 2026',
     description: 'Cobertura crítica com reforço em fins de semana e troca rápida de plantonistas.',
     startDate: '2026-02-01',
     endDate: '2026-02-28',
@@ -81,7 +81,7 @@ export const DEMO_SCHEDULES: Schedule[] = [
     id: '2',
     organizationId: 'org-demo',
     locationId: 'loc-ps',
-    title: 'Cobertura Pronto-Socorro - Ciclo Fevereiro 2026',
+    title: 'Cobertura Pronto-Socorro - Fevereiro 2026',
     description: 'Escala com janela de resposta rápida para picos de demanda no período noturno.',
     startDate: '2026-02-01',
     endDate: '2026-02-28',
@@ -108,8 +108,8 @@ export const DEMO_SCHEDULES: Schedule[] = [
     id: '4',
     organizationId: 'org-demo',
     locationId: 'loc-clinica',
-    title: 'Cobertura Clínica Médica - Ciclo Janeiro 2026',
-    description: 'Ciclo concluído com aderência de cobertura acima da meta contratual.',
+    title: 'Cobertura Clínica Médica - Janeiro 2026',
+    description: 'Mês concluído com aderência de cobertura acima da meta contratual.',
     startDate: '2026-01-01',
     endDate: '2026-01-31',
     status: 'CLOSED',
@@ -159,7 +159,7 @@ export const DEMO_RECENT_ACTIVITY: DemoActivityItem[] = [
   {
     id: '2',
     type: 'schedule',
-    message: 'Ciclo de escala da Clínica Médica foi publicado para validação final.',
+    message: 'Escala mensal da Clínica Médica foi publicada para validação final.',
     time: new Date(Date.now() - 28 * 60 * 1000),
   },
   {
@@ -316,13 +316,13 @@ export const DEMO_REPORT_METRICS: DemoReportMetric[] = [
 export const DEMO_REPORT_HIGHLIGHTS = [
   'UTI Adulto mantém cobertura acima de 93% em todos os turnos críticos.',
   'Pronto-Socorro reduziu tempo de confirmação em 18% no comparativo mensal.',
-  'Escala de Clínica Médica fechou o ciclo com zero ruptura assistencial.',
-  'Ciclos com alerta antecipado tiveram 27% menos cancelamentos de última hora.',
+  'Escala de Clínica Médica fechou o mês com zero ruptura assistencial.',
+  'Meses com alerta antecipado tiveram 27% menos cancelamentos de última hora.',
 ]
 
-export interface DemoFinancialCycle {
+export interface DemoFinancialMonth {
   id: string
-  cycle: string
+  month: string
   projectedCost: number
   confirmedCost: number
   paidCost: number
@@ -330,10 +330,10 @@ export interface DemoFinancialCycle {
   status: 'Em fechamento' | 'Fechado' | 'Em análise'
 }
 
-export const DEMO_FINANCIAL_CYCLES: DemoFinancialCycle[] = [
+export const DEMO_FINANCIAL_MONTHS: DemoFinancialMonth[] = [
   {
     id: 'fin-1',
-    cycle: 'Fevereiro/2026',
+    month: 'Fevereiro/2026',
     projectedCost: 148_920_00,
     confirmedCost: 143_600_00,
     paidCost: 126_200_00,
@@ -342,7 +342,7 @@ export const DEMO_FINANCIAL_CYCLES: DemoFinancialCycle[] = [
   },
   {
     id: 'fin-2',
-    cycle: 'Janeiro/2026',
+    month: 'Janeiro/2026',
     projectedCost: 139_450_00,
     confirmedCost: 141_180_00,
     paidCost: 141_180_00,
@@ -351,7 +351,7 @@ export const DEMO_FINANCIAL_CYCLES: DemoFinancialCycle[] = [
   },
   {
     id: 'fin-3',
-    cycle: 'Dezembro/2025',
+    month: 'Dezembro/2025',
     projectedCost: 133_870_00,
     confirmedCost: 132_910_00,
     paidCost: 132_910_00,

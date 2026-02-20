@@ -17,7 +17,7 @@ const faqItems = [
   {
     question: 'Quanto tempo para implantar um software de escalas médicas no hospital?',
     answer:
-      'A implantação pode iniciar por uma unidade piloto. Em geral, o primeiro ciclo entra em operação em poucos dias, com migração gradual para as demais áreas.',
+      'A implantação pode iniciar por uma unidade piloto. Em geral, o primeiro mês entra em operação em poucos dias, com migração gradual para as demais áreas.',
   },
   {
     question: 'A plataforma atende hospital e clínica na mesma operação?',
