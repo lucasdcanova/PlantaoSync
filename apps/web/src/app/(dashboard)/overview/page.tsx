@@ -37,6 +37,7 @@ import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { InfoTooltip } from '@/components/ui/info-tooltip'
 import { DEMO_DASHBOARD_STATS, DEMO_PROFESSIONALS, DEMO_RECENT_ACTIVITY } from '@/lib/demo-data'
 
 type InsightPersona = 'gestor' | 'medico'
@@ -210,6 +211,7 @@ export default function OverviewPage() {
       icon: Users,
       color: 'brand' as const,
       subtitle: 'Aptos no hospital',
+      tooltip: 'Total de profissionais cadastrados e ativos na organização, aptos a receber convites de escala.',
     },
     {
       title: 'Escalas Ativas',
@@ -217,6 +219,7 @@ export default function OverviewPage() {
       icon: Calendar,
       color: 'green' as const,
       subtitle: 'Em acompanhamento',
+      tooltip: 'Escalas com status PUBLICADO sendo monitoradas agora. Inclui todos os turnos futuros ainda abertos para confirmação.',
     },
     {
       title: 'Confirmações',
@@ -224,6 +227,7 @@ export default function OverviewPage() {
       icon: CheckCircle,
       color: 'green' as const,
       trend: { value: 12, label: 'vs. mês anterior' },
+      tooltip: 'Número de plantões confirmados pelos profissionais nos últimos 7 dias. Calculado sobre todas as escalas ativas.',
     },
     {
       title: 'Custo Projetado',
@@ -231,6 +235,7 @@ export default function OverviewPage() {
       icon: DollarSign,
       color: 'amber' as const,
       subtitle: 'Escalas em curso',
+      tooltip: 'Soma dos valores de todos os plantões das escalas ativas deste mês, independente do status de confirmação.',
     },
   ]
 
@@ -259,6 +264,11 @@ export default function OverviewPage() {
                   <Badge variant="outline" className="border-border/70 text-[11px]">
                     Atualizado em tempo real
                   </Badge>
+                  <InfoTooltip
+                    title="Projeção EMS"
+                    description="EMS (Escala Mensal de Saúde) é a projeção do custo total das escalas do mês, calculada com base nos plantões publicados e suas taxas de confirmação esperadas."
+                    side="bottom"
+                  />
                 </div>
 
                 <div>
@@ -280,25 +290,46 @@ export default function OverviewPage() {
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="border-border/70 bg-card/70 rounded-xl border p-3">
-                    <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
-                      Confirmado
-                    </p>
+                    <div className="flex items-center gap-1">
+                      <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
+                        Confirmado
+                      </p>
+                      <InfoTooltip
+                        title="Confirmado"
+                        description="Valor já comprometido — soma dos plantões que tiveram confirmação formal pelo profissional no período selecionado."
+                        side="top"
+                      />
+                    </div>
                     <p className="text-foreground mt-1 text-sm font-semibold">
                       {formatCurrency(periodConfirmed)}
                     </p>
                   </div>
                   <div className="border-border/70 bg-card/70 rounded-xl border p-3">
-                    <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
-                      Gap atual
-                    </p>
+                    <div className="flex items-center gap-1">
+                      <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
+                        Gap atual
+                      </p>
+                      <InfoTooltip
+                        title="Gap Atual"
+                        description="Diferença entre o total projetado e o já confirmado. Representa a exposição financeira ainda não coberta por confirmações formais."
+                        side="top"
+                      />
+                    </div>
                     <p className="mt-1 text-sm font-semibold text-amber-600">
                       {formatCurrency(Math.max(0, periodProjected - periodConfirmed))}
                     </p>
                   </div>
                   <div className="border-border/70 bg-card/70 rounded-xl border p-3">
-                    <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
-                      Pressão média
-                    </p>
+                    <div className="flex items-center gap-1">
+                      <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
+                        Pressão média
+                      </p>
+                      <InfoTooltip
+                        title="Pressão Média"
+                        description="Índice de urgência operacional baseado na proporção de plantões pendentes em relação ao total do período. Acima de 70% é considerado crítico."
+                        side="top"
+                      />
+                    </div>
                     <p className="text-foreground mt-1 text-sm font-semibold">
                       {Math.round(
                         emsProjectionSeries.reduce((sum, item) => sum + item.pressure, 0) /
@@ -405,11 +436,22 @@ export default function OverviewPage() {
             >
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-display text-foreground text-base font-semibold">
-                    {persona === 'gestor'
-                      ? 'Cobertura por frente assistencial'
-                      : 'Pulso de adesão médica'}
-                  </h3>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-display text-foreground text-base font-semibold">
+                      {persona === 'gestor'
+                        ? 'Cobertura por frente assistencial'
+                        : 'Pulso de adesão médica'}
+                    </h3>
+                    <InfoTooltip
+                      title={persona === 'gestor' ? 'Cobertura por frente assistencial' : 'Pulso de adesão médica'}
+                      description={
+                        persona === 'gestor'
+                          ? 'Cobertura % = plantões confirmados ÷ total de vagas × 100. Pendências = confirmações ainda aguardadas por setor assistencial.'
+                          : 'Aceite % = confirmações recebidas ÷ convites enviados × 100. Plantões concluídos = turnos já realizados por especialidade.'
+                      }
+                      side="top"
+                    />
+                  </div>
                   <p className="text-muted-foreground text-xs">
                     {persona === 'gestor'
                       ? 'Passe o mouse para inspecionar cobertura, pendências e alocação.'
@@ -510,9 +552,20 @@ export default function OverviewPage() {
               className="card-base p-5 xl:col-span-2"
             >
               <div className="mb-5 flex items-center justify-between gap-2">
-                <h3 className="font-display text-foreground text-base font-semibold">
-                  {persona === 'gestor' ? 'Composição operacional' : 'Status da força médica'}
-                </h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="font-display text-foreground text-base font-semibold">
+                    {persona === 'gestor' ? 'Composição operacional' : 'Status da força médica'}
+                  </h3>
+                  <InfoTooltip
+                    title={persona === 'gestor' ? 'Composição operacional' : 'Status da força médica'}
+                    description={
+                      persona === 'gestor'
+                        ? 'Distribuição das confirmações por status: Confirmados = aceites formais; Pendentes = aguardando resposta; Crítico = pendentes com plantão em menos de 48h.'
+                        : 'Distribuição dos profissionais por status: Em cobertura = em plantão agora; Ativo = disponível para escala; Indisponível = ausência ou bloqueio registrado.'
+                    }
+                    side="top"
+                  />
+                </div>
                 <Badge variant="outline" className="text-[11px]">
                   Interativo
                 </Badge>
@@ -591,9 +644,16 @@ export default function OverviewPage() {
                     <span className="font-display text-foreground text-4xl font-bold tracking-tight">
                       {occupancyRate}%
                     </span>
-                    <p className="text-muted-foreground mt-1 text-[11px] uppercase tracking-wider">
-                      Turnos preenchidos
-                    </p>
+                    <div className="mt-1 flex items-center gap-1">
+                      <p className="text-muted-foreground text-[11px] uppercase tracking-wider">
+                        Turnos preenchidos
+                      </p>
+                      <InfoTooltip
+                        title="Turnos Preenchidos"
+                        description="Percentual de vagas de plantão com pelo menos uma confirmação sobre o total de vagas abertas nas escalas ativas. Meta ideal: acima de 85%."
+                        side="right"
+                      />
+                    </div>
                   </div>
 
                   <div className="bg-muted/60 relative h-2 overflow-hidden rounded-full">
@@ -607,25 +667,40 @@ export default function OverviewPage() {
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground inline-flex items-center gap-1">
+                      <span className="text-muted-foreground inline-flex items-center gap-1.5">
                         <ShieldAlert className="h-3 w-3 text-amber-500" />
                         Pendências críticas
+                        <InfoTooltip
+                          title="Pendências Críticas"
+                          description="Confirmações não recebidas em plantões que iniciam em menos de 48h. Requerem ação imediata do gestor."
+                          side="right"
+                        />
                       </span>
                       <span className="text-foreground font-semibold">{pendingConfirmations}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground inline-flex items-center gap-1">
+                      <span className="text-muted-foreground inline-flex items-center gap-1.5">
                         <Stethoscope className="text-brand-600 h-3 w-3" />
                         Médicos em cobertura
+                        <InfoTooltip
+                          title="Médicos em Cobertura"
+                          description="Profissionais com plantão em andamento neste exato momento, conforme os horários registrados nas escalas ativas."
+                          side="right"
+                        />
                       </span>
                       <span className="text-foreground font-semibold">
                         {doctorMix.find((item) => item.name === 'Em cobertura')?.value ?? 0}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground inline-flex items-center gap-1">
+                      <span className="text-muted-foreground inline-flex items-center gap-1.5">
                         <TrendingUp className="h-3 w-3 text-green-600" />
                         Confirmações na semana
+                        <InfoTooltip
+                          title="Confirmações na Semana"
+                          description="Total de confirmações aceitas pelos profissionais nos últimos 7 dias corridos, considerando todas as escalas ativas."
+                          side="right"
+                        />
                       </span>
                       <span className="text-foreground font-semibold">{confirmedThisWeek}</span>
                     </div>

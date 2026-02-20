@@ -11,6 +11,7 @@ import {
   ShieldAlert,
   TrendingUp,
 } from 'lucide-react'
+import { InfoTooltip } from '@/components/ui/info-tooltip'
 import { motion } from 'framer-motion'
 import { parseISO } from 'date-fns'
 import {
@@ -179,6 +180,11 @@ export default function DoctorOverviewPage() {
               <Badge variant="outline" className="text-[11px]">
                 Resumo médico
               </Badge>
+              <InfoTooltip
+                title="Projeção EMS"
+                description="Projeção dos seus ganhos com base nos plantões confirmados deste mês. O potencial inclui oportunidades abertas que você ainda pode aceitar para aumentar sua receita."
+                side="bottom"
+              />
             </div>
 
             <p className="text-muted-foreground mt-4 text-xs uppercase tracking-[0.18em]">
@@ -194,7 +200,14 @@ export default function DoctorOverviewPage() {
 
             <div className="mt-4 space-y-2">
               <div className="text-muted-foreground flex items-center justify-between text-[11px] uppercase tracking-wide">
-                <span>Execução da meta EMS</span>
+                <span className="inline-flex items-center gap-1">
+                  Execução da meta EMS
+                  <InfoTooltip
+                    title="Execução da Meta EMS"
+                    description="Percentual da sua projeção atual em relação à meta EMS do mês, calculada como o maior valor entre sua projeção confirmada e o potencial total de oportunidades abertas."
+                    side="top"
+                  />
+                </span>
                 <span className="text-foreground font-semibold">{emsProgress}%</span>
               </div>
               <div className="bg-brand-100/70 h-2 overflow-hidden rounded-full">
@@ -293,28 +306,56 @@ export default function DoctorOverviewPage() {
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <article className="border-border bg-card shadow-card rounded-2xl border p-5">
-          <p className="text-muted-foreground text-xs uppercase tracking-wide">
-            Plantões disponíveis
-          </p>
+          <div className="flex items-center gap-1">
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">
+              Plantões disponíveis
+            </p>
+            <InfoTooltip
+              title="Plantões Disponíveis"
+              description="Total de plantões publicados pelo hospital que estão abertos para confirmação, considerando sua especialidade e os turnos ainda não preenchidos."
+              side="top"
+            />
+          </div>
           <p className="font-display text-foreground mt-2 text-2xl font-bold">
             {availableShifts.length}
           </p>
           <p className="text-muted-foreground text-xs">abertos para confirmação</p>
         </article>
         <article className="border-border bg-card shadow-card rounded-2xl border p-5">
-          <p className="text-muted-foreground text-xs uppercase tracking-wide">
-            Confirmados no mês
-          </p>
+          <div className="flex items-center gap-1">
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">
+              Confirmados no mês
+            </p>
+            <InfoTooltip
+              title="Confirmados no Mês"
+              description="Plantões que você aceitou e que não foram cancelados neste mês calendário. Inclui plantões passados e futuros já confirmados."
+              side="top"
+            />
+          </div>
           <p className="font-display text-foreground mt-2 text-2xl font-bold">{confirmedInMonth}</p>
           <p className="text-muted-foreground text-xs">{monthLabel}</p>
         </article>
         <article className="border-border bg-card shadow-card rounded-2xl border p-5">
-          <p className="text-muted-foreground text-xs uppercase tracking-wide">Trocas pendentes</p>
+          <div className="flex items-center gap-1">
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">Trocas pendentes</p>
+            <InfoTooltip
+              title="Trocas Pendentes"
+              description="Solicitações de troca de plantão que ainda aguardam resposta sua ou da coordenação. Trocas não respondidas podem expirar automaticamente."
+              side="top"
+            />
+          </div>
           <p className="font-display text-foreground mt-2 text-2xl font-bold">{pendingSwaps}</p>
           <p className="text-muted-foreground text-xs">aguardando decisão</p>
         </article>
         <article className="border-border bg-card shadow-card rounded-2xl border p-5">
-          <p className="text-muted-foreground text-xs uppercase tracking-wide">Upside de receita</p>
+          <div className="flex items-center gap-1">
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">Upside de receita</p>
+            <InfoTooltip
+              title="Upside de Receita"
+              description="Valor acumulado das 3 melhores oportunidades abertas disponíveis neste mês. Representa o ganho adicional que você pode alcançar confirmando esses plantões."
+              side="top"
+            />
+          </div>
           <p className="font-display text-foreground mt-2 text-2xl font-bold">
             {formatCurrency(upsideProjection)}
           </p>
@@ -326,9 +367,20 @@ export default function DoctorOverviewPage() {
         <article className="border-border bg-card shadow-card rounded-2xl border p-6 xl:col-span-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="font-display text-foreground text-lg font-bold">
-                Radar interativo de desempenho
-              </h2>
+              <div className="flex items-center gap-1.5">
+                <h2 className="font-display text-foreground text-lg font-bold">
+                  Radar interativo de desempenho
+                </h2>
+                <InfoTooltip
+                  title={lens === 'financeiro' ? 'Radar Financeiro' : 'Radar Assistencial'}
+                  description={
+                    lens === 'financeiro'
+                      ? 'Compara semana a semana: Confirmado = ganhos já garantidos pelos seus plantões aceitos; Potencial = Confirmado + valor das oportunidades abertas ainda disponíveis.'
+                      : 'Plantões = número de turnos realizados por setor neste mês; Pressão % = índice de complexidade calculado pela carga de pacientes (Baixa=1pt, Moderada=2pt, Alta=3pt).'
+                  }
+                  side="top"
+                />
+              </div>
               <p className="text-muted-foreground text-xs">
                 Alterne entre foco financeiro e assistencial para navegar pelos indicadores.
               </p>
@@ -432,7 +484,14 @@ export default function DoctorOverviewPage() {
 
         <article className="border-border bg-card shadow-card rounded-2xl border p-6 xl:col-span-2">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-foreground text-lg font-bold">Estado das trocas</h2>
+            <div className="flex items-center gap-1.5">
+              <h2 className="font-display text-foreground text-lg font-bold">Estado das trocas</h2>
+              <InfoTooltip
+                title="Estado das Trocas"
+                description="Distribuição das suas solicitações de troca de plantão por status: Pendentes = aguardando decisão; Aceitas = trocas aprovadas pela coordenação; Recusadas = não aprovadas."
+                side="top"
+              />
+            </div>
             <Badge variant="outline" className="text-[11px]">
               Interativo
             </Badge>
@@ -483,23 +542,38 @@ export default function DoctorOverviewPage() {
 
           <div className="mt-3 space-y-2 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground inline-flex items-center gap-1">
+              <span className="text-muted-foreground inline-flex items-center gap-1.5">
                 <ShieldAlert className="h-3.5 w-3.5 text-amber-500" />
                 Pendências urgentes
+                <InfoTooltip
+                  title="Pendências Urgentes"
+                  description="Trocas pendentes que requerem atenção imediata — a outra parte está aguardando sua resposta ou a data do plantão se aproxima."
+                  side="left"
+                />
               </span>
               <span className="text-foreground font-semibold">{pendingSwaps}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground inline-flex items-center gap-1">
+              <span className="text-muted-foreground inline-flex items-center gap-1.5">
                 <TrendingUp className="h-3.5 w-3.5 text-green-600" />
                 Plantões do mês
+                <InfoTooltip
+                  title="Plantões do Mês"
+                  description="Total de plantões na sua escala neste mês calendário, incluindo passados, futuros, confirmados e cancelados."
+                  side="left"
+                />
               </span>
               <span className="text-foreground font-semibold">{monthShifts.length}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground inline-flex items-center gap-1">
+              <span className="text-muted-foreground inline-flex items-center gap-1.5">
                 <Activity className="text-brand-600 h-3.5 w-3.5" />
                 Oportunidades abertas
+                <InfoTooltip
+                  title="Oportunidades Abertas"
+                  description="Plantões publicados pelo hospital disponíveis para você confirmar neste mês. Confirmar oportunidades aumenta sua projeção EMS."
+                  side="left"
+                />
               </span>
               <span className="text-foreground font-semibold">{monthOpportunities.length}</span>
             </div>

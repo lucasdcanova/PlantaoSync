@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
+import { InfoTooltip } from '@/components/ui/info-tooltip'
 
 interface KpiCardProps {
   title: string
@@ -14,6 +15,7 @@ interface KpiCardProps {
   color?: 'brand' | 'green' | 'amber' | 'red'
   loading?: boolean
   index?: number
+  tooltip?: string
 }
 
 const colorMap = {
@@ -48,6 +50,7 @@ export function KpiCard({
   color = 'brand',
   loading = false,
   index = 0,
+  tooltip,
 }: KpiCardProps) {
   const colors = colorMap[color]
 
@@ -72,8 +75,13 @@ export function KpiCard({
       className="group card-base card-hover p-5"
     >
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">{title}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80 truncate">
+              {title}
+            </p>
+            {tooltip && <InfoTooltip title={title} description={tooltip} side="top" />}
+          </div>
           <div className="mt-1">
             <motion.span
               initial={{ opacity: 0 }}
@@ -86,7 +94,7 @@ export function KpiCard({
           </div>
         </div>
         <div className={cn(
-          'flex h-7 w-7 items-center justify-center rounded-lg border border-border/40 transition-shadow',
+          'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border/40 transition-shadow ml-2',
           colors.bg
         )}>
           <Icon className={cn('h-3.5 w-3.5', colors.icon)} />
