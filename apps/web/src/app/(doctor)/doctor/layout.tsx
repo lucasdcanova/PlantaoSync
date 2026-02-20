@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -42,6 +42,7 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
   const router = useRouter()
   const { isAuthenticated, user, logout } = useAuthStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [logoAnimating, setLogoAnimating] = useState(false)
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
@@ -52,6 +53,12 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
       router.replace('/overview')
     }
   }, [isAuthenticated, router, user])
+
+  const handleLogoTap = useCallback(() => {
+    if (logoAnimating) return
+    setLogoAnimating(true)
+    setTimeout(() => setLogoAnimating(false), 600)
+  }, [logoAnimating])
 
   if (!isAuthenticated || !user || user.role !== 'PROFESSIONAL') return null
 
@@ -133,17 +140,10 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto pb-24 lg:pb-0">
-          {/* Mobile header */}
-          <header className="border-border bg-card/92 fixed inset-x-0 top-0 z-40 border-b px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-xl lg:hidden">
-            <div className="mx-auto flex w-full max-w-[1680px] items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="logo-container-light !shadow-subtle !rounded-lg !p-1">
-                  <ProductLogo variant="mark" className="h-6 w-6" imageClassName="h-full w-full" />
-                </div>
-                <div>
-                  <p className="text-foreground text-sm font-semibold">Portal Médico</p>
-                </div>
-              </div>
+          {/* Mobile header — SOLID background, centered logo */}
+          <header className="mobile-header-solid">
+            <div className="mobile-header-inner">
+              {/* Left: Avatar */}
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user.avatarUrl} />
@@ -151,6 +151,31 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
                     {getInitials(user.name)}
                   </AvatarFallback>
                 </Avatar>
+                <div className="lg:hidden">
+                  <p className="text-foreground text-xs font-medium leading-tight">Olá,</p>
+                  <p className="text-muted-foreground text-[10px] leading-tight">
+                    {user.name?.split(' ')[0]}
+                  </p>
+                </div>
+              </div>
+
+              {/* Center: Logo with notch */}
+              <div className="header-logo-center">
+                <motion.div
+                  className={cn('header-logo-orb', logoAnimating && 'logo-animating')}
+                  onClick={handleLogoTap}
+                  whileTap={{ scale: 0.92 }}
+                >
+                  <ProductLogo
+                    variant="mark"
+                    className="h-7 w-7"
+                    imageClassName="h-full w-full"
+                  />
+                </motion.div>
+              </div>
+
+              {/* Right: Menu */}
+              <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -161,9 +186,11 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
                 </Button>
               </div>
             </div>
+            {/* Notch visual cove */}
+            <div className="mobile-header-notch" />
           </header>
 
-          <div className="h-[calc(68px+env(safe-area-inset-top))] lg:hidden" />
+          <div className="mobile-header-spacer" />
           <RouteTransition className="p-4 sm:p-6">{children}</RouteTransition>
         </main>
       </div>

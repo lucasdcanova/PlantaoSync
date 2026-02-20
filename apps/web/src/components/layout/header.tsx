@@ -23,7 +23,8 @@ export function Header({ title, subtitle }: HeaderProps) {
 
   return (
     <>
-      <header className="border-border bg-card/92 fixed inset-x-0 top-0 z-50 min-h-[calc(68px+env(safe-area-inset-top))] border-b px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-md sm:px-6 lg:sticky lg:top-0 lg:min-h-0 lg:pt-3">
+      {/* Desktop-only page header (mobile header is in layout) */}
+      <header className="hidden lg:sticky lg:top-0 lg:z-50 lg:block lg:border-b lg:border-border lg:bg-card lg:px-6 lg:py-3">
         <div className="mx-auto flex w-full max-w-[1680px] items-center justify-between gap-4">
           <div>
             <h1 className="font-display text-foreground text-lg font-semibold sm:text-xl">
@@ -60,7 +61,14 @@ export function Header({ title, subtitle }: HeaderProps) {
           </div>
         </div>
       </header>
-      <div className="h-[calc(68px+env(safe-area-inset-top))] lg:hidden" />
+
+      {/* Mobile: page title (smaller, below the main header) */}
+      <div className="px-4 pt-3 lg:hidden">
+        <h1 className="font-display text-foreground text-base font-semibold">{title}</h1>
+        {subtitle ? (
+          <p className="text-muted-foreground text-[11px]">{subtitle}</p>
+        ) : null}
+      </div>
     </>
   )
 }

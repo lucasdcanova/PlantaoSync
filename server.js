@@ -7,6 +7,7 @@
 const path = require('path')
 const http = require('http')
 const { createRequire } = require('module')
+const { execSync } = require('child_process')
 
 // ── Workspace paths ──────────────────────────────────────────────────
 const API_DIR = path.join(__dirname, 'api')
@@ -126,6 +127,23 @@ async function main() {
         logger.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`)
     })
 }
+
+// ── Run database migrations before starting ──────────────────────────
+function runMigrations() {
+    console.log('🔄 Running database migrations...')
+    try {
+        execSync('pnpm --filter=api run db:migrate:prod', {
+            cwd: __dirname,
+            stdio: 'inherit',
+        })
+        console.log('✅ Database migrations completed')
+    } catch (err) {
+        console.error('❌ Migration failed:', err.message)
+        process.exit(1)
+    }
+}
+
+runMigrations()
 
 main().catch((err) => {
     console.error('❌ Failed to start unified server:', err)
