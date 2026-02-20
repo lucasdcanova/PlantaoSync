@@ -26,7 +26,9 @@ function buildReportCsv() {
     'Dias de plantao',
     'Horas realizadas',
     'Numero de plantoes',
-    'Carga fixa (%)',
+    'Plantoes cedidos pelo gestor',
+    'Plantoes trocados',
+    'Taxa de troca sobre cedidos (%)',
     'Ultimo plantao',
   ]
 
@@ -37,7 +39,9 @@ function buildReportCsv() {
       String(row.daysWorked),
       String(row.totalHours),
       String(row.shiftsCount),
-      String(row.fixedCoverageRate),
+      String(row.managerGrantedShifts),
+      String(row.swappedGrantedShifts),
+      String(row.grantedShiftsSwapRate),
       row.lastShiftAt,
     ]
       .map((value) => `"${value.replaceAll('"', '""')}"`)
@@ -50,8 +54,8 @@ function buildReportCsv() {
 export default function ReportsPage() {
   const schedules = useSchedulesStore((state) => state.schedules)
 
-  const doctorsOver70Percent = useMemo(
-    () => DEMO_MONTHLY_DOCTOR_REPORT.filter((row) => row.fixedCoverageRate > 70),
+  const doctorsWithHighGrantedShiftSwapRate = useMemo(
+    () => DEMO_MONTHLY_DOCTOR_REPORT.filter((row) => row.grantedShiftsSwapRate > 70),
     [],
   )
 
@@ -134,7 +138,7 @@ export default function ReportsPage() {
                     Plantões
                   </th>
                   <th className="border-border bg-background text-muted-foreground border-b px-3 py-2 text-left text-[11px] uppercase tracking-wide">
-                    Carga fixa
+                    Trocas sobre cedidos
                   </th>
                 </tr>
               </thead>
@@ -159,12 +163,13 @@ export default function ReportsPage() {
                     <td className="border-border/70 border-b px-3 py-2 text-sm">
                       <Badge
                         className={
-                          row.fixedCoverageRate > 70
+                          row.grantedShiftsSwapRate > 70
                             ? 'border-amber-200 bg-amber-50 text-amber-700'
                             : 'border-green-200 bg-green-50 text-green-700'
                         }
                       >
-                        {row.fixedCoverageRate}%
+                        {row.grantedShiftsSwapRate}% ({row.swappedGrantedShifts}/
+                        {row.managerGrantedShifts})
                       </Badge>
                     </td>
                   </tr>
@@ -177,28 +182,29 @@ export default function ReportsPage() {
         <section className="grid gap-4 xl:grid-cols-3">
           <article className="border-border bg-card shadow-card rounded-2xl border p-5">
             <h3 className="font-display text-foreground text-base font-semibold">
-              Alerta de concentração
+              Alerta de trocas acima de 70%
             </h3>
             <p className="text-muted-foreground mt-1 text-xs">
-              Plantonistas fixos acima de 70% da carga mensal.
+              Plantonistas que trocaram mais de 70% dos plantões cedidos pelo gestor.
             </p>
 
             <div className="mt-4 space-y-2">
-              {doctorsOver70Percent.length > 0 ? (
-                doctorsOver70Percent.map((doctor) => (
+              {doctorsWithHighGrantedShiftSwapRate.length > 0 ? (
+                doctorsWithHighGrantedShiftSwapRate.map((doctor) => (
                   <div
                     key={doctor.professionalId}
                     className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2"
                   >
                     <p className="text-sm font-medium text-amber-800">{doctor.name}</p>
                     <p className="text-xs text-amber-700">
-                      {doctor.fixedCoverageRate}% da carga mensal ({doctor.totalHours}h)
+                      {doctor.grantedShiftsSwapRate}% dos plantões cedidos (
+                      {doctor.swappedGrantedShifts}/{doctor.managerGrantedShifts})
                     </p>
                   </div>
                 ))
               ) : (
                 <p className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-                  Nenhum profissional acima de 70%.
+                  Nenhum profissional com troca acima de 70% dos plantões cedidos.
                 </p>
               )}
             </div>

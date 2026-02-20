@@ -352,7 +352,9 @@ export interface DemoMonthlyDoctorReportRow {
   daysWorked: number
   totalHours: number
   shiftsCount: number
-  fixedCoverageRate: number
+  managerGrantedShifts: number
+  swappedGrantedShifts: number
+  grantedShiftsSwapRate: number
   lastShiftAt: string
 }
 
@@ -364,7 +366,9 @@ export const DEMO_MONTHLY_DOCTOR_REPORT: DemoMonthlyDoctorReportRow[] = [
     daysWorked: 18,
     totalHours: 192,
     shiftsCount: 16,
-    fixedCoverageRate: 74,
+    managerGrantedShifts: 10,
+    swappedGrantedShifts: 8,
+    grantedShiftsSwapRate: 80,
     lastShiftAt: '2026-02-19',
   },
   {
@@ -374,7 +378,9 @@ export const DEMO_MONTHLY_DOCTOR_REPORT: DemoMonthlyDoctorReportRow[] = [
     daysWorked: 14,
     totalHours: 144,
     shiftsCount: 12,
-    fixedCoverageRate: 58,
+    managerGrantedShifts: 9,
+    swappedGrantedShifts: 4,
+    grantedShiftsSwapRate: 44,
     lastShiftAt: '2026-02-17',
   },
   {
@@ -384,7 +390,9 @@ export const DEMO_MONTHLY_DOCTOR_REPORT: DemoMonthlyDoctorReportRow[] = [
     daysWorked: 16,
     totalHours: 168,
     shiftsCount: 14,
-    fixedCoverageRate: 67,
+    managerGrantedShifts: 11,
+    swappedGrantedShifts: 7,
+    grantedShiftsSwapRate: 64,
     lastShiftAt: '2026-02-20',
   },
   {
@@ -394,7 +402,9 @@ export const DEMO_MONTHLY_DOCTOR_REPORT: DemoMonthlyDoctorReportRow[] = [
     daysWorked: 2,
     totalHours: 24,
     shiftsCount: 2,
-    fixedCoverageRate: 11,
+    managerGrantedShifts: 3,
+    swappedGrantedShifts: 0,
+    grantedShiftsSwapRate: 0,
     lastShiftAt: '2025-10-28',
   },
 ]
