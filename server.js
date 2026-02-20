@@ -36,17 +36,9 @@ try {
 const PORT = parseInt(process.env.PORT || '3001', 10)
 
 async function main() {
-    // ── 1. Boot NestJS (API) ─────────────────────────────────────────
+    // ── 1. Boot NestJS (API) on its own Express instance ─────────────
     const { NestFactory } = resolve('@nestjs/core')
     const { ValidationPipe, Logger } = resolve('@nestjs/common')
-    const platformExpress = resolve('@nestjs/platform-express')
-    const { ExpressAdapter } = platformExpress
-
-    // express is a transitive dep of @nestjs/platform-express.
-    // In pnpm strict mode, we need to resolve it from that package's context.
-    const platformExpressPath = apiRequire.resolve('@nestjs/platform-express')
-    const platformRequire = createRequire(platformExpressPath)
-    const express = platformRequire('express')
 
     const cookieParser = resolve('cookie-parser')
     const helmet = resolve('helmet')
@@ -58,10 +50,8 @@ async function main() {
 
     const logger = new Logger('UnifiedServer')
 
-    // Create a shared Express instance
-    const expressApp = express()
-
-    const nestApp = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), {
+    // Let NestJS create its own Express adapter (default behavior)
+    const nestApp = await NestFactory.create(AppModule, {
         logger: ['error', 'warn', 'log', 'debug'],
     })
 
@@ -101,8 +91,9 @@ async function main() {
     nestApp.useGlobalFilters(new HttpExceptionFilter())
     nestApp.useGlobalInterceptors(new LoggingInterceptor())
 
-    // Initialize NestJS (registers all routes on the Express instance)
+    // Initialize NestJS but don't listen yet
     await nestApp.init()
+    const nestHandler = nestApp.getHttpAdapter().getInstance()
     logger.log('✅ NestJS API initialized')
 
     // ── 2. Boot Next.js ──────────────────────────────────────────────
@@ -115,15 +106,19 @@ async function main() {
     const nextHandler = nextApp.getRequestHandler()
     logger.log('✅ Next.js frontend initialized')
 
-    // ── 3. Mount Next.js as fallback on Express ──────────────────────
-    // API routes are already registered by NestJS above.
-    // Everything else goes to Next.js.
-    expressApp.all('*', (req, res) => {
-        return nextHandler(req, res)
+    // ── 3. Create unified HTTP server ────────────────────────────────
+    // Route /api/v1/* to NestJS, everything else to Next.js
+    const server = http.createServer((req, res) => {
+        const url = req.url || '/'
+        if (url.startsWith('/api/v1') || url.startsWith('/api/docs')) {
+            // Forward to NestJS Express handler
+            nestHandler(req, res)
+        } else {
+            // Forward to Next.js
+            nextHandler(req, res)
+        }
     })
 
-    // ── 4. Start listening ───────────────────────────────────────────
-    const server = http.createServer(expressApp)
     server.listen(PORT, '0.0.0.0', () => {
         logger.log(`🚀 Unified server running on port ${PORT}`)
         logger.log(`   ├── API:      /api/v1`)
