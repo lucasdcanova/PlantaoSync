@@ -178,10 +178,13 @@ export const DEMO_RECENT_ACTIVITY: DemoActivityItem[] = [
 
 export interface DemoProfessional {
   id: string
+  userId: string
   name: string
+  email: string
   crm: string
   specialty: string
   status: 'Ativo' | 'Em cobertura' | 'Indisponível'
+  hospitalStatus: 'ATIVO' | 'REMOVIDO'
   acceptanceRate: number
   completedShifts: number
   nextAvailability: string
@@ -191,10 +194,13 @@ export interface DemoProfessional {
 export const DEMO_PROFESSIONALS: DemoProfessional[] = [
   {
     id: 'pro-1',
+    userId: 'demo-doctor-1',
     name: 'Dra. Ana Costa',
+    email: DEMO_DOCTOR_EMAIL,
     crm: 'CRM-SP 123456',
     specialty: 'Intensivista',
     status: 'Em cobertura',
+    hospitalStatus: 'ATIVO',
     acceptanceRate: 96,
     completedShifts: 28,
     nextAvailability: '20/02/2026 19:00',
@@ -202,10 +208,13 @@ export const DEMO_PROFESSIONALS: DemoProfessional[] = [
   },
   {
     id: 'pro-2',
+    userId: 'doctor-demo-2',
     name: 'Dr. Carlos Mendes',
+    email: 'carlos.mendes@hospital.demo',
     crm: 'CRM-SP 224411',
     specialty: 'Clínica Médica',
     status: 'Ativo',
+    hospitalStatus: 'ATIVO',
     acceptanceRate: 91,
     completedShifts: 24,
     nextAvailability: '20/02/2026 07:00',
@@ -213,10 +222,13 @@ export const DEMO_PROFESSIONALS: DemoProfessional[] = [
   },
   {
     id: 'pro-3',
+    userId: 'doctor-demo-3',
     name: 'Dra. Bianca Farias',
+    email: 'bianca.farias@hospital.demo',
     crm: 'CRM-SP 778899',
     specialty: 'Emergência',
     status: 'Ativo',
+    hospitalStatus: 'ATIVO',
     acceptanceRate: 94,
     completedShifts: 31,
     nextAvailability: '20/02/2026 13:00',
@@ -224,10 +236,13 @@ export const DEMO_PROFESSIONALS: DemoProfessional[] = [
   },
   {
     id: 'pro-4',
+    userId: 'doctor-demo-4',
     name: 'Dr. Felipe Rocha',
+    email: 'felipe.rocha@hospital.demo',
     crm: 'CRM-SP 332211',
     specialty: 'Anestesiologia',
     status: 'Indisponível',
+    hospitalStatus: 'ATIVO',
     acceptanceRate: 88,
     completedShifts: 19,
     nextAvailability: '21/02/2026 07:00',
@@ -513,10 +528,14 @@ export const DEMO_DOCTOR_AVAILABLE_SHIFTS: DemoDoctorShiftOpportunity[] = [
 
 export interface DemoDoctorMyShift {
   id: string
+  professionalId: string
+  professionalUserId: string
+  sectorId: string
   date: string
   startTime: string
   endTime: string
   sectorName: string
+  specialty: string
   status: 'CONFIRMADO' | 'CONCLUIDO' | 'TROCA_SOLICITADA' | 'CANCELADO'
   value: number
   patientLoad: 'Baixa' | 'Moderada' | 'Alta'
@@ -526,10 +545,14 @@ export interface DemoDoctorMyShift {
 export const DEMO_DOCTOR_MY_SHIFTS: DemoDoctorMyShift[] = [
   {
     id: 'my-1',
+    professionalId: 'pro-1',
+    professionalUserId: 'demo-doctor-1',
+    sectorId: 'sec-uti-adulto',
     date: '2026-02-18',
     startTime: '07:00',
     endTime: '19:00',
     sectorName: 'UTI Adulto',
+    specialty: 'Medicina Intensiva',
     status: 'CONCLUIDO',
     value: 140_000,
     patientLoad: 'Alta',
@@ -537,30 +560,42 @@ export const DEMO_DOCTOR_MY_SHIFTS: DemoDoctorMyShift[] = [
   },
   {
     id: 'my-2',
+    professionalId: 'pro-1',
+    professionalUserId: 'demo-doctor-1',
+    sectorId: 'sec-ps',
     date: '2026-02-19',
     startTime: '19:00',
     endTime: '07:00',
     sectorName: 'Pronto-Socorro',
+    specialty: 'Emergência',
     status: 'CONCLUIDO',
     value: 150_000,
     patientLoad: 'Alta',
   },
   {
     id: 'my-3',
+    professionalId: 'pro-1',
+    professionalUserId: 'demo-doctor-1',
+    sectorId: 'sec-uti-adulto',
     date: '2026-02-21',
     startTime: '19:00',
     endTime: '07:00',
     sectorName: 'UTI Adulto',
+    specialty: 'Medicina Intensiva',
     status: 'CONFIRMADO',
     value: 145_000,
     patientLoad: 'Moderada',
   },
   {
     id: 'my-4',
+    professionalId: 'pro-1',
+    professionalUserId: 'demo-doctor-1',
+    sectorId: 'sec-clinica',
     date: '2026-02-25',
     startTime: '07:00',
     endTime: '19:00',
     sectorName: 'Clínica Médica',
+    specialty: 'Clínica Médica',
     status: 'TROCA_SOLICITADA',
     value: 95_000,
     patientLoad: 'Baixa',
