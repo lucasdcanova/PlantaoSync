@@ -49,22 +49,24 @@ function HighlightedTabIcon({
   return (
     <View
       style={{
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: 62,
+        height: 62,
+        borderRadius: 31,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: BRAND,
+        borderWidth: 4,
+        borderColor: '#ffffff',
         shadowColor: BRAND,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
-        transform: [{ translateY: -12 }],
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 10,
+        elevation: 10,
+        transform: [{ translateY: -18 }],
       }}
     >
       <Icon
-        size={24}
+        size={28}
         color="#ffffff"
         strokeWidth={2.5}
       />

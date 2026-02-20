@@ -39,8 +39,7 @@ export function MobileNav() {
                 <span className="bottom-nav-calendar-ring" />
                 <Icon
                   className={cn(
-                    'bottom-nav-icon h-6 w-6',
-                    active ? 'text-white' : 'text-brand-700',
+                    'bottom-nav-icon h-7 w-7 text-white',
                   )}
                 />
               </span>
