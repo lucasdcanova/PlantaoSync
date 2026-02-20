@@ -268,23 +268,36 @@
   .mobile-header-notch {
     position: absolute;
     left: 50%;
-    bottom: -20px;
+    bottom: -18px;
     transform: translateX(-50%);
-    width: 72px;
-    height: 36px;
+    width: 80px;
+    height: 28px;
     z-index: 2;
     pointer-events: none;
   }
 
+  /* Main notch curve */
   .mobile-header-notch::before {
     content: '';
     position: absolute;
     inset: 0;
     background-color: var(--header-bg);
-    border-radius: 0 0 50% 50%;
+    border-radius: 0 0 50% 50% / 0 0 100% 100%;
     border-left: 1px solid hsl(var(--border));
     border-right: 1px solid hsl(var(--border));
     border-bottom: 1px solid hsl(var(--border));
+  }
+
+  /* Side masks to hide parent border behind notch */
+  .mobile-header-notch::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    height: 2px;
+    background-color: var(--header-bg);
+    z-index: 1;
   }
 
   /* Centered logo container in header */
@@ -309,11 +322,9 @@
     width: 44px;
     height: 44px;
     border-radius: 14px;
-    background: linear-gradient(
-      145deg,
-      rgba(78, 205, 196, 0.12) 0%,
-      rgba(43, 181, 171, 0.06) 100%
-    );
+    background: linear-gradient(145deg,
+        rgba(78, 205, 196, 0.12) 0%,
+        rgba(43, 181, 171, 0.06) 100%);
     border: 1.5px solid rgba(78, 205, 196, 0.25);
     box-shadow:
       0 2px 12px rgba(78, 205, 196, 0.12),
@@ -333,11 +344,9 @@
     position: absolute;
     inset: -3px;
     border-radius: 17px;
-    background: radial-gradient(
-      circle,
-      rgba(78, 205, 196, 0.15) 0%,
-      transparent 70%
-    );
+    background: radial-gradient(circle,
+        rgba(78, 205, 196, 0.15) 0%,
+        transparent 70%);
     opacity: 0;
     transition: opacity 400ms ease;
     pointer-events: none;
@@ -356,11 +365,9 @@
   /* Dark mode adjustments for logo orb */
   [data-theme='dark'] .header-logo-orb,
   .dark .header-logo-orb {
-    background: linear-gradient(
-      145deg,
-      rgba(78, 205, 196, 0.15) 0%,
-      rgba(43, 181, 171, 0.08) 100%
-    );
+    background: linear-gradient(145deg,
+        rgba(78, 205, 196, 0.15) 0%,
+        rgba(43, 181, 171, 0.08) 100%);
     border-color: rgba(78, 205, 196, 0.3);
     box-shadow:
       0 2px 16px rgba(78, 205, 196, 0.18),
@@ -369,11 +376,9 @@
 
   [data-theme='dark'] .header-logo-orb::before,
   .dark .header-logo-orb::before {
-    background: radial-gradient(
-      circle,
-      rgba(78, 205, 196, 0.25) 0%,
-      transparent 70%
-    );
+    background: radial-gradient(circle,
+        rgba(78, 205, 196, 0.25) 0%,
+        transparent 70%);
   }
 
   /* Header spacer */
@@ -622,12 +627,10 @@
   }
 
   .skeleton {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--muted)) 25%,
-      hsl(var(--muted-foreground) / 0.08) 50%,
-      hsl(var(--muted)) 75%
-    );
+    background: linear-gradient(90deg,
+        hsl(var(--muted)) 25%,
+        hsl(var(--muted-foreground) / 0.08) 50%,
+        hsl(var(--muted)) 75%);
     background-size: 200% 100%;
     animation: shimmer 1.4s linear infinite;
     @apply rounded-md;
