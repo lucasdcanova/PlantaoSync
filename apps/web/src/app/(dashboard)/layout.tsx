@@ -69,7 +69,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 onClick={handleLogoTap}
                 whileTap={{ scale: 0.92 }}
               >
-                <ProductLogo variant="mark" className="h-7 w-7" imageClassName="h-full w-full" />
+                <ProductLogo
+                  variant="mark"
+                  className="header-logo-mark"
+                  imageClassName="h-full w-full"
+                />
               </motion.div>
             </div>
 

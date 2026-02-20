@@ -2,14 +2,7 @@
 
 import { useEffect, useCallback, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import {
-  Activity,
-  CalendarDays,
-  CalendarPlus2,
-  Clock3,
-  LogOut,
-  Repeat2,
-} from 'lucide-react'
+import { Activity, CalendarDays, CalendarPlus2, Clock3, LogOut, Repeat2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -168,7 +161,11 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
                   onClick={handleLogoTap}
                   whileTap={{ scale: 0.92 }}
                 >
-                  <ProductLogo variant="mark" className="h-7 w-7" imageClassName="h-full w-full" />
+                  <ProductLogo
+                    variant="mark"
+                    className="header-logo-mark"
+                    imageClassName="h-full w-full"
+                  />
                 </motion.div>
               </div>
 
