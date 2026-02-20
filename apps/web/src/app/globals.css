@@ -235,6 +235,12 @@
      MOBILE HEADER — SOLID, NO TRANSPARENCY
      ======================================== */
   .mobile-header-solid {
+    --header-logo-orb-size: 70px;
+    --header-logo-orb-radius: 23px;
+    --header-notch-gap: 12px;
+    --header-notch-width: calc(var(--header-logo-orb-size) + (var(--header-notch-gap) * 2));
+    --header-notch-height: calc((var(--header-logo-orb-size) / 2) + var(--header-notch-gap) + 3px);
+    --header-notch-radius: calc(var(--header-logo-orb-radius) + var(--header-notch-gap));
     position: fixed;
     inset-inline: 0;
     top: 0;
@@ -273,8 +279,8 @@
     left: 50%;
     bottom: -42px;
     transform: translateX(-50%);
-    width: 94px;
-    height: 48px;
+    width: var(--header-notch-width);
+    height: var(--header-notch-height);
     z-index: 2;
     pointer-events: none;
   }
@@ -285,7 +291,7 @@
     position: absolute;
     inset: 0;
     background-color: var(--header-bg);
-    border-radius: 0 0 20px 20px;
+    border-radius: 0 0 var(--header-notch-radius) var(--header-notch-radius);
     border-left: 1px solid hsl(var(--border));
     border-right: 1px solid hsl(var(--border));
     border-bottom: 1px solid hsl(var(--border));
@@ -300,11 +306,12 @@
     position: absolute;
     top: -12px;
     left: 50%;
-    width: 94px;
+    width: var(--header-notch-width);
     height: 14px;
     transform: translateX(-50%);
     background:
-      linear-gradient(var(--header-bg), var(--header-bg)) center bottom / 90px 4px no-repeat,
+      linear-gradient(var(--header-bg), var(--header-bg)) center bottom /
+        calc(var(--header-notch-width) - 4px) 4px no-repeat,
       linear-gradient(hsl(var(--border)), hsl(var(--border))) left top / 1px 14px no-repeat,
       linear-gradient(hsl(var(--border)), hsl(var(--border))) right top / 1px 14px no-repeat;
     z-index: 1;
@@ -329,9 +336,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 70px;
-    height: 70px;
-    border-radius: 23px;
+    width: var(--header-logo-orb-size);
+    height: var(--header-logo-orb-size);
+    border-radius: var(--header-logo-orb-radius);
     background: linear-gradient(145deg, rgba(78, 205, 196, 0.12) 0%, rgba(43, 181, 171, 0.06) 100%);
     border: 1.5px solid rgba(78, 205, 196, 0.25);
     box-shadow:
