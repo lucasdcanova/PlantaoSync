@@ -11,12 +11,19 @@ const { createRequire } = require('module')
 // ── Workspace paths ──────────────────────────────────────────────────
 const API_DIR = path.join(__dirname, 'api')
 const WEB_DIR = path.join(__dirname, 'apps', 'web')
-const ROOT_DIR = __dirname
 
-// Create requirers scoped to each workspace so pnpm dependencies resolve
-const apiRequire = createRequire(path.join(API_DIR, 'package.json'))
-const webRequire = createRequire(path.join(WEB_DIR, 'package.json'))
-const rootRequire = createRequire(path.join(ROOT_DIR, 'package.json'))
+// Create scoped requirers for each workspace
+const apiRequire = createRequire(path.join(API_DIR, 'index.js'))
+const webRequire = createRequire(path.join(WEB_DIR, 'index.js'))
+
+// Helper: resolve a package trying multiple requirers in sequence
+function resolve(pkg) {
+    const requirers = [apiRequire, webRequire, require]
+    for (const req of requirers) {
+        try { return req(pkg) } catch { }
+    }
+    throw new Error(`Cannot resolve '${pkg}' from any workspace`)
+}
 
 // ── Load root .env ───────────────────────────────────────────────────
 try {
@@ -30,13 +37,19 @@ const PORT = parseInt(process.env.PORT || '3001', 10)
 
 async function main() {
     // ── 1. Boot NestJS (API) ─────────────────────────────────────────
-    // Use apiRequire to resolve packages from the api workspace
-    const { NestFactory } = apiRequire('@nestjs/core')
-    const { ValidationPipe, Logger } = apiRequire('@nestjs/common')
-    const { ExpressAdapter } = apiRequire('@nestjs/platform-express')
-    const express = apiRequire('express')
-    const cookieParser = apiRequire('cookie-parser')
-    const helmet = apiRequire('helmet')
+    const { NestFactory } = resolve('@nestjs/core')
+    const { ValidationPipe, Logger } = resolve('@nestjs/common')
+    const platformExpress = resolve('@nestjs/platform-express')
+    const { ExpressAdapter } = platformExpress
+
+    // express is a transitive dep of @nestjs/platform-express.
+    // In pnpm strict mode, we need to resolve it from that package's context.
+    const platformExpressPath = apiRequire.resolve('@nestjs/platform-express')
+    const platformRequire = createRequire(platformExpressPath)
+    const express = platformRequire('express')
+
+    const cookieParser = resolve('cookie-parser')
+    const helmet = resolve('helmet')
 
     // Import compiled NestJS app
     const { AppModule } = require('./api/dist/src/app.module')
