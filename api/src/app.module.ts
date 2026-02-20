@@ -16,6 +16,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ReportsModule } from './modules/reports/reports.module'
 import { FinancesModule } from './modules/finances/finances.module'
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module'
+import { StorageModule } from './modules/storage/storage.module'
+import { UploadsModule } from './modules/uploads/uploads.module'
 
 const shouldEnableNotifications =
   Boolean(process.env.REDIS_URL?.trim()) || Boolean(process.env.REDIS_HOST?.trim())
@@ -47,6 +49,8 @@ const shouldEnableNotifications =
     ReportsModule,
     FinancesModule,
     SubscriptionsModule,
+    StorageModule,
+    UploadsModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

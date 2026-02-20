@@ -43,3 +43,11 @@ services:
         sync: false
       - key: JWT_REFRESH_EXPIRES_IN
         value: "30d"
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_REGION
+        value: "sa-east-1"
+      - key: AWS_S3_BUCKET
+        value: "plantaosync-storage"
