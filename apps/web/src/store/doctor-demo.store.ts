@@ -86,10 +86,14 @@ export const useDoctorDemoStore = create<DoctorDemoState>()(
 
           const claimedShift: DemoDoctorMyShift = {
             id: `my-${shift.id}`,
+            professionalId: 'demo-professional',
+            professionalUserId: 'demo-doctor-1',
+            sectorId: shift.sectorId,
             date: shift.date,
             startTime: shift.startTime,
             endTime: shift.endTime,
             sectorName: shift.sectorName,
+            specialty: shift.specialty,
             status: 'CONFIRMADO',
             value: shift.value,
             patientLoad: 'Moderada',
