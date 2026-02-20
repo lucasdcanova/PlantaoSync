@@ -76,7 +76,8 @@ export default function OverviewPage() {
 
   const monthlyCost = stats?.monthlyCost ?? DEMO_DASHBOARD_STATS.monthlyCost
   const occupancyRate = stats?.occupancyRate ?? DEMO_DASHBOARD_STATS.occupancyRate
-  const pendingConfirmations = stats?.pendingConfirmations ?? DEMO_DASHBOARD_STATS.pendingConfirmations
+  const pendingConfirmations =
+    stats?.pendingConfirmations ?? DEMO_DASHBOARD_STATS.pendingConfirmations
   const confirmedThisWeek = stats?.confirmedThisWeek ?? DEMO_DASHBOARD_STATS.confirmedThisWeek
 
   const emsProjectionSeries = useMemo(() => {
@@ -107,7 +108,8 @@ export default function OverviewPage() {
 
   const periodProjected = emsProjectionSeries.reduce((sum, item) => sum + item.projected, 0)
   const periodConfirmed = emsProjectionSeries.reduce((sum, item) => sum + item.confirmed, 0)
-  const adherenceRate = periodProjected > 0 ? Math.round((periodConfirmed / periodProjected) * 100) : 0
+  const adherenceRate =
+    periodProjected > 0 ? Math.round((periodConfirmed / periodProjected) * 100) : 0
 
   const managerCoverageData = useMemo(
     () => [
@@ -140,7 +142,10 @@ export default function OverviewPage() {
   )
 
   const doctorSpecialtyData = useMemo(() => {
-    const grouped = new Map<string, { name: string; acceptanceSum: number; completed: number; members: number }>()
+    const grouped = new Map<
+      string,
+      { name: string; acceptanceSum: number; completed: number; members: number }
+    >()
 
     DEMO_PROFESSIONALS.forEach((professional) => {
       const current = grouped.get(professional.specialty)
@@ -173,7 +178,11 @@ export default function OverviewPage() {
     () => [
       { name: 'Confirmados', value: confirmedThisWeek, color: '#22c55e' },
       { name: 'Pendentes', value: pendingConfirmations, color: '#f59e0b' },
-      { name: 'Crítico', value: Math.max(1, Math.round(pendingConfirmations * 0.45)), color: '#ef4444' },
+      {
+        name: 'Crítico',
+        value: Math.max(1, Math.round(pendingConfirmations * 0.45)),
+        color: '#ef4444',
+      },
     ],
     [confirmedThisWeek, pendingConfirmations],
   )
@@ -226,22 +235,19 @@ export default function OverviewPage() {
   ]
 
   return (
-  <>
-      <Header
-        title="Central Operacional"
-        subtitle={formatDate(new Date(), "EEEE, dd 'de' MMMM")}
-      />
+    <>
+      <Header title="Central Operacional" subtitle={formatDate(new Date(), "EEEE, dd 'de' MMMM")} />
 
       <PageTransition>
-        <div className="p-4 sm:p-6 space-y-6">
+        <div className="space-y-6 p-4 sm:p-6">
           {/* Projeção EMS no topo */}
           <motion.section
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="relative overflow-hidden rounded-2xl border border-brand-200/50 bg-gradient-to-br from-brand-50/90 via-card to-brand-100/50 p-5 sm:p-6 shadow-brand"
+            className="border-brand-200/50 from-brand-50/90 via-card to-brand-100/50 shadow-brand relative overflow-hidden rounded-2xl border bg-gradient-to-br p-5 sm:p-6"
           >
-            <div className="pointer-events-none absolute -right-14 -top-16 h-52 w-52 rounded-full bg-brand-300/25 blur-3xl" />
+            <div className="bg-brand-300/25 pointer-events-none absolute -right-14 -top-16 h-52 w-52 rounded-full blur-3xl" />
             <div className="pointer-events-none absolute -bottom-16 left-8 h-44 w-44 rounded-full bg-green-300/20 blur-3xl" />
 
             <div className="relative grid gap-6 lg:grid-cols-[1.05fr_1fr] lg:items-end">
@@ -256,35 +262,44 @@ export default function OverviewPage() {
                 </div>
 
                 <div>
-                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  <p className="text-muted-foreground text-xs uppercase tracking-[0.18em]">
                     Escala mensal assistencial
                   </p>
                   {statsLoading ? (
                     <Skeleton className="mt-2 h-10 w-44" />
                   ) : (
-                    <h2 className="mt-1 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                    <h2 className="font-display text-foreground mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
                       {formatCurrency(window === '30d' ? monthlyCost : periodProjected)}
                     </h2>
                   )}
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Aderência de {adherenceRate}% entre projeção e confirmações do período selecionado.
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    Aderência de {adherenceRate}% entre projeção e confirmações do período
+                    selecionado.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Confirmado</p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">{formatCurrency(periodConfirmed)}</p>
+                  <div className="border-border/70 bg-card/70 rounded-xl border p-3">
+                    <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
+                      Confirmado
+                    </p>
+                    <p className="text-foreground mt-1 text-sm font-semibold">
+                      {formatCurrency(periodConfirmed)}
+                    </p>
                   </div>
-                  <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Gap atual</p>
+                  <div className="border-border/70 bg-card/70 rounded-xl border p-3">
+                    <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
+                      Gap atual
+                    </p>
                     <p className="mt-1 text-sm font-semibold text-amber-600">
                       {formatCurrency(Math.max(0, periodProjected - periodConfirmed))}
                     </p>
                   </div>
-                  <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Pressão média</p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">
+                  <div className="border-border/70 bg-card/70 rounded-xl border p-3">
+                    <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
+                      Pressão média
+                    </p>
+                    <p className="text-foreground mt-1 text-sm font-semibold">
                       {Math.round(
                         emsProjectionSeries.reduce((sum, item) => sum + item.pressure, 0) /
                           emsProjectionSeries.length,
@@ -295,10 +310,10 @@ export default function OverviewPage() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-border/60 bg-card/80 p-4 backdrop-blur">
+              <div className="border-border/60 bg-card/80 rounded-xl border p-4 backdrop-blur">
                 <div className="mb-3 flex items-center justify-between">
-                  <p className="text-xs font-medium text-foreground">Curva de execução</p>
-                  <div className="inline-flex rounded-full border border-border bg-background p-1">
+                  <p className="text-foreground text-xs font-medium">Curva de execução</p>
+                  <div className="border-border bg-background inline-flex rounded-full border p-1">
                     {[
                       { id: '7d', label: '7 dias' },
                       { id: '30d', label: '30 dias' },
@@ -310,7 +325,7 @@ export default function OverviewPage() {
                         className={cn(
                           'rounded-full px-3 py-1 text-[11px] font-medium transition-all',
                           window === option.id
-                            ? 'bg-brand-500 text-white shadow-brand'
+                            ? 'bg-brand-500 shadow-brand text-white'
                             : 'text-muted-foreground hover:text-foreground',
                         )}
                       >
@@ -334,7 +349,12 @@ export default function OverviewPage() {
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" opacity={0.2} />
-                      <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
                       <YAxis hide />
                       <Tooltip
                         cursor={{ stroke: '#94a3b8', strokeDasharray: '4 4' }}
@@ -381,20 +401,22 @@ export default function OverviewPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 280, damping: 26 }}
-              className="xl:col-span-3 card-base p-5"
+              className="card-base p-5 xl:col-span-3"
             >
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-display text-base font-semibold text-foreground">
-                    {persona === 'gestor' ? 'Cobertura por frente assistencial' : 'Pulso de adesão médica'}
+                  <h3 className="font-display text-foreground text-base font-semibold">
+                    {persona === 'gestor'
+                      ? 'Cobertura por frente assistencial'
+                      : 'Pulso de adesão médica'}
                   </h3>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {persona === 'gestor'
                       ? 'Passe o mouse para inspecionar cobertura, pendências e alocação.'
                       : 'Visão da coordenação sobre prontidão e produtividade das especialidades.'}
                   </p>
                 </div>
-                <div className="inline-flex rounded-full border border-border bg-background p-1">
+                <div className="border-border bg-background inline-flex rounded-full border p-1">
                   <button
                     type="button"
                     onClick={() => setPersona('gestor')}
@@ -424,7 +446,10 @@ export default function OverviewPage() {
 
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={persona === 'gestor' ? managerCoverageData : doctorSpecialtyData} barGap={12}>
+                  <BarChart
+                    data={persona === 'gestor' ? managerCoverageData : doctorSpecialtyData}
+                    barGap={12}
+                  >
                     <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" opacity={0.2} />
                     <XAxis
                       dataKey="name"
@@ -444,13 +469,33 @@ export default function OverviewPage() {
                     />
                     {persona === 'gestor' ? (
                       <>
-                        <Bar dataKey="coverage" name="Cobertura %" fill="#4ecdc4" radius={[8, 8, 0, 0]} />
-                        <Bar dataKey="pending" name="Pendências" fill="#f59e0b" radius={[8, 8, 0, 0]} />
+                        <Bar
+                          dataKey="coverage"
+                          name="Cobertura %"
+                          fill="#4ecdc4"
+                          radius={[8, 8, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="pending"
+                          name="Pendências"
+                          fill="#f59e0b"
+                          radius={[8, 8, 0, 0]}
+                        />
                       </>
                     ) : (
                       <>
-                        <Bar dataKey="acceptance" name="Aceite %" fill="#3b82f6" radius={[8, 8, 0, 0]} />
-                        <Bar dataKey="completed" name="Plantões concluídos" fill="#4ecdc4" radius={[8, 8, 0, 0]} />
+                        <Bar
+                          dataKey="acceptance"
+                          name="Aceite %"
+                          fill="#3b82f6"
+                          radius={[8, 8, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="completed"
+                          name="Plantões concluídos"
+                          fill="#4ecdc4"
+                          radius={[8, 8, 0, 0]}
+                        />
                       </>
                     )}
                   </BarChart>
@@ -462,10 +507,10 @@ export default function OverviewPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25, type: 'spring', stiffness: 280, damping: 26 }}
-              className="xl:col-span-2 card-base p-5"
+              className="card-base p-5 xl:col-span-2"
             >
               <div className="mb-5 flex items-center justify-between gap-2">
-                <h3 className="font-display text-base font-semibold text-foreground">
+                <h3 className="font-display text-foreground text-base font-semibold">
                   {persona === 'gestor' ? 'Composição operacional' : 'Status da força médica'}
                 </h3>
                 <Badge variant="outline" className="text-[11px]">
@@ -506,12 +551,12 @@ export default function OverviewPage() {
                 </ResponsiveContainer>
               </div>
 
-              <div className="mt-2 rounded-xl border border-border/70 bg-muted/20 p-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="border-border/70 bg-muted/20 mt-2 rounded-xl border p-3">
+                <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
                   Destaque atual
                 </p>
-                <p className="mt-1 text-sm font-semibold text-foreground">{activePieItem?.name}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-foreground mt-1 text-sm font-semibold">{activePieItem?.name}</p>
+                <p className="text-muted-foreground text-xs">
                   {activePieItem?.value} registros monitorados no momento.
                 </p>
               </div>
@@ -524,10 +569,10 @@ export default function OverviewPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, type: 'spring', stiffness: 300, damping: 30 }}
-              className="lg:col-span-2 card-base p-5"
+              className="card-base p-5 lg:col-span-2"
             >
               <div className="mb-5 flex items-center justify-between">
-                <h3 className="font-display text-sm font-semibold text-foreground italic">
+                <h3 className="font-display text-foreground text-sm font-semibold italic">
                   Foco Prioritário
                 </h3>
                 <Badge variant="outline" className="border-border/60 text-[10px] font-medium">
@@ -543,46 +588,46 @@ export default function OverviewPage() {
               ) : (
                 <div className="space-y-6">
                   <div>
-                    <span className="font-display text-4xl font-bold tracking-tight text-foreground">
+                    <span className="font-display text-foreground text-4xl font-bold tracking-tight">
                       {occupancyRate}%
                     </span>
-                    <p className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
+                    <p className="text-muted-foreground mt-1 text-[11px] uppercase tracking-wider">
                       Turnos preenchidos
                     </p>
                   </div>
 
-                  <div className="relative h-2 overflow-hidden rounded-full bg-muted/60">
+                  <div className="bg-muted/60 relative h-2 overflow-hidden rounded-full">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${occupancyRate}%` }}
                       transition={{ delay: 0.5, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                      className="h-full rounded-full bg-brand-500 shadow-[0_0_12px_rgba(78,205,196,0.4)]"
+                      className="bg-brand-500 h-full rounded-full shadow-[0_0_12px_rgba(78,205,196,0.4)]"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="inline-flex items-center gap-1 text-muted-foreground">
+                      <span className="text-muted-foreground inline-flex items-center gap-1">
                         <ShieldAlert className="h-3 w-3 text-amber-500" />
                         Pendências críticas
                       </span>
-                      <span className="font-semibold text-foreground">{pendingConfirmations}</span>
+                      <span className="text-foreground font-semibold">{pendingConfirmations}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="inline-flex items-center gap-1 text-muted-foreground">
-                        <Stethoscope className="h-3 w-3 text-brand-600" />
+                      <span className="text-muted-foreground inline-flex items-center gap-1">
+                        <Stethoscope className="text-brand-600 h-3 w-3" />
                         Médicos em cobertura
                       </span>
-                      <span className="font-semibold text-foreground">
+                      <span className="text-foreground font-semibold">
                         {doctorMix.find((item) => item.name === 'Em cobertura')?.value ?? 0}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="inline-flex items-center gap-1 text-muted-foreground">
+                      <span className="text-muted-foreground inline-flex items-center gap-1">
                         <TrendingUp className="h-3 w-3 text-green-600" />
                         Confirmações na semana
                       </span>
-                      <span className="font-semibold text-foreground">{confirmedThisWeek}</span>
+                      <span className="text-foreground font-semibold">{confirmedThisWeek}</span>
                     </div>
                   </div>
                 </div>
@@ -593,13 +638,13 @@ export default function OverviewPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35, type: 'spring', stiffness: 300, damping: 30 }}
-              className="lg:col-span-3 card-base p-5"
+              className="card-base p-5 lg:col-span-3"
             >
               <div className="mb-5 flex items-center justify-between">
-                <h3 className="font-display text-sm font-semibold text-foreground italic">
+                <h3 className="font-display text-foreground text-sm font-semibold italic">
                   Ações em Tempo Real
                 </h3>
-                <Button variant="ghost" size="sm" className="h-7 text-[11px] text-brand-700">
+                <Button variant="ghost" size="sm" className="text-brand-700 h-7 text-[11px]">
                   Ver todas
                 </Button>
               </div>
@@ -623,7 +668,7 @@ export default function OverviewPage() {
                       <div className="flex items-start gap-4">
                         <div
                           className={cn(
-                            'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/40',
+                            'border-border/40 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border',
                             item.type === 'confirmation'
                               ? 'bg-green-50 text-green-600'
                               : item.type === 'alert'
@@ -640,8 +685,8 @@ export default function OverviewPage() {
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm leading-snug text-foreground/90">{item.message}</p>
-                          <p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <p className="text-foreground/90 text-sm leading-snug">{item.message}</p>
+                          <p className="text-muted-foreground mt-1 flex items-center gap-1 text-[10px]">
                             <Clock className="h-3 w-3" />
                             Há {getMinutesAgo(item.time)} min
                           </p>

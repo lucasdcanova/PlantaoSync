@@ -2,7 +2,15 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { CalendarDays, Clock3, Repeat2, ArrowRight, Activity, ShieldAlert, TrendingUp } from 'lucide-react'
+import {
+  CalendarDays,
+  Clock3,
+  Repeat2,
+  ArrowRight,
+  Activity,
+  ShieldAlert,
+  TrendingUp,
+} from 'lucide-react'
 import { motion } from 'framer-motion'
 import { parseISO } from 'date-fns'
 import {
@@ -64,7 +72,9 @@ export default function DoctorOverviewPage() {
   const confirmedInMonth = monthShifts.filter((shift) => shift.status !== 'CANCELADO').length
   const pendingSwaps = swapRequests.filter((swap) => swap.status === 'PENDENTE').length
   const monthProjection = monthShifts.reduce((sum, shift) => sum + shift.value, 0)
-  const upsideProjection = monthOpportunities.slice(0, 3).reduce((sum, shift) => sum + shift.value, 0)
+  const upsideProjection = monthOpportunities
+    .slice(0, 3)
+    .reduce((sum, shift) => sum + shift.value, 0)
   const potentialProjection = monthProjection + upsideProjection
   const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
   const emsTarget = Math.max(potentialProjection, 680_000)
@@ -102,7 +112,10 @@ export default function DoctorOverviewPage() {
   }, [monthOpportunities, monthShifts, timelineWindow])
 
   const assistentialSeries = useMemo(() => {
-    const grouped = new Map<string, { name: string; shifts: number; value: number; loadScore: number }>()
+    const grouped = new Map<
+      string,
+      { name: string; shifts: number; value: number; loadScore: number }
+    >()
 
     monthShifts.forEach((shift) => {
       const current = grouped.get(shift.sectorName)
@@ -154,55 +167,58 @@ export default function DoctorOverviewPage() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-2xl border border-brand-200/50 bg-gradient-to-br from-brand-50/95 via-card to-brand-100/45 p-5 shadow-brand sm:p-6"
+        className="border-brand-200/50 from-brand-50/95 via-card to-brand-100/45 shadow-brand relative overflow-hidden rounded-2xl border bg-gradient-to-br p-5 sm:p-6"
       >
-        <div className="pointer-events-none absolute -right-16 -top-14 h-48 w-48 rounded-full bg-brand-300/25 blur-3xl" />
+        <div className="bg-brand-300/25 pointer-events-none absolute -right-16 -top-14 h-48 w-48 rounded-full blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 left-8 h-44 w-44 rounded-full bg-blue-300/15 blur-3xl" />
 
         <div className="relative grid gap-6 lg:grid-cols-[1.1fr_1fr] lg:items-end">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Badge className="border-brand-200 bg-brand-100 text-brand-800">Projeção EMS</Badge>
-              <Badge variant="outline" className="text-[11px]">Resumo médico</Badge>
+              <Badge variant="outline" className="text-[11px]">
+                Resumo médico
+              </Badge>
             </div>
 
-            <p className="mt-4 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="text-muted-foreground mt-4 text-xs uppercase tracking-[0.18em]">
               Projeção do mês de {monthLabel}
             </p>
-            <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            <h1 className="font-display text-foreground mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
               {formatCurrency(monthProjection)}
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Potencial de {formatCurrency(potentialProjection)} caso você confirme as melhores oportunidades abertas.
+            <p className="text-muted-foreground mt-1 text-sm">
+              Potencial de {formatCurrency(potentialProjection)} caso você confirme as melhores
+              oportunidades abertas.
             </p>
 
             <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="text-muted-foreground flex items-center justify-between text-[11px] uppercase tracking-wide">
                 <span>Execução da meta EMS</span>
-                <span className="font-semibold text-foreground">{emsProgress}%</span>
+                <span className="text-foreground font-semibold">{emsProgress}%</span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-brand-100/70">
+              <div className="bg-brand-100/70 h-2 overflow-hidden rounded-full">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${emsProgress}%` }}
                   transition={{ delay: 0.2, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                  className="h-full rounded-full bg-brand-500"
+                  className="bg-brand-500 h-full rounded-full"
                 />
               </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/60 bg-card/80 p-4 backdrop-blur">
+          <div className="border-border/60 bg-card/80 rounded-xl border p-4 backdrop-blur">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-xs font-medium text-foreground">Trajetória semanal</p>
-              <div className="inline-flex rounded-full border border-border bg-background p-1">
+              <p className="text-foreground text-xs font-medium">Trajetória semanal</p>
+              <div className="border-border bg-background inline-flex rounded-full border p-1">
                 <button
                   type="button"
                   onClick={() => setTimelineWindow('4s')}
                   className={cn(
                     'rounded-full px-3 py-1 text-[11px] font-medium transition-all',
                     timelineWindow === '4s'
-                      ? 'bg-brand-500 text-white shadow-brand'
+                      ? 'bg-brand-500 shadow-brand text-white'
                       : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
@@ -214,7 +230,7 @@ export default function DoctorOverviewPage() {
                   className={cn(
                     'rounded-full px-3 py-1 text-[11px] font-medium transition-all',
                     timelineWindow === 'mes'
-                      ? 'bg-brand-500 text-white shadow-brand'
+                      ? 'bg-brand-500 shadow-brand text-white'
                       : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
@@ -237,7 +253,12 @@ export default function DoctorOverviewPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" opacity={0.2} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
                   <YAxis hide />
                   <Tooltip
                     formatter={(value: number) => formatCurrency(value)}
@@ -271,38 +292,48 @@ export default function DoctorOverviewPage() {
       </motion.section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <article className="rounded-2xl border border-border bg-card p-5 shadow-card">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Plantões disponíveis</p>
-          <p className="mt-2 font-display text-2xl font-bold text-foreground">{availableShifts.length}</p>
-          <p className="text-xs text-muted-foreground">abertos para confirmação</p>
+        <article className="border-border bg-card shadow-card rounded-2xl border p-5">
+          <p className="text-muted-foreground text-xs uppercase tracking-wide">
+            Plantões disponíveis
+          </p>
+          <p className="font-display text-foreground mt-2 text-2xl font-bold">
+            {availableShifts.length}
+          </p>
+          <p className="text-muted-foreground text-xs">abertos para confirmação</p>
         </article>
-        <article className="rounded-2xl border border-border bg-card p-5 shadow-card">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Confirmados no mês</p>
-          <p className="mt-2 font-display text-2xl font-bold text-foreground">{confirmedInMonth}</p>
-          <p className="text-xs text-muted-foreground">{monthLabel}</p>
+        <article className="border-border bg-card shadow-card rounded-2xl border p-5">
+          <p className="text-muted-foreground text-xs uppercase tracking-wide">
+            Confirmados no mês
+          </p>
+          <p className="font-display text-foreground mt-2 text-2xl font-bold">{confirmedInMonth}</p>
+          <p className="text-muted-foreground text-xs">{monthLabel}</p>
         </article>
-        <article className="rounded-2xl border border-border bg-card p-5 shadow-card">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Trocas pendentes</p>
-          <p className="mt-2 font-display text-2xl font-bold text-foreground">{pendingSwaps}</p>
-          <p className="text-xs text-muted-foreground">aguardando decisão</p>
+        <article className="border-border bg-card shadow-card rounded-2xl border p-5">
+          <p className="text-muted-foreground text-xs uppercase tracking-wide">Trocas pendentes</p>
+          <p className="font-display text-foreground mt-2 text-2xl font-bold">{pendingSwaps}</p>
+          <p className="text-muted-foreground text-xs">aguardando decisão</p>
         </article>
-        <article className="rounded-2xl border border-border bg-card p-5 shadow-card">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Upside de receita</p>
-          <p className="mt-2 font-display text-2xl font-bold text-foreground">{formatCurrency(upsideProjection)}</p>
-          <p className="text-xs text-muted-foreground">plantões disponíveis do mês</p>
+        <article className="border-border bg-card shadow-card rounded-2xl border p-5">
+          <p className="text-muted-foreground text-xs uppercase tracking-wide">Upside de receita</p>
+          <p className="font-display text-foreground mt-2 text-2xl font-bold">
+            {formatCurrency(upsideProjection)}
+          </p>
+          <p className="text-muted-foreground text-xs">plantões disponíveis do mês</p>
         </article>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-5">
-        <article className="rounded-2xl border border-border bg-card p-6 shadow-card xl:col-span-3">
+        <article className="border-border bg-card shadow-card rounded-2xl border p-6 xl:col-span-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="font-display text-lg font-bold text-foreground">Radar interativo de desempenho</h2>
-              <p className="text-xs text-muted-foreground">
+              <h2 className="font-display text-foreground text-lg font-bold">
+                Radar interativo de desempenho
+              </h2>
+              <p className="text-muted-foreground text-xs">
                 Alterne entre foco financeiro e assistencial para navegar pelos indicadores.
               </p>
             </div>
-            <div className="inline-flex rounded-full border border-border bg-background p-1">
+            <div className="border-border bg-background inline-flex rounded-full border p-1">
               <button
                 type="button"
                 onClick={() => setLens('financeiro')}
@@ -341,7 +372,12 @@ export default function DoctorOverviewPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" opacity={0.2} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
                   <YAxis hide />
                   <Tooltip
                     formatter={(value: number) => formatCurrency(value)}
@@ -371,7 +407,13 @@ export default function DoctorOverviewPage() {
               ) : (
                 <BarChart data={assistentialSeries} barGap={12}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" opacity={0.2} />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} interval={0} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval={0}
+                  />
                   <YAxis hide />
                   <Tooltip
                     contentStyle={{
@@ -388,10 +430,12 @@ export default function DoctorOverviewPage() {
           </div>
         </article>
 
-        <article className="rounded-2xl border border-border bg-card p-6 shadow-card xl:col-span-2">
+        <article className="border-border bg-card shadow-card rounded-2xl border p-6 xl:col-span-2">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-lg font-bold text-foreground">Estado das trocas</h2>
-            <Badge variant="outline" className="text-[11px]">Interativo</Badge>
+            <h2 className="font-display text-foreground text-lg font-bold">Estado das trocas</h2>
+            <Badge variant="outline" className="text-[11px]">
+              Interativo
+            </Badge>
           </div>
 
           <div className="mt-4 h-52">
@@ -427,44 +471,48 @@ export default function DoctorOverviewPage() {
             </ResponsiveContainer>
           </div>
 
-          <div className="rounded-xl border border-border bg-muted/20 p-3">
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Alerta principal</p>
-            <p className="mt-1 text-sm font-semibold text-foreground">{activeSwapStatus.name}</p>
-            <p className="text-xs text-muted-foreground">
+          <div className="border-border bg-muted/20 rounded-xl border p-3">
+            <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
+              Alerta principal
+            </p>
+            <p className="text-foreground mt-1 text-sm font-semibold">{activeSwapStatus.name}</p>
+            <p className="text-muted-foreground text-xs">
               {activeSwapStatus.value} solicitações no estado selecionado.
             </p>
           </div>
 
           <div className="mt-3 space-y-2 text-xs">
             <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1 text-muted-foreground">
+              <span className="text-muted-foreground inline-flex items-center gap-1">
                 <ShieldAlert className="h-3.5 w-3.5 text-amber-500" />
                 Pendências urgentes
               </span>
-              <span className="font-semibold text-foreground">{pendingSwaps}</span>
+              <span className="text-foreground font-semibold">{pendingSwaps}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1 text-muted-foreground">
+              <span className="text-muted-foreground inline-flex items-center gap-1">
                 <TrendingUp className="h-3.5 w-3.5 text-green-600" />
                 Plantões do mês
               </span>
-              <span className="font-semibold text-foreground">{monthShifts.length}</span>
+              <span className="text-foreground font-semibold">{monthShifts.length}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1 text-muted-foreground">
-                <Activity className="h-3.5 w-3.5 text-brand-600" />
+              <span className="text-muted-foreground inline-flex items-center gap-1">
+                <Activity className="text-brand-600 h-3.5 w-3.5" />
                 Oportunidades abertas
               </span>
-              <span className="font-semibold text-foreground">{monthOpportunities.length}</span>
+              <span className="text-foreground font-semibold">{monthOpportunities.length}</span>
             </div>
           </div>
         </article>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <article className="rounded-2xl border border-border bg-card p-6 shadow-card">
+        <article className="border-border bg-card shadow-card rounded-2xl border p-6">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-lg font-bold text-foreground">Próximas oportunidades</h2>
+            <h2 className="font-display text-foreground text-lg font-bold">
+              Próximas oportunidades
+            </h2>
             <Button asChild size="sm" variant="outline">
               <Link href="/doctor/available" className="gap-1.5">
                 Ver todas
@@ -475,18 +523,18 @@ export default function DoctorOverviewPage() {
 
           <div className="mt-4 space-y-3">
             {availableShifts.slice(0, 3).map((shift) => (
-              <div key={shift.id} className="rounded-xl border border-border bg-background p-4">
+              <div key={shift.id} className="border-border bg-background rounded-xl border p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-medium text-foreground">{shift.sectorName}</p>
-                    <p className="text-xs text-muted-foreground">{shift.specialty}</p>
+                    <p className="text-foreground font-medium">{shift.sectorName}</p>
+                    <p className="text-muted-foreground text-xs">{shift.specialty}</p>
                   </div>
-                  <Badge className="border border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900 dark:bg-brand-900/30 dark:text-brand-300">
+                  <Badge className="border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900 dark:bg-brand-900/30 dark:text-brand-300 border">
                     {shift.slotsLeft} vaga{shift.slotsLeft > 1 ? 's' : ''}
                   </Badge>
                 </div>
-                <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-                  <CalendarDays className="h-4 w-4 text-brand-500" />
+                <p className="text-muted-foreground mt-3 flex items-center gap-2 text-sm">
+                  <CalendarDays className="text-brand-500 h-4 w-4" />
                   {formatDate(shift.date)} · {shift.startTime} - {shift.endTime}
                 </p>
               </div>
@@ -494,9 +542,9 @@ export default function DoctorOverviewPage() {
           </div>
         </article>
 
-        <article className="rounded-2xl border border-border bg-card p-6 shadow-card">
+        <article className="border-border bg-card shadow-card rounded-2xl border p-6">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-lg font-bold text-foreground">Meus plantões</h2>
+            <h2 className="font-display text-foreground text-lg font-bold">Meus plantões</h2>
             <Button asChild size="sm" variant="outline">
               <Link href="/doctor/history" className="gap-1.5">
                 Histórico
@@ -507,25 +555,25 @@ export default function DoctorOverviewPage() {
 
           <div className="mt-4 space-y-3">
             {upcoming.map((shift) => (
-              <div key={shift.id} className="rounded-xl border border-border bg-background p-4">
+              <div key={shift.id} className="border-border bg-background rounded-xl border p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-medium text-foreground">{shift.sectorName}</p>
-                    <p className="text-xs text-muted-foreground">{formatCurrency(shift.value)}</p>
+                    <p className="text-foreground font-medium">{shift.sectorName}</p>
+                    <p className="text-muted-foreground text-xs">{formatCurrency(shift.value)}</p>
                   </div>
                   <Badge className="border border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-900/30 dark:text-green-300">
                     {shift.status.replace('_', ' ')}
                   </Badge>
                 </div>
-                <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock3 className="h-4 w-4 text-brand-500" />
+                <p className="text-muted-foreground mt-3 flex items-center gap-2 text-sm">
+                  <Clock3 className="text-brand-500 h-4 w-4" />
                   {formatDate(shift.date)} · {shift.startTime} - {shift.endTime}
                 </p>
               </div>
             ))}
 
             {upcoming.length === 0 && (
-              <div className="rounded-xl border border-dashed border-border bg-background p-6 text-center text-sm text-muted-foreground">
+              <div className="border-border bg-background text-muted-foreground rounded-xl border border-dashed p-6 text-center text-sm">
                 Nenhum plantão confirmado para o restante deste mês.
               </div>
             )}
@@ -533,9 +581,9 @@ export default function DoctorOverviewPage() {
         </article>
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-6 shadow-card">
+      <section className="border-border bg-card shadow-card rounded-2xl border p-6">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-display text-lg font-bold text-foreground">Solicitações de troca</h2>
+          <h2 className="font-display text-foreground text-lg font-bold">Solicitações de troca</h2>
           <Button asChild size="sm" variant="outline">
             <Link href="/doctor/swaps" className="gap-1.5">
               Gerenciar trocas
@@ -543,7 +591,7 @@ export default function DoctorOverviewPage() {
             </Link>
           </Button>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-2 text-sm">
           Você tem {pendingSwaps} solicitação(ões) pendente(s) para revisar.
         </p>
       </section>
