@@ -1,3 +1,7 @@
+const { loadRootEnv } = require('../../scripts/load-root-env.cjs')
+
+loadRootEnv(__dirname)
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -38,4 +42,3 @@ const withPWA = require('next-pwa')({
 })
 
 module.exports = withPWA(nextConfig)
-

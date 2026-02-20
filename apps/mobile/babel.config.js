@@ -1,3 +1,7 @@
+const { loadRootEnv } = require('../../scripts/load-root-env.cjs')
+
+loadRootEnv(__dirname)
+
 module.exports = function (api) {
   api.cache(true)
   return {
