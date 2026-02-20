@@ -19,6 +19,7 @@ async function bootstrap() {
   const port = config.get<number>('PORT', 3001)
   const appUrl = config.get<string>('APP_URL', 'http://localhost:3000')
   const corsOrigins = config.get<string>('CORS_ORIGINS', appUrl)
+  const hasRedisConfig = Boolean(config.get<string>('REDIS_URL') || config.get<string>('REDIS_HOST'))
 
   // Security
   app.use(
@@ -68,6 +69,10 @@ async function bootstrap() {
       swaggerOptions: { persistAuthorization: true },
     })
     logger.log(`📚 Swagger: http://localhost:${port}/api/docs`)
+  }
+
+  if (!hasRedisConfig) {
+    logger.warn('REDIS_URL/REDIS_HOST não configurado: módulo de notificações ficará desabilitado.')
   }
 
   await app.listen(port)
