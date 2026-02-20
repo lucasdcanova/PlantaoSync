@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Outfit } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from 'sonner'
+import { NavigationProgress } from '@/components/layout/navigation-progress'
 import { QueryProvider } from '@/lib/query-provider'
 import { getSiteUrl } from '@/lib/site'
 import { BRAND_NAME } from '@/lib/brand'
@@ -80,6 +81,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           disableTransitionOnChange={false}
         >
           <QueryProvider>
+            <NavigationProgress />
             {children}
             <Toaster
               position="top-right"

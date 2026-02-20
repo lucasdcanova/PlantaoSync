@@ -21,10 +21,26 @@ export function RouteTransition({ children, className }: RouteTransitionProps) {
     <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={pathname}
-        initial={{ opacity: 0, y: 12, scale: 0.997 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -8, scale: 0.996 }}
-        transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+        initial={{ opacity: 0, y: 14, scale: 0.996, filter: 'blur(6px)' }}
+        animate={{
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          filter: 'blur(0px)',
+          transition: {
+            y: { type: 'spring', stiffness: 290, damping: 30, mass: 0.65 },
+            scale: { type: 'spring', stiffness: 290, damping: 30, mass: 0.65 },
+            opacity: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
+            filter: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+          },
+        }}
+        exit={{
+          opacity: 0,
+          y: -10,
+          scale: 0.994,
+          filter: 'blur(4px)',
+          transition: { duration: 0.18, ease: [0.4, 0, 1, 1] },
+        }}
         className={cn('route-transition-frame', className)}
       >
         {children}

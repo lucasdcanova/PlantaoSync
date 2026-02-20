@@ -184,10 +184,20 @@
       color var(--transition-fast);
     transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
     will-change: transform;
+    transform: translateZ(0);
   }
 
   .tap-feedback:active {
     transform: translateY(1px) scale(0.97);
+  }
+
+  .bottom-nav-item.active {
+    transform: translateY(-1px);
+    animation: bottom-nav-lift 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .bottom-nav-item.active .bottom-nav-icon {
+    animation: bottom-nav-icon-pop 280ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .card-base {
@@ -326,9 +336,51 @@
   }
 }
 
+@keyframes bottom-nav-lift {
+  0% {
+    transform: translateY(1px) scale(0.96);
+  }
+
+  100% {
+    transform: translateY(-1px) scale(1);
+  }
+}
+
+@keyframes bottom-nav-icon-pop {
+  0% {
+    transform: scale(0.9);
+  }
+
+  60% {
+    transform: scale(1.12);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tap-feedback:hover {
+    transform: translateY(-1px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .tap-feedback,
+  .tap-feedback:hover,
+  .tap-feedback:active {
+    transform: none !important;
+  }
+
   .bottom-nav-item-calendar.active .bottom-nav-calendar-shell,
-  .bottom-nav-item-calendar.active .bottom-nav-calendar-ring {
+  .bottom-nav-item-calendar.active .bottom-nav-calendar-ring,
+  .bottom-nav-item.active,
+  .bottom-nav-item.active .bottom-nav-icon {
     animation: none;
   }
 }
