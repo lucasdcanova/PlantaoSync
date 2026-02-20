@@ -159,7 +159,7 @@ function NavItem({
     <Link
       href={href}
       className={cn(
-        'relative flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium',
+        'tap-feedback relative flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-all',
         collapsed && 'justify-center px-0',
         isActive
           ? 'bg-brand-50 text-brand-800 before:absolute before:left-0 before:top-1 before:h-8 before:w-[3px] before:rounded-r before:bg-brand-700'

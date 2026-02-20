@@ -19,6 +19,7 @@ import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { ProductLogo } from '@/components/brand/product-logo'
+import { RouteTransition } from '@/components/layout/route-transition'
 import { StatusBarSync } from '@/components/layout/status-bar-sync'
 import { BRAND_SHORT_NAME } from '@/lib/brand'
 import { cn, getInitials } from '@/lib/utils'
@@ -86,7 +87,7 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex h-10 items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors',
+                    'tap-feedback flex h-10 items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-all',
                     active
                       ? 'bg-brand-50 text-brand-800 dark:bg-brand-900/20 dark:text-brand-300'
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground',
@@ -163,7 +164,7 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
           </header>
 
           <div className="h-[calc(68px+env(safe-area-inset-top))] lg:hidden" />
-          <div className="p-4 sm:p-6">{children}</div>
+          <RouteTransition className="p-4 sm:p-6">{children}</RouteTransition>
         </main>
       </div>
 
@@ -178,7 +179,7 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
               key={item.href}
               href={item.href}
               className={cn(
-                'bottom-nav-item',
+                'bottom-nav-item tap-feedback',
                 featured && 'bottom-nav-item-calendar',
                 active && 'active',
               )}
@@ -260,7 +261,7 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
                       className={cn(
-                        'flex h-10 items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors',
+                        'tap-feedback flex h-10 items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-all',
                         active
                           ? 'bg-brand-50 text-brand-800'
                           : 'text-muted-foreground hover:bg-accent hover:text-foreground',

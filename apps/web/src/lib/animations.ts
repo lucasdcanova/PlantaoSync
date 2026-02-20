@@ -1,29 +1,29 @@
 import type { Transition, Variants } from 'framer-motion'
 
-const easing: [number, number, number, number] = [0.4, 0, 0.2, 1]
+const easing: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
 export const motionFast: Transition = {
   type: 'tween',
   ease: easing,
-  duration: 0.15,
+  duration: 0.18,
 }
 
 export const motionBase: Transition = {
   type: 'tween',
   ease: easing,
-  duration: 0.2,
+  duration: 0.28,
 }
 
 export const motionSlow: Transition = {
   type: 'tween',
   ease: easing,
-  duration: 0.28,
+  duration: 0.42,
 }
 
 export const pageVariants: Variants = {
-  initial: { opacity: 0, y: 10 },
-  animate: { opacity: 1, y: 0, transition: motionBase },
-  exit: { opacity: 0, y: -6, transition: motionFast },
+  initial: { opacity: 0, y: 14, scale: 0.997 },
+  animate: { opacity: 1, y: 0, scale: 1, transition: motionBase },
+  exit: { opacity: 0, y: -10, scale: 0.996, transition: motionFast },
 }
 
 export const listVariants: Variants = {

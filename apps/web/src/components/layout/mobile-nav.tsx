@@ -29,7 +29,7 @@ export function MobileNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              'bottom-nav-item',
+              'bottom-nav-item tap-feedback',
               featured && 'bottom-nav-item-calendar',
               active && 'active',
             )}

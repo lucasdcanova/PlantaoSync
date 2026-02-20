@@ -15,7 +15,7 @@ export function MarketingShell({ title, description, children }: MarketingShellP
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b border-border/80 bg-background/90 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-3">
+          <Link href="/" className="tap-feedback flex items-center gap-3">
             <div className="h-8 w-8 rounded-md bg-card p-1 shadow-card">
               <ProductLogo variant="mark" className="h-full w-full" imageClassName="h-full w-full" />
             </div>
@@ -23,13 +23,13 @@ export function MarketingShell({ title, description, children }: MarketingShellP
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <Link href="/#visao" className="hover:text-foreground">
+            <Link href="/#visao" className="tap-feedback hover:text-foreground">
               Visão
             </Link>
-            <Link href="/#fluxo" className="hover:text-foreground">
+            <Link href="/#fluxo" className="tap-feedback hover:text-foreground">
               Fluxo
             </Link>
-            <Link href="/faq" className="hover:text-foreground">
+            <Link href="/faq" className="tap-feedback hover:text-foreground">
               FAQ
             </Link>
           </nav>
@@ -49,7 +49,7 @@ export function MarketingShell({ title, description, children }: MarketingShellP
         <div className="mx-auto max-w-5xl">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+            className="tap-feedback inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Voltar para a página inicial
@@ -72,13 +72,13 @@ export function MarketingShell({ title, description, children }: MarketingShellP
             <span className="font-semibold text-foreground">{BRAND_NAME}</span>
           </div>
           <div className="flex gap-5">
-            <Link href="/privacy" className="hover:text-foreground">
+            <Link href="/privacy" className="tap-feedback hover:text-foreground">
               Privacidade
             </Link>
-            <Link href="/terms" className="hover:text-foreground">
+            <Link href="/terms" className="tap-feedback hover:text-foreground">
               Termos
             </Link>
-            <Link href="/lgpd" className="hover:text-foreground">
+            <Link href="/lgpd" className="tap-feedback hover:text-foreground">
               LGPD
             </Link>
           </div>

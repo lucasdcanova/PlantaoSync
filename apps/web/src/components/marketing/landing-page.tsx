@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import { ProductLogo } from '@/components/brand/product-logo'
+import { HeroMotionBackground } from '@/components/marketing/hero-motion'
 import { Button } from '@/components/ui/button'
 import { BRAND_NAME } from '@/lib/brand'
 
@@ -61,11 +62,7 @@ export function LandingPage() {
       <main>
         {/* Hero — Minimalist */}
         <section className="relative flex min-h-[100dvh] flex-col items-center justify-center px-4 pt-14 text-center">
-          {/* Subtle gradient orbs */}
-          <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="bg-brand-200/30 absolute left-1/2 top-1/3 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]" />
-            <div className="bg-brand-100/40 absolute bottom-1/4 right-1/4 h-[280px] w-[280px] rounded-full blur-[80px]" />
-          </div>
+          <HeroMotionBackground />
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
