@@ -681,6 +681,153 @@ export const DEMO_DOCTOR_MY_SHIFTS: DemoDoctorMyShift[] = [
   },
 ]
 
+export interface DemoManagerAssignedShift {
+  id: string
+  scheduleId: string
+  date: string
+  startTime: string
+  endTime: string
+  sectorName: string
+  professionalId: string
+  professionalName: string
+  professionalPhone: string
+  specialty: string
+  assignmentSource: 'Escala fixa' | 'Troca aprovada'
+}
+
+export const DEMO_MANAGER_ASSIGNED_SHIFTS: DemoManagerAssignedShift[] = [
+  {
+    id: 'asg-1',
+    scheduleId: '1',
+    date: '2026-02-20',
+    startTime: '07:00',
+    endTime: '19:00',
+    sectorName: 'UTI Adulto',
+    professionalId: 'pro-1',
+    professionalName: 'Dra. Ana Costa',
+    professionalPhone: '(11) 99123-4567',
+    specialty: 'Medicina Intensiva',
+    assignmentSource: 'Escala fixa',
+  },
+  {
+    id: 'asg-2',
+    scheduleId: '1',
+    date: '2026-02-20',
+    startTime: '19:00',
+    endTime: '07:00',
+    sectorName: 'UTI Adulto',
+    professionalId: 'pro-3',
+    professionalName: 'Dra. Bianca Farias',
+    professionalPhone: '(11) 99711-9880',
+    specialty: 'Emergência',
+    assignmentSource: 'Troca aprovada',
+  },
+  {
+    id: 'asg-3',
+    scheduleId: '1',
+    date: '2026-02-21',
+    startTime: '07:00',
+    endTime: '19:00',
+    sectorName: 'UTI Adulto',
+    professionalId: 'pro-2',
+    professionalName: 'Dr. Carlos Mendes',
+    professionalPhone: '(11) 98876-1200',
+    specialty: 'Clínica Médica',
+    assignmentSource: 'Escala fixa',
+  },
+  {
+    id: 'asg-4',
+    scheduleId: '1',
+    date: '2026-02-21',
+    startTime: '19:00',
+    endTime: '07:00',
+    sectorName: 'UTI Adulto',
+    professionalId: 'pro-4',
+    professionalName: 'Dr. Felipe Rocha',
+    professionalPhone: '(11) 99643-2211',
+    specialty: 'Anestesiologia',
+    assignmentSource: 'Escala fixa',
+  },
+  {
+    id: 'asg-5',
+    scheduleId: '1',
+    date: '2026-02-22',
+    startTime: '07:00',
+    endTime: '19:00',
+    sectorName: 'UTI Adulto',
+    professionalId: 'pro-1',
+    professionalName: 'Dra. Ana Costa',
+    professionalPhone: '(11) 99123-4567',
+    specialty: 'Medicina Intensiva',
+    assignmentSource: 'Escala fixa',
+  },
+  {
+    id: 'asg-6',
+    scheduleId: '1',
+    date: '2026-02-22',
+    startTime: '19:00',
+    endTime: '07:00',
+    sectorName: 'UTI Adulto',
+    professionalId: 'pro-3',
+    professionalName: 'Dra. Bianca Farias',
+    professionalPhone: '(11) 99711-9880',
+    specialty: 'Emergência',
+    assignmentSource: 'Troca aprovada',
+  },
+  {
+    id: 'asg-7',
+    scheduleId: '2',
+    date: '2026-02-20',
+    startTime: '07:00',
+    endTime: '19:00',
+    sectorName: 'Pronto-Socorro',
+    professionalId: 'pro-2',
+    professionalName: 'Dr. Carlos Mendes',
+    professionalPhone: '(11) 98876-1200',
+    specialty: 'Emergência',
+    assignmentSource: 'Escala fixa',
+  },
+  {
+    id: 'asg-8',
+    scheduleId: '2',
+    date: '2026-02-20',
+    startTime: '19:00',
+    endTime: '07:00',
+    sectorName: 'Pronto-Socorro',
+    professionalId: 'pro-3',
+    professionalName: 'Dra. Bianca Farias',
+    professionalPhone: '(11) 99711-9880',
+    specialty: 'Emergência',
+    assignmentSource: 'Escala fixa',
+  },
+  {
+    id: 'asg-9',
+    scheduleId: '2',
+    date: '2026-02-21',
+    startTime: '07:00',
+    endTime: '19:00',
+    sectorName: 'Pronto-Socorro',
+    professionalId: 'pro-1',
+    professionalName: 'Dra. Ana Costa',
+    professionalPhone: '(11) 99123-4567',
+    specialty: 'Clínica Médica',
+    assignmentSource: 'Troca aprovada',
+  },
+  {
+    id: 'asg-10',
+    scheduleId: '2',
+    date: '2026-02-22',
+    startTime: '19:00',
+    endTime: '07:00',
+    sectorName: 'Pronto-Socorro',
+    professionalId: 'pro-4',
+    professionalName: 'Dr. Felipe Rocha',
+    professionalPhone: '(11) 99643-2211',
+    specialty: 'Anestesiologia',
+    assignmentSource: 'Escala fixa',
+  },
+]
+
 export interface DemoDoctorSwapRequest {
   id: string
   direction: 'entrada' | 'saida'
