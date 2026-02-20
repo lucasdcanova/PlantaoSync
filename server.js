@@ -6,22 +6,28 @@
  */
 const path = require('path')
 const http = require('http')
-const Module = require('module')
+const { createRequire } = require('module')
 
 // ── Resolve workspace packages ───────────────────────────────────────
 // pnpm keeps dependencies in workspace-local node_modules, so we must
-// tell Node where to find them.
+// set NODE_PATH before any require() to workspace packages.
 const API_DIR = path.join(__dirname, 'api')
 const WEB_DIR = path.join(__dirname, 'apps', 'web')
+const ROOT_DIR = __dirname
 
-// Prepend workspace node_modules to the module search path
-const extraPaths = [
+// Set NODE_PATH so Node resolves packages from all workspace node_modules
+const nodePaths = [
     path.join(API_DIR, 'node_modules'),
     path.join(WEB_DIR, 'node_modules'),
-    path.join(__dirname, 'node_modules'),
-]
-// Patch global module paths so require() finds workspace deps
-Module.globalPaths.unshift(...extraPaths)
+    path.join(ROOT_DIR, 'node_modules'),
+].join(path.delimiter)
+
+process.env.NODE_PATH = process.env.NODE_PATH
+    ? `${nodePaths}${path.delimiter}${process.env.NODE_PATH}`
+    : nodePaths
+
+// Force Node to re-initialize module paths with updated NODE_PATH
+require('module').Module._initPaths()
 
 // ── Load root .env ───────────────────────────────────────────────────
 try {
@@ -99,10 +105,6 @@ async function main() {
     const nextApp = next({
         dev: false,
         dir: WEB_DIR,
-        conf: {
-            // Ensure Next.js doesn't try to listen on its own port
-            output: 'standalone',
-        },
     })
     await nextApp.prepare()
     const nextHandler = nextApp.getRequestHandler()

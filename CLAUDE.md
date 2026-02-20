@@ -1095,57 +1095,97 @@ POST   /api/v1/schedules/:id/publish  # ação especial
 
 ---
 
-## 12. Variáveis de Ambiente
+## 12. Deploy e Infraestrutura (Render)
 
-### api/.env.example
-```env
-# Database
-DATABASE_URL="postgresql://user:pass@localhost:5432/agendaplantao"
+### 12.1 Arquitetura Unificada
 
-# Redis
-REDIS_URL="redis://localhost:6379"
+O backend (NestJS) e o frontend (Next.js) são servidos na **mesma URL e porta** por um servidor unificado (`server.js` na raiz do projeto).
 
-# Auth
-JWT_ACCESS_SECRET="..."
-JWT_ACCESS_EXPIRES_IN="15m"
-JWT_REFRESH_SECRET="..."
-JWT_REFRESH_EXPIRES_IN="30d"
-
-# Firebase
-FIREBASE_PROJECT_ID="agendaplantao"
-FIREBASE_PRIVATE_KEY="..."
-FIREBASE_CLIENT_EMAIL="..."
-
-# Resend (Email)
-RESEND_API_KEY="re_..."
-EMAIL_FROM="noreply@agendaplantao.com.br"
-
-# Stripe
-STRIPE_SECRET_KEY="sk_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
-
-# Cloudflare R2
-R2_ACCOUNT_ID="..."
-R2_ACCESS_KEY="..."
-R2_SECRET_KEY="..."
-R2_BUCKET="agendaplantao"
-
-# App
-APP_URL="https://agendaplantao.com.br"
-API_URL="https://api.agendaplantao.com.br"
-NODE_ENV="production"
+```
+https://plantaosync.onrender.com
+├── /api/v1/*  → NestJS (backend)
+└── /*         → Next.js (frontend)
 ```
 
-### apps/web/.env.example
-```env
-NEXT_PUBLIC_API_URL="https://api.agendaplantao.com.br"
-NEXT_PUBLIC_WS_URL="wss://api.agendaplantao.com.br"
-NEXT_PUBLIC_APP_ENV="production"
+**Como funciona:**
+- `server.js` cria uma instância Express compartilhada
+- NestJS registra suas rotas em `/api/v1/*` nessa instância
+- Next.js atua como fallback para todas as outras rotas
+- Ambos rodam no mesmo processo Node.js, na mesma porta
 
-# PWA Web Push
-NEXT_PUBLIC_VAPID_PUBLIC_KEY="..."
-VAPID_PRIVATE_KEY="..."
+**Render Service:** `plantaosync` (Web Service, Node, Oregon)
+- **Build Command:** `npm install -g pnpm && pnpm install --frozen-lockfile && pnpm --filter=api run db:generate && pnpm run build --filter=web... && pnpm --filter=api run build`
+- **Start Command:** `node server.js`
+- **Service ID:** `srv-d6blqdmr433s73d8lfng`
+
+### 12.2 Render CLI
+
+O Render CLI está instalado e autenticado na máquina local. Use-o para acessar logs e diagnosticar problemas diretamente pelo terminal, sem precisar abrir o browser.
+
+```bash
+# Ver logs em tempo real do serviço
+render logs --service srv-d6blqdmr433s73d8lfng --tail
+
+# Ver logs recentes
+render logs --service srv-d6blqdmr433s73d8lfng
+
+# Listar deploys
+render deploys list --service srv-d6blqdmr433s73d8lfng
+
+# Disparar deploy manual
+render deploys create --service srv-d6blqdmr433s73d8lfng
+
+# Ver status do serviço
+render services show srv-d6blqdmr433s73d8lfng
 ```
+
+**Dica:** Quando houver erro no deploy, use `render logs` para ver os logs de build e runtime diretamente no terminal. É mais rápido que navegar pelo dashboard.
+
+### 12.3 Variáveis de Ambiente
+
+Todas as variáveis estão configuradas tanto no `.env` (raiz do monorepo) quanto no dashboard do Render.
+
+```env
+NODE_ENV=production
+PORT=3001
+APP_URL=https://plantaosync.onrender.com
+FRONTEND_URL=https://plantaosync.onrender.com
+API_URL=https://plantaosync.onrender.com
+CORS_ORIGINS=https://plantaosync.onrender.com
+DATABASE_URL=postgresql://...
+DIRECT_URL=postgresql://...
+REDIS_URL=
+REDIS_HOST=
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_TLS=false
+JWT_ACCESS_SECRET=...
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_SECRET=...
+JWT_REFRESH_EXPIRES_IN=30d
+JWT_SECRET=
+NEXT_PUBLIC_APP_URL=https://plantaosync.onrender.com
+NEXT_PUBLIC_API_URL=https://plantaosync.onrender.com
+NEXT_PUBLIC_WS_URL=wss://plantaosync.onrender.com
+NEXT_PUBLIC_APP_ENV=production
+EXPO_PUBLIC_API_URL=https://plantaosync.onrender.com
+EXPO_PUBLIC_WS_URL=wss://plantaosync.onrender.com
+FIREBASE_PROJECT_ID=
+FIREBASE_PRIVATE_KEY=
+FIREBASE_CLIENT_EMAIL=
+RESEND_API_KEY=
+EMAIL_FROM=noreply@plantaosync.com
+EMAIL_FROM_NAME=CONFIRMA PLANTAO
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY=
+R2_SECRET_KEY=
+R2_BUCKET=
+R2_PUBLIC_URL=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+```
+
+**Importante:** Todas as URLs (APP_URL, API_URL, NEXT_PUBLIC_API_URL, etc.) apontam para o mesmo domínio `https://plantaosync.onrender.com` pois backend e frontend estão unificados.
 
 ---
 
@@ -1161,7 +1201,7 @@ pnpm dev                      # Todos os apps em paralelo (Turborepo)
 
 # Ou individualmente:
 pnpm --filter=api dev          # Backend :3001
-pnpm --filter=web dev          # Frontend :3000
+pnpm --filter=web dev          # Frontend :3002
 pnpm --filter=mobile start     # Expo app
 
 # Banco de dados
@@ -1175,6 +1215,9 @@ pnpm --filter=api test:e2e     # E2E do backend
 
 # Build de produção
 pnpm build
+
+# Servidor unificado (produção local)
+NODE_ENV=production node server.js
 ```
 
 ---
@@ -1191,7 +1234,9 @@ pnpm build
 8. **Dark mode** — implementar desde o componente 1, não como afterthought
 9. **Acessibilidade** — ARIA labels, contraste mínimo AA, navegação por teclado
 10. **Exportação PDF** — hospitais precisam de relatórios para auditorias regulatórias
+11. **Deploy unificado** — backend e frontend rodam no mesmo serviço Render via `server.js`; para debug use o Render CLI (`render logs`)
 
 ---
 
-*Documento criado em 19/02/2026 — baseado na análise do Agendoctor e nas melhores práticas de desenvolvimento SaaS.*
+*Documento atualizado em 20/02/2026.*
+
