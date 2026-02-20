@@ -7,7 +7,7 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          '50': '#e8f8f7',
+          '50': '#edf9f8',
           '100': '#d2f2f0',
           '200': '#ace7e2',
           '300': '#83dbd4',
@@ -67,14 +67,16 @@ const config: Config = {
         xl: 'var(--radius-xl)',
       },
       fontFamily: {
-        sans: ['var(--font-inter)', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
-        display: ['var(--font-inter)', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+        sans: ['var(--font-outfit)', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+        display: ['var(--font-outfit)', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
       },
       boxShadow: {
         card: 'var(--shadow-card)',
         elevated: 'var(--shadow-card-hover)',
         modal: 'var(--shadow-modal)',
-        brand: '0 8px 24px rgba(78, 205, 196, 0.24)',
+        brand: '0 4px 14px rgba(78, 205, 196, 0.18)',
+        'brand-lg': '0 8px 24px rgba(78, 205, 196, 0.24)',
+        subtle: '0 1px 2px rgba(0, 0, 0, 0.04)',
       },
       keyframes: {
         shimmer: {

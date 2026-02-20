@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Outfit } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from 'sonner'
 import { QueryProvider } from '@/lib/query-provider'
@@ -8,10 +8,11 @@ import { BRAND_NAME } from '@/lib/brand'
 import './globals.css'
 
 const baseUrl = getSiteUrl()
-const inter = Inter({
+const outfit = Outfit({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-inter',
+  variable: '--font-outfit',
+  weight: ['300', '400', '500', '600', '700'],
 })
 
 export const metadata: Metadata = {
@@ -61,8 +62,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#4ecdc4' },
-    { media: '(prefers-color-scheme: dark)', color: '#2bb5ab' },
+    { media: '(prefers-color-scheme: light)', color: '#f8fafb' },
+    { media: '(prefers-color-scheme: dark)', color: '#0c0f14' },
   ],
   width: 'device-width',
   initialScale: 1,
@@ -73,7 +74,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans`}>
+      <body className={`${outfit.variable} font-sans`}>
         <ThemeProvider
           attribute="data-theme"
           defaultTheme="system"
@@ -86,7 +87,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               position="top-right"
               richColors
               toastOptions={{
-                style: { fontFamily: 'var(--font-inter)' },
+                style: { fontFamily: 'var(--font-outfit)' },
               }}
             />
           </QueryProvider>

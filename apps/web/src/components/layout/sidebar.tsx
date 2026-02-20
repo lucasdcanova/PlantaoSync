@@ -48,12 +48,12 @@ export function Sidebar() {
   return (
     <TooltipProvider delayDuration={0}>
       <motion.aside
-        animate={{ width: sidebarCollapsed ? 84 : 260 }}
+        animate={{ width: sidebarCollapsed ? 80 : 250 }}
         transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
         className="relative hidden h-screen flex-col border-r border-border bg-card lg:flex"
         style={{ flexShrink: 0 }}
       >
-        <div className="flex h-20 items-center justify-between px-4">
+        <div className="flex h-16 items-center px-4">
           <AnimatePresence mode="wait">
             {!sidebarCollapsed ? (
               <motion.div
@@ -62,14 +62,14 @@ export function Sidebar() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -8 }}
                 transition={{ duration: 0.2 }}
-                className="flex items-center gap-3"
+                className="flex items-center gap-2.5"
               >
-                <div className="h-9 w-9 rounded-md bg-background p-1 shadow-card">
-                  <ProductLogo variant="mark" className="h-full w-full" imageClassName="h-full w-full" />
+                <div className="logo-container-light !rounded-lg !p-1.5 !shadow-subtle">
+                  <ProductLogo variant="mark" className="h-6 w-6" imageClassName="h-full w-full" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold tracking-wide text-foreground">{BRAND_SHORT_NAME}</p>
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Operação clínica</p>
+                  <p className="text-sm font-semibold tracking-tight text-foreground">{BRAND_SHORT_NAME}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Gestão</p>
                 </div>
               </motion.div>
             ) : (
@@ -79,15 +79,15 @@ export function Sidebar() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.18 }}
-                className="mx-auto h-9 w-9 rounded-md bg-background p-1 shadow-card"
+                className="mx-auto logo-container-light !rounded-lg !p-1.5 !shadow-subtle"
               >
-                <ProductLogo variant="mark" className="h-full w-full" imageClassName="h-full w-full" />
+                <ProductLogo variant="mark" className="h-6 w-6" imageClassName="h-full w-full" />
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 py-2">
+        <nav className="flex-1 space-y-0.5 px-3 py-4">
           {navItems.map((item) => (
             <NavItem
               key={item.href}
@@ -100,7 +100,7 @@ export function Sidebar() {
           ))}
         </nav>
 
-        <div className="space-y-1 border-t border-border px-3 py-3">
+        <div className="space-y-0.5 border-t border-border px-3 py-3">
           {bottomItems.map((item) => (
             <NavItem
               key={item.href}
@@ -113,22 +113,19 @@ export function Sidebar() {
           ))}
         </div>
 
-        <div className="border-t border-border p-3">
-          <div className={cn('flex items-start gap-3', sidebarCollapsed && 'justify-center')}>
+        <div className="border-t border-border p-4">
+          <div className={cn('flex items-center gap-3', sidebarCollapsed && 'justify-center')}>
             <Avatar className="h-9 w-9">
               <AvatarImage src={user?.avatarUrl} />
-              <AvatarFallback className="bg-brand-50 text-brand-700 text-xs font-semibold">
+              <AvatarFallback className="bg-brand-50 text-brand-700 text-[10px] font-semibold">
                 {getInitials(user?.name ?? 'US')}
               </AvatarFallback>
             </Avatar>
 
             {!sidebarCollapsed && (
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">{user?.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
-                <div className="mt-2">
-                  <Badge className="border-brand-200 bg-brand-50 text-brand-800">Meu hospital</Badge>
-                </div>
+                <p className="truncate text-[10px] text-muted-foreground">{user?.email}</p>
               </div>
             )}
           </div>
@@ -136,7 +133,7 @@ export function Sidebar() {
 
         <button
           onClick={toggleSidebar}
-          className="absolute -right-3 top-24 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-card hover:text-foreground"
+          className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-card hover:text-foreground"
         >
           {sidebarCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
         </button>
