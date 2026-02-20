@@ -8,26 +8,15 @@ const path = require('path')
 const http = require('http')
 const { createRequire } = require('module')
 
-// ── Resolve workspace packages ───────────────────────────────────────
-// pnpm keeps dependencies in workspace-local node_modules, so we must
-// set NODE_PATH before any require() to workspace packages.
+// ── Workspace paths ──────────────────────────────────────────────────
 const API_DIR = path.join(__dirname, 'api')
 const WEB_DIR = path.join(__dirname, 'apps', 'web')
 const ROOT_DIR = __dirname
 
-// Set NODE_PATH so Node resolves packages from all workspace node_modules
-const nodePaths = [
-    path.join(API_DIR, 'node_modules'),
-    path.join(WEB_DIR, 'node_modules'),
-    path.join(ROOT_DIR, 'node_modules'),
-].join(path.delimiter)
-
-process.env.NODE_PATH = process.env.NODE_PATH
-    ? `${nodePaths}${path.delimiter}${process.env.NODE_PATH}`
-    : nodePaths
-
-// Force Node to re-initialize module paths with updated NODE_PATH
-require('module').Module._initPaths()
+// Create requirers scoped to each workspace so pnpm dependencies resolve
+const apiRequire = createRequire(path.join(API_DIR, 'package.json'))
+const webRequire = createRequire(path.join(WEB_DIR, 'package.json'))
+const rootRequire = createRequire(path.join(ROOT_DIR, 'package.json'))
 
 // ── Load root .env ───────────────────────────────────────────────────
 try {
@@ -41,12 +30,15 @@ const PORT = parseInt(process.env.PORT || '3001', 10)
 
 async function main() {
     // ── 1. Boot NestJS (API) ─────────────────────────────────────────
-    const { NestFactory } = require('@nestjs/core')
-    const { ValidationPipe, Logger } = require('@nestjs/common')
-    const { ExpressAdapter } = require('@nestjs/platform-express')
-    const express = require('express')
-    const cookieParser = require('cookie-parser')
-    const helmet = require('helmet')
+    // Use apiRequire to resolve packages from the api workspace
+    const { NestFactory } = apiRequire('@nestjs/core')
+    const { ValidationPipe, Logger } = apiRequire('@nestjs/common')
+    const { ExpressAdapter } = apiRequire('@nestjs/platform-express')
+    const express = apiRequire('express')
+    const cookieParser = apiRequire('cookie-parser')
+    const helmet = apiRequire('helmet')
+
+    // Import compiled NestJS app
     const { AppModule } = require('./api/dist/src/app.module')
     const { HttpExceptionFilter } = require('./api/dist/src/shared/filters/http-exception.filter')
     const { LoggingInterceptor } = require('./api/dist/src/shared/interceptors/logging.interceptor')
@@ -101,7 +93,7 @@ async function main() {
     logger.log('✅ NestJS API initialized')
 
     // ── 2. Boot Next.js ──────────────────────────────────────────────
-    const next = require('next')
+    const next = webRequire('next')
     const nextApp = next({
         dev: false,
         dir: WEB_DIR,
