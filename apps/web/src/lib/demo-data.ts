@@ -181,6 +181,7 @@ export interface DemoProfessional {
   userId: string
   name: string
   email: string
+  phone?: string
   crm: string
   specialty: string
   status: 'Ativo' | 'Em cobertura' | 'Indisponível'
@@ -188,6 +189,7 @@ export interface DemoProfessional {
   acceptanceRate: number
   completedShifts: number
   nextAvailability: string
+  lastShiftAt?: string
   locations: string[]
 }
 
@@ -197,6 +199,7 @@ export const DEMO_PROFESSIONALS: DemoProfessional[] = [
     userId: 'demo-doctor-1',
     name: 'Dra. Ana Costa',
     email: DEMO_DOCTOR_EMAIL,
+    phone: '(11) 99123-4567',
     crm: 'CRM-SP 123456',
     specialty: 'Intensivista',
     status: 'Em cobertura',
@@ -204,6 +207,7 @@ export const DEMO_PROFESSIONALS: DemoProfessional[] = [
     acceptanceRate: 96,
     completedShifts: 28,
     nextAvailability: '20/02/2026 19:00',
+    lastShiftAt: '2026-02-19',
     locations: ['UTI Adulto', 'UTI Cardiológica'],
   },
   {
@@ -211,6 +215,7 @@ export const DEMO_PROFESSIONALS: DemoProfessional[] = [
     userId: 'doctor-demo-2',
     name: 'Dr. Carlos Mendes',
     email: 'carlos.mendes@hospital.demo',
+    phone: '(11) 98876-1200',
     crm: 'CRM-SP 224411',
     specialty: 'Clínica Médica',
     status: 'Ativo',
@@ -218,6 +223,7 @@ export const DEMO_PROFESSIONALS: DemoProfessional[] = [
     acceptanceRate: 91,
     completedShifts: 24,
     nextAvailability: '20/02/2026 07:00',
+    lastShiftAt: '2026-02-17',
     locations: ['Clínica Médica', 'Pronto-Socorro'],
   },
   {
@@ -225,6 +231,7 @@ export const DEMO_PROFESSIONALS: DemoProfessional[] = [
     userId: 'doctor-demo-3',
     name: 'Dra. Bianca Farias',
     email: 'bianca.farias@hospital.demo',
+    phone: '(11) 99711-9880',
     crm: 'CRM-SP 778899',
     specialty: 'Emergência',
     status: 'Ativo',
@@ -232,6 +239,7 @@ export const DEMO_PROFESSIONALS: DemoProfessional[] = [
     acceptanceRate: 94,
     completedShifts: 31,
     nextAvailability: '20/02/2026 13:00',
+    lastShiftAt: '2026-02-20',
     locations: ['Pronto-Socorro'],
   },
   {
@@ -239,6 +247,7 @@ export const DEMO_PROFESSIONALS: DemoProfessional[] = [
     userId: 'doctor-demo-4',
     name: 'Dr. Felipe Rocha',
     email: 'felipe.rocha@hospital.demo',
+    phone: '(11) 99643-2211',
     crm: 'CRM-SP 332211',
     specialty: 'Anestesiologia',
     status: 'Indisponível',
@@ -246,6 +255,7 @@ export const DEMO_PROFESSIONALS: DemoProfessional[] = [
     acceptanceRate: 88,
     completedShifts: 19,
     nextAvailability: '21/02/2026 07:00',
+    lastShiftAt: '2025-10-28',
     locations: ['Centro Cirúrgico', 'UTI Adulto'],
   },
 ]
@@ -335,6 +345,60 @@ export const DEMO_REPORT_HIGHLIGHTS = [
   'Meses com alerta antecipado tiveram 27% menos cancelamentos de última hora.',
 ]
 
+export interface DemoMonthlyDoctorReportRow {
+  professionalId: string
+  name: string
+  phone: string
+  daysWorked: number
+  totalHours: number
+  shiftsCount: number
+  fixedCoverageRate: number
+  lastShiftAt: string
+}
+
+export const DEMO_MONTHLY_DOCTOR_REPORT: DemoMonthlyDoctorReportRow[] = [
+  {
+    professionalId: 'pro-1',
+    name: 'Dra. Ana Costa',
+    phone: '(11) 99123-4567',
+    daysWorked: 18,
+    totalHours: 192,
+    shiftsCount: 16,
+    fixedCoverageRate: 74,
+    lastShiftAt: '2026-02-19',
+  },
+  {
+    professionalId: 'pro-2',
+    name: 'Dr. Carlos Mendes',
+    phone: '(11) 98876-1200',
+    daysWorked: 14,
+    totalHours: 144,
+    shiftsCount: 12,
+    fixedCoverageRate: 58,
+    lastShiftAt: '2026-02-17',
+  },
+  {
+    professionalId: 'pro-3',
+    name: 'Dra. Bianca Farias',
+    phone: '(11) 99711-9880',
+    daysWorked: 16,
+    totalHours: 168,
+    shiftsCount: 14,
+    fixedCoverageRate: 67,
+    lastShiftAt: '2026-02-20',
+  },
+  {
+    professionalId: 'pro-4',
+    name: 'Dr. Felipe Rocha',
+    phone: '(11) 99643-2211',
+    daysWorked: 2,
+    totalHours: 24,
+    shiftsCount: 2,
+    fixedCoverageRate: 11,
+    lastShiftAt: '2025-10-28',
+  },
+]
+
 export interface DemoFinancialMonth {
   id: string
   month: string
@@ -377,7 +441,12 @@ export const DEMO_FINANCIAL_MONTHS: DemoFinancialMonth[] = [
 
 export const DEMO_NOTIFICATION_RULES = [
   { id: 'notif-1', name: 'Alerta de risco crítico', channel: 'Push + E-mail', status: 'Ativo' },
-  { id: 'notif-2', name: 'Convocação sem resposta (15 min)', channel: 'Push + SMS', status: 'Ativo' },
+  {
+    id: 'notif-2',
+    name: 'Convocação sem resposta (15 min)',
+    channel: 'Push + SMS',
+    status: 'Ativo',
+  },
   { id: 'notif-3', name: 'Resumo diário da cobertura', channel: 'E-mail', status: 'Ativo' },
   { id: 'notif-4', name: 'Lembrete de fechamento financeiro', channel: 'E-mail', status: 'Ativo' },
 ]
