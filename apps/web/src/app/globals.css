@@ -238,6 +238,7 @@
     --header-logo-orb-size: 70px;
     --header-logo-orb-radius: 23px;
     --header-notch-gap: 12px;
+    --header-center-offset-x: 48px;
     --header-notch-width: calc(var(--header-logo-orb-size) + (var(--header-notch-gap) * 2));
     --header-notch-height: calc((var(--header-logo-orb-size) / 2) + var(--header-notch-gap) + 3px);
     --header-notch-radius: calc(var(--header-logo-orb-radius) + var(--header-notch-gap));
@@ -251,8 +252,8 @@
     padding-bottom: 0;
     padding-top: env(safe-area-inset-top, 0px);
     box-shadow:
-      0 6px 18px rgba(15, 23, 42, 0.08),
-      0 1px 0 rgba(15, 23, 42, 0.06);
+      0 10px 26px rgba(15, 23, 42, 0.14),
+      0 2px 0 rgba(15, 23, 42, 0.08);
     /* Solid — NO backdrop-blur or transparency */
   }
 
@@ -276,7 +277,7 @@
   /* Header notch (central cove for logo) */
   .mobile-header-notch {
     position: absolute;
-    left: 50%;
+    left: calc(50% + var(--header-center-offset-x));
     bottom: -42px;
     transform: translateX(-50%);
     width: var(--header-notch-width);
@@ -296,8 +297,8 @@
     border-right: 1px solid hsl(var(--border));
     border-bottom: 1px solid hsl(var(--border));
     box-shadow:
-      0 18px 34px rgba(15, 23, 42, 0.16),
-      0 6px 12px rgba(15, 23, 42, 0.1);
+      0 24px 46px rgba(15, 23, 42, 0.24),
+      0 10px 20px rgba(15, 23, 42, 0.14);
   }
 
   /* Top mask + extended connector lines from notch into header border */
@@ -320,7 +321,7 @@
   /* Centered logo container in header */
   .header-logo-center {
     position: absolute;
-    left: 50%;
+    left: calc(50% + var(--header-center-offset-x));
     top: 50%;
     transform: translate(-50%, -14%);
     z-index: 3;
@@ -426,6 +427,7 @@
     height: calc(78px + env(safe-area-inset-bottom, 0px));
     box-shadow: var(--shadow-nav-bottom);
     background-color: var(--header-bg);
+    overflow: visible;
   }
 
   .bottom-nav-item-v2 {
@@ -435,17 +437,20 @@
     align-items: center;
     gap: 4px;
     min-width: 62px;
+    max-width: 92px;
+    flex: 1 1 0;
     padding: 2px 6px;
     text-decoration: none;
     -webkit-tap-highlight-color: transparent;
     will-change: transform;
+    z-index: 1;
   }
 
   .bottom-nav-item-v2:active {
     transform: scale(0.93);
   }
 
-  /* Wrapper — holds the orb + inner content (icon and label) */
+  /* Wrapper — holds icon and label (orb lives in its own draggable layer) */
   .bottom-nav-content-wrap {
     position: relative;
     display: flex;
@@ -459,7 +464,7 @@
       width 280ms cubic-bezier(0.22, 1, 0.36, 1),
       height 280ms cubic-bezier(0.22, 1, 0.36, 1),
       margin-top 280ms cubic-bezier(0.22, 1, 0.36, 1);
-    z-index: 1;
+    z-index: 2;
   }
 
   .bottom-nav-inner {
@@ -474,27 +479,46 @@
     gap: 2px;
   }
 
-  .bottom-nav-item-v2.active .bottom-nav-content-wrap {
-    width: 92px;
-    height: 92px;
-    margin-top: -46px;
+  .bottom-nav-item-v2.route-active .bottom-nav-icon-v2 {
+    color: var(--color-teal-dark);
   }
 
-  /* The animated active orb — travels between items via layoutId */
+  .bottom-nav-item-v2.route-active .bottom-nav-label-v2 {
+    color: var(--color-teal-dark);
+    font-weight: 600;
+  }
+
+  .bottom-nav-item-v2.orb-selected .bottom-nav-content-wrap {
+    pointer-events: none;
+  }
+
+  /* Draggable active orb (independent from nav items) */
   .bottom-nav-active-orb {
     position: absolute;
-    inset: 0;
+    left: 0;
+    top: -46px;
+    width: 92px;
+    height: 92px;
     border-radius: 50%;
-    /* Perfect circle */
     background: linear-gradient(145deg, rgba(78, 205, 196, 0.95) 0%, rgba(43, 181, 171, 0.88) 100%);
     box-shadow:
       0 10px 28px rgba(78, 205, 196, 0.45),
       0 2px 10px rgba(43, 181, 171, 0.35),
       inset 0 1px 0 rgba(255, 255, 255, 0.25);
-    z-index: 0;
+    z-index: 4;
+    cursor: grab;
+    touch-action: none;
   }
 
-  /* Subtle glow ring behind the orb */
+  .bottom-nav-active-orb.dragging {
+    cursor: grabbing;
+    box-shadow:
+      0 14px 34px rgba(78, 205, 196, 0.55),
+      0 4px 14px rgba(43, 181, 171, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+
+  /* Subtle glow ring around the draggable orb */
   .bottom-nav-active-orb::after {
     content: '';
     position: absolute;
@@ -505,7 +529,11 @@
     animation: orb-glow-in 400ms ease-out 100ms forwards;
   }
 
-  /* Icon within the inner wrap */
+  .bottom-nav-orb-inner {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.22));
+  }
+
+  /* Icon within each nav item */
   .bottom-nav-icon-v2 {
     position: relative;
     z-index: 2;
@@ -515,11 +543,6 @@
     transition:
       color 200ms ease,
       transform 200ms ease;
-  }
-
-  .bottom-nav-item-v2.active .bottom-nav-icon-v2 {
-    color: white;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
   }
 
   /* Label */
@@ -534,12 +557,7 @@
     transition: color 200ms ease;
   }
 
-  .bottom-nav-item-v2.active .bottom-nav-label-v2 {
-    color: var(--color-teal-dark);
-    font-weight: 600;
-  }
-
-  .bottom-nav-item-v2:not(.active) .bottom-nav-label-v2 {
+  .bottom-nav-item-v2:not(.route-active) .bottom-nav-label-v2 {
     color: var(--color-text-muted);
     font-weight: 500;
   }
