@@ -24,6 +24,19 @@ export interface DemoDoctorRegistration {
   createdAt: string
 }
 
+export interface DemoDoctorPrivateShift {
+  id: string
+  date: string
+  startTime: string
+  endTime: string
+  institutionName: string
+  locationName: string
+  specialty: string
+  value: number
+  notes?: string
+  createdAt: string
+}
+
 interface RegisterDoctorPayload {
   inviteCode: string
   fullName: string
@@ -39,14 +52,27 @@ interface RequestSwapPayload {
   reason: string
 }
 
+interface AddPrivateShiftPayload {
+  date: string
+  startTime: string
+  endTime: string
+  institutionName: string
+  locationName: string
+  specialty: string
+  value: number
+  notes?: string
+}
+
 interface DoctorDemoState {
   sectors: DemoDoctorSector[]
   availableShifts: DemoDoctorShiftOpportunity[]
   myShifts: DemoDoctorMyShift[]
+  privateShifts: DemoDoctorPrivateShift[]
   swapRequests: DemoDoctorSwapRequest[]
   inviteCodes: DemoDoctorInviteCode[]
   registrations: DemoDoctorRegistration[]
   claimShift: (shiftId: string, valueOverride?: number) => void
+  addPrivateShift: (payload: AddPrivateShiftPayload) => DemoDoctorPrivateShift
   requestSwap: (payload: RequestSwapPayload) => void
   respondSwapRequest: (requestId: string, decision: 'ACEITA' | 'RECUSADA') => void
   registerDoctorByInvite: (payload: RegisterDoctorPayload) => {
@@ -62,9 +88,44 @@ function buildInitialDoctorState() {
     sectors: DEMO_DOCTOR_SECTORS.map((sector) => ({ ...sector })),
     availableShifts: DEMO_DOCTOR_AVAILABLE_SHIFTS.map((shift) => ({ ...shift })),
     myShifts: DEMO_DOCTOR_MY_SHIFTS.map((shift) => ({ ...shift })),
+    privateShifts: [] as DemoDoctorPrivateShift[],
     swapRequests: DEMO_DOCTOR_SWAP_REQUESTS.map((swap) => ({ ...swap })),
     inviteCodes: DEMO_DOCTOR_INVITE_CODES.map((invite) => ({ ...invite })),
     registrations: [] as DemoDoctorRegistration[],
+  }
+}
+
+function normalizeDate(value: string) {
+  return value.slice(0, 10)
+}
+
+function validatePrivateShiftPayload(payload: AddPrivateShiftPayload) {
+  if (!payload.date) {
+    throw new Error('Informe a data do plantão externo.')
+  }
+
+  if (!payload.startTime || !payload.endTime) {
+    throw new Error('Informe horário de início e fim.')
+  }
+
+  if (payload.startTime === payload.endTime) {
+    throw new Error('Horário de início e fim não podem ser iguais.')
+  }
+
+  if (!payload.institutionName.trim()) {
+    throw new Error('Informe a instituição do plantão externo.')
+  }
+
+  if (!payload.locationName.trim()) {
+    throw new Error('Informe o local/setor do plantão externo.')
+  }
+
+  if (!payload.specialty.trim()) {
+    throw new Error('Informe a especialidade do plantão externo.')
+  }
+
+  if (!Number.isFinite(payload.value) || payload.value <= 0) {
+    throw new Error('Informe um valor válido para o plantão externo.')
   }
 }
 
@@ -109,6 +170,31 @@ export const useDoctorDemoStore = create<DoctorDemoState>()(
             myShifts: [claimedShift, ...state.myShifts],
           }
         }),
+
+      addPrivateShift: (payload) => {
+        validatePrivateShiftPayload(payload)
+
+        const privateShift: DemoDoctorPrivateShift = {
+          id: `private-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          date: normalizeDate(payload.date),
+          startTime: payload.startTime,
+          endTime: payload.endTime,
+          institutionName: payload.institutionName.trim(),
+          locationName: payload.locationName.trim(),
+          specialty: payload.specialty.trim(),
+          value: Math.round(payload.value),
+          notes: payload.notes?.trim() || undefined,
+          createdAt: new Date().toISOString(),
+        }
+
+        set((state) => ({
+          privateShifts: [privateShift, ...state.privateShifts].sort((a, b) =>
+            `${b.date}-${b.startTime}`.localeCompare(`${a.date}-${a.startTime}`),
+          ),
+        }))
+
+        return privateShift
+      },
 
       requestSwap: ({ shiftId, counterpartName, reason }) =>
         set((state) => {
@@ -245,6 +331,7 @@ export const useDoctorDemoStore = create<DoctorDemoState>()(
         sectors: state.sectors,
         availableShifts: state.availableShifts,
         myShifts: state.myShifts,
+        privateShifts: state.privateShifts,
         swapRequests: state.swapRequests,
         inviteCodes: state.inviteCodes,
         registrations: state.registrations,
