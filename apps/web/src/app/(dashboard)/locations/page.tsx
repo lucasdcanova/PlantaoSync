@@ -401,25 +401,6 @@ export default function LocationsPage() {
 
       <PageTransition>
         <div className="space-y-5 p-4 sm:p-6">
-          <section className="from-brand-50 via-background to-brand-100/40 border-brand-200/70 relative overflow-hidden rounded-2xl border bg-gradient-to-br p-6">
-            <div className="bg-brand-200/40 pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full blur-3xl" />
-            <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
-              <div className="max-w-2xl">
-                <p className="text-brand-700 text-xs font-semibold uppercase tracking-widest">
-                  Centro de controle de setores
-                </p>
-                <h2 className="font-display text-foreground mt-2 text-2xl font-bold tracking-tight">
-                  O gestor edita todos os dados operacionais em um só fluxo
-                </h2>
-                <p className="text-muted-foreground mt-2 text-sm">
-                  Estruture criticidade, ocupação, custo e disponibilidade por setor com governança
-                  total e feedback instantâneo.
-                </p>
-              </div>
-              <Badge className="border-brand-300 text-brand-700 bg-white">CRUD completo</Badge>
-            </div>
-          </section>
-
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               {
