@@ -38,28 +38,36 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { InfoTooltip } from '@/components/ui/info-tooltip'
-import { DEMO_DASHBOARD_STATS, DEMO_PROFESSIONALS, DEMO_RECENT_ACTIVITY } from '@/lib/demo-data'
+import { useAuthStore } from '@/store/auth.store'
+import { useProfessionalsStore } from '@/store/professionals.store'
+import { DEMO_DASHBOARD_STATS, DEMO_RECENT_ACTIVITY } from '@/lib/demo-data'
+
+const EMPTY_STATS = {
+  totalProfessionals: 0,
+  activeSchedules: 0,
+  confirmedThisWeek: 0,
+  monthlyCost: 0,
+  occupancyRate: 0,
+  pendingConfirmations: 0,
+}
 
 type InsightPersona = 'gestor' | 'medico'
 type ProjectionWindow = '7d' | '30d'
 
-// Hook de stats (conecta com /api/v1/tenants/me/stats)
+// Hook de stats — retorna demo data apenas para usuários demo
 function useDashboardStats() {
+  const isDemoMode = useAuthStore((s) => s.isDemoMode)
   return useQuery({
-    queryKey: ['dashboard-stats'],
-    queryFn: async () => {
-      // Dados mock enquanto API não está conectada
-      return DEMO_DASHBOARD_STATS
-    },
+    queryKey: ['dashboard-stats', isDemoMode],
+    queryFn: async () => isDemoMode ? DEMO_DASHBOARD_STATS : EMPTY_STATS,
   })
 }
 
 function useRecentActivity() {
+  const isDemoMode = useAuthStore((s) => s.isDemoMode)
   return useQuery({
-    queryKey: ['recent-activity'],
-    queryFn: async () => {
-      return DEMO_RECENT_ACTIVITY
-    },
+    queryKey: ['recent-activity', isDemoMode],
+    queryFn: async () => isDemoMode ? DEMO_RECENT_ACTIVITY : [],
   })
 }
 
@@ -71,6 +79,7 @@ function getMinutesAgo(time: Date) {
 export default function OverviewPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
   const { data: activity, isLoading: activityLoading } = useRecentActivity()
+  const professionals = useProfessionalsStore((s) => s.professionals.filter((p) => p.hospitalStatus === 'ATIVO'))
   const [persona, setPersona] = useState<InsightPersona>('gestor')
   const [window, setWindow] = useState<ProjectionWindow>('30d')
   const [activeSlice, setActiveSlice] = useState(0)
@@ -148,7 +157,7 @@ export default function OverviewPage() {
       { name: string; acceptanceSum: number; completed: number; members: number }
     >()
 
-    DEMO_PROFESSIONALS.forEach((professional) => {
+    professionals.forEach((professional) => {
       const current = grouped.get(professional.specialty)
       if (current) {
         current.acceptanceSum += professional.acceptanceRate
@@ -173,7 +182,7 @@ export default function OverviewPage() {
       }))
       .sort((a, b) => b.completed - a.completed)
       .slice(0, 4)
-  }, [])
+  }, [professionals])
 
   const managerMix = useMemo(
     () => [
@@ -189,7 +198,7 @@ export default function OverviewPage() {
   )
 
   const doctorMix = useMemo(() => {
-    const statusMap = DEMO_PROFESSIONALS.reduce<Record<string, number>>((acc, professional) => {
+    const statusMap = professionals.reduce<Record<string, number>>((acc, professional) => {
       acc[professional.status] = (acc[professional.status] ?? 0) + 1
       return acc
     }, {})
@@ -199,7 +208,7 @@ export default function OverviewPage() {
       { name: 'Ativo', value: statusMap.Ativo ?? 0, color: '#3b82f6' },
       { name: 'Indisponível', value: statusMap.Indisponível ?? 0, color: '#f97316' },
     ]
-  }, [])
+  }, [professionals])
 
   const pieData = persona === 'gestor' ? managerMix : doctorMix
   const activePieItem = pieData[activeSlice] ?? pieData[0]

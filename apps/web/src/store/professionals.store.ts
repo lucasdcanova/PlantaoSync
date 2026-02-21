@@ -16,12 +16,14 @@ interface ProfessionalsState {
   removeProfessional: (professionalId: string) => void
   restoreProfessional: (professionalId: string) => void
   resetProfessionals: () => void
+  initDemoData: () => void
 }
 
 export const useProfessionalsStore = create<ProfessionalsState>()(
   persist(
-    (set, get) => ({
-      professionals: DEMO_PROFESSIONALS,
+    (set) => ({
+      // Start EMPTY — populated via initDemoData() on demo login
+      professionals: [],
 
       addProfessional: (input) => {
         const newPro: DemoProfessional = {
@@ -57,18 +59,16 @@ export const useProfessionalsStore = create<ProfessionalsState>()(
           ),
         })),
 
-      resetProfessionals: () => set({ professionals: DEMO_PROFESSIONALS }),
+      // Reset to empty (real users)
+      resetProfessionals: () => set({ professionals: [] }),
+
+      // Populate with demo data (call on demo login only)
+      initDemoData: () => set({ professionals: DEMO_PROFESSIONALS }),
     }),
     {
       name: 'confirma-plantao-professionals',
       storage: createJSONStorage(() => localStorage),
-      merge: (persisted, current) => {
-        const p = persisted as Partial<ProfessionalsState>
-        return {
-          ...current,
-          professionals: p.professionals ?? current.professionals,
-        }
-      },
+      partialize: (state) => ({ professionals: state.professionals }),
     },
   ),
 )

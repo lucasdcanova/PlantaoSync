@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, ArrowRight, Loader2, Activity, ShieldCheck, Stethoscope } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,18 +16,17 @@ import { ProductLogo } from '@/components/brand/product-logo'
 import { API_BASE_URL } from '@/lib/env'
 import {
   DEMO_DOCTOR_ACCESS_TOKEN,
-  DEMO_DOCTOR_EMAIL,
-  DEMO_DOCTOR_PASSWORD,
   DEMO_DOCTOR_USER,
   DEMO_MANAGER_ACCESS_TOKEN,
-  DEMO_MANAGER_EMAIL,
-  DEMO_MANAGER_PASSWORD,
   DEMO_MANAGER_USER,
   isDoctorDemoCredential,
   isManagerDemoCredential,
 } from '@/lib/demo-data'
 import { useDoctorDemoStore } from '@/store/doctor-demo.store'
 import { useAuthStore } from '@/store/auth.store'
+import { useSchedulesStore } from '@/store/schedules.store'
+import { useProfessionalsStore } from '@/store/professionals.store'
+import { useInstitutionStore } from '@/store/institution.store'
 import { cn } from '@/lib/utils'
 import { BRAND_NAME } from '@/lib/brand'
 
@@ -37,21 +36,40 @@ const loginSchema = z.object({
 })
 
 type LoginForm = z.infer<typeof loginSchema>
+type LoginTransitionState = {
+  name: string
+  roleLabel: string
+}
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
+  const [loginTransition, setLoginTransition] = useState<LoginTransitionState | null>(null)
+  const [suppressAutoRedirect, setSuppressAutoRedirect] = useState(false)
   const router = useRouter()
   const { setUser, setAccessToken, isAuthenticated, user } = useAuthStore()
   const validateRegisteredCredential = useDoctorDemoStore(
     (state) => state.validateRegisteredCredential,
   )
 
+  // Store actions accessed via getState() to avoid unnecessary re-renders
+  const activateDemoMode = () => {
+    useSchedulesStore.getState().initDemoData()
+    useProfessionalsStore.getState().initDemoData()
+    useInstitutionStore.getState().initDemoData()
+  }
+
+  const clearDemoData = (authUser: Parameters<typeof setUser>[0]) => {
+    useSchedulesStore.getState().resetSchedules()
+    useProfessionalsStore.getState().resetProfessionals()
+    useInstitutionStore.getState().initFromUser(authUser)
+  }
+
   // Auto-redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (!suppressAutoRedirect && isAuthenticated && user) {
       router.replace(user.role === 'PROFESSIONAL' ? '/doctor' : '/overview')
     }
-  }, [isAuthenticated, user, router])
+  }, [isAuthenticated, suppressAutoRedirect, user, router])
 
   const {
     register,
@@ -59,34 +77,48 @@ export default function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) })
 
+  const runPremiumLoginTransition = async (
+    destination: '/overview' | '/doctor',
+    name: string,
+    roleLabel: string,
+  ) => {
+    setLoginTransition({ name, roleLabel })
+    await new Promise((resolve) => setTimeout(resolve, 1250))
+    router.push(destination)
+  }
+
   const onSubmit = async (data: LoginForm) => {
     if (isManagerDemoCredential(data.email, data.password)) {
-      setUser(DEMO_MANAGER_USER)
+      setSuppressAutoRedirect(true)
+      activateDemoMode()
+      setUser(DEMO_MANAGER_USER, true)
       setAccessToken(DEMO_MANAGER_ACCESS_TOKEN)
-      router.push('/overview')
-      toast.success(`Bem-vindo, ${DEMO_MANAGER_USER.name.split(' ')[0]}!`)
+      await runPremiumLoginTransition('/overview', DEMO_MANAGER_USER.name.split(' ')[0], 'Gestão')
       return
     }
 
     if (isDoctorDemoCredential(data.email, data.password)) {
-      setUser(DEMO_DOCTOR_USER)
+      setSuppressAutoRedirect(true)
+      activateDemoMode()
+      setUser(DEMO_DOCTOR_USER, true)
       setAccessToken(DEMO_DOCTOR_ACCESS_TOKEN)
-      router.push('/doctor')
-      toast.success(`Bem-vinda, ${DEMO_DOCTOR_USER.name.split(' ')[1]}!`)
+      await runPremiumLoginTransition('/doctor', DEMO_DOCTOR_USER.name.split(' ')[1], 'Médico')
       return
     }
 
     const invitedDoctor = validateRegisteredCredential(data.email, data.password)
     if (invitedDoctor) {
-      setUser({
+      const invitedUser = {
         ...DEMO_DOCTOR_USER,
         id: invitedDoctor.id,
         name: invitedDoctor.fullName,
         email: invitedDoctor.email,
-      })
+      }
+      setSuppressAutoRedirect(true)
+      activateDemoMode()
+      setUser(invitedUser, true)
       setAccessToken(`${DEMO_DOCTOR_ACCESS_TOKEN}-${invitedDoctor.id}`)
-      router.push('/doctor')
-      toast.success(`Bem-vindo, ${invitedDoctor.fullName.split(' ')[0]}!`)
+      await runPremiumLoginTransition('/doctor', invitedDoctor.fullName.split(' ')[0], 'Médico')
       return
     }
 
@@ -103,149 +135,296 @@ export default function LoginPage() {
         throw new Error(err.message ?? 'Falha no login')
       }
 
-      const { user, accessToken } = await res.json()
-      setUser(user)
+      const { user: authUser, accessToken } = await res.json()
+      setSuppressAutoRedirect(true)
+      clearDemoData(authUser)
+      setUser(authUser, false)
       setAccessToken(accessToken)
-      router.push(user.role === 'PROFESSIONAL' ? '/doctor' : '/overview')
-      toast.success(`Bem-vindo, ${user.name.split(' ')[0]}!`)
+      await runPremiumLoginTransition(
+        authUser.role === 'PROFESSIONAL' ? '/doctor' : '/overview',
+        authUser.name.split(' ')[0],
+        authUser.role === 'PROFESSIONAL' ? 'Médico' : 'Gestão',
+      )
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao fazer login')
     }
   }
 
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center px-4 py-12">
-      {/* Subtle background */}
-      <div className="pointer-events-none fixed inset-0">
-        <div className="bg-brand-100/40 absolute left-1/2 top-1/3 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]" />
+    <div className="relative min-h-[100dvh] overflow-hidden bg-[linear-gradient(155deg,#f6fbfb_0%,#f8faff_42%,#ecf6f5_100%)] px-4 py-8">
+      <div className="pointer-events-none absolute inset-0">
+        <motion.div
+          className="bg-brand-300/30 absolute -left-24 top-16 h-64 w-64 rounded-full blur-3xl"
+          animate={{ scale: [1, 1.08, 1], opacity: [0.3, 0.46, 0.3] }}
+          transition={{ duration: 7.5, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="bg-brand-200/45 absolute right-[-5rem] top-[30%] h-72 w-72 rounded-full blur-3xl"
+          animate={{ scale: [1, 1.14, 1], opacity: [0.25, 0.4, 0.25] }}
+          transition={{ duration: 8.2, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
+        />
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 w-full max-w-sm"
-      >
-        {/* Logo and title */}
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 !inline-flex !p-2.5">
-            <ProductLogo
-              variant="full"
-              className="w-[278px] max-w-[calc(100vw-2rem)]"
-              imageClassName="h-auto w-full"
-              priority
-            />
-          </div>
-          <h1 className="font-display text-foreground text-2xl font-bold tracking-tight">Entrar</h1>
-          <p className="text-muted-foreground mt-1.5 text-sm">Acesse sua central de plantões</p>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs font-medium">
-              E-mail
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="seu@email.com.br"
-              autoComplete="email"
-              {...register('email')}
-              className={cn(
-                'bg-card h-11 rounded-xl',
-                errors.email && 'border-destructive focus-visible:ring-destructive',
-              )}
-            />
-            {errors.email && <p className="text-destructive text-xs">{errors.email.message}</p>}
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-xs font-medium">
-                Senha
-              </Label>
-              <Link href="/forgot-password" className="text-brand-700 hover:text-brand-800 text-xs">
-                Esqueceu?
-              </Link>
-            </div>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                {...register('password')}
-                className={cn(
-                  'bg-card h-11 rounded-xl pr-10',
-                  errors.password && 'border-destructive focus-visible:ring-destructive',
-                )}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2"
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            {errors.password && (
-              <p className="text-destructive text-xs">{errors.password.message}</p>
-            )}
-          </div>
-
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="bg-brand-700 hover:bg-brand-800 shadow-brand h-11 w-full gap-2 rounded-xl font-medium text-white"
+      <div className="relative z-10 mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-6xl items-center">
+        <div className="grid w-full items-center gap-8 lg:grid-cols-[1.06fr_0.94fr]">
+          <motion.section
+            initial={{ opacity: 0, x: -24 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
+            className="hidden lg:block"
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Entrando...
-              </>
-            ) : (
-              <>
-                Entrar
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </Button>
-        </form>
-
-        {/* Links */}
-        <div className="mt-6 space-y-2 text-center">
-          <p className="text-muted-foreground text-sm">
-            Primeira vez?{' '}
-            <Link href="/register" className="text-brand-700 hover:text-brand-800 font-medium">
-              Criar conta
-            </Link>
-          </p>
-          <p className="text-muted-foreground text-xs">
-            Recebeu convite?{' '}
-            <Link href="/invite" className="text-brand-700 hover:text-brand-800 font-medium">
-              Cadastre-se no hospital
-            </Link>
-          </p>
-        </div>
-
-        {/* Demo credentials */}
-        <div className="border-border/60 bg-card/50 mt-8 rounded-xl border p-4 text-center">
-          <p className="text-muted-foreground mb-2 text-[11px] font-medium uppercase tracking-wider">
-            Acesso demonstração
-          </p>
-          <div className="text-muted-foreground space-y-1 text-xs">
-            <p>
-              Gestor: <code className="text-brand-700">{DEMO_MANAGER_EMAIL}</code> /{' '}
-              <code className="text-brand-700">{DEMO_MANAGER_PASSWORD}</code>
+            <div className="border-brand-200/80 text-brand-800 inline-flex items-center rounded-full border bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider backdrop-blur">
+              Plataforma hospitalar
+            </div>
+            <h1 className="font-display text-foreground mt-5 max-w-xl text-4xl font-bold tracking-tight">
+              Gestão de plantões com fluidez operacional e segurança clínica.
+            </h1>
+            <p className="text-muted-foreground mt-4 max-w-lg text-base leading-relaxed">
+              {BRAND_NAME} centraliza escalas, trocas e histórico em uma experiência estável para
+              gestão e corpo médico.
             </p>
-            <p>
-              Médico: <code className="text-brand-700">{DEMO_DOCTOR_EMAIL}</code> /{' '}
-              <code className="text-brand-700">{DEMO_DOCTOR_PASSWORD}</code>
-            </p>
-          </div>
+
+            <div className="mt-8 grid max-w-lg gap-3">
+              <div className="border-border/70 bg-card/75 flex items-center gap-3 rounded-2xl border p-4 shadow-sm backdrop-blur">
+                <div className="bg-brand-100 text-brand-800 rounded-xl p-2">
+                  <Activity className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-foreground text-sm font-semibold">Escalas em tempo real</p>
+                  <p className="text-muted-foreground text-xs">
+                    Visibilidade imediata de cobertura
+                  </p>
+                </div>
+              </div>
+              <div className="border-border/70 bg-card/75 flex items-center gap-3 rounded-2xl border p-4 shadow-sm backdrop-blur">
+                <div className="bg-brand-100 text-brand-800 rounded-xl p-2">
+                  <Stethoscope className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-foreground text-sm font-semibold">Fluxo médico simplificado</p>
+                  <p className="text-muted-foreground text-xs">
+                    Trocas e confirmações com menos atrito
+                  </p>
+                </div>
+              </div>
+              <div className="border-border/70 bg-card/75 flex items-center gap-3 rounded-2xl border p-4 shadow-sm backdrop-blur">
+                <div className="bg-brand-100 text-brand-800 rounded-xl p-2">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-foreground text-sm font-semibold">Acesso protegido</p>
+                  <p className="text-muted-foreground text-xs">
+                    Controle seguro por perfil de usuário
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.section>
+
+          <motion.section
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+            className="relative mx-auto w-full max-w-[460px]"
+          >
+            <div className="border-border/70 bg-card/92 relative overflow-hidden rounded-[28px] border p-6 shadow-[0_24px_58px_rgba(15,23,42,0.14)] backdrop-blur-xl sm:p-8">
+              <div className="from-brand-300/0 via-brand-500/60 to-brand-300/0 pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r" />
+
+              <div className="mb-6 text-center">
+                <div className="mx-auto mb-4 inline-flex">
+                  <ProductLogo
+                    variant="full"
+                    className="w-[256px] max-w-[calc(100vw-5rem)]"
+                    imageClassName="h-auto w-full"
+                    priority
+                  />
+                </div>
+                <h2 className="font-display text-foreground text-2xl font-bold tracking-tight">
+                  Entrar na plataforma
+                </h2>
+                <p className="text-muted-foreground mt-1.5 text-sm">
+                  Acesse sua central de plantões com credenciais institucionais.
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="text-xs font-semibold">
+                    E-mail
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com.br"
+                    autoComplete="email"
+                    {...register('email')}
+                    className={cn(
+                      'bg-background/80 border-border/80 h-11 rounded-xl',
+                      errors.email && 'border-destructive focus-visible:ring-destructive',
+                    )}
+                  />
+                  {errors.email && (
+                    <p className="text-destructive text-xs">{errors.email.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-xs font-semibold">
+                      Senha
+                    </Label>
+                    <Link
+                      href="/forgot-password"
+                      className="text-brand-700 hover:text-brand-800 text-xs font-medium"
+                    >
+                      Esqueceu?
+                    </Link>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                      {...register('password')}
+                      className={cn(
+                        'bg-background/80 border-border/80 h-11 rounded-xl pr-10',
+                        errors.password && 'border-destructive focus-visible:ring-destructive',
+                      )}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-destructive text-xs">{errors.password.message}</p>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || Boolean(loginTransition)}
+                  className="bg-brand-700 hover:bg-brand-800 shadow-brand-lg h-11 w-full gap-2 rounded-xl font-semibold text-white"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Entrando...
+                    </>
+                  ) : (
+                    <>
+                      Entrar
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </form>
+
+              <div className="mt-6 space-y-2 text-center">
+                <p className="text-muted-foreground text-sm">
+                  Primeira vez?{' '}
+                  <Link
+                    href="/register"
+                    className="text-brand-700 hover:text-brand-800 font-semibold"
+                  >
+                    Criar conta
+                  </Link>
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Recebeu convite?{' '}
+                  <Link
+                    href="/invite"
+                    className="text-brand-700 hover:text-brand-800 font-semibold"
+                  >
+                    Cadastre-se no hospital
+                  </Link>
+                </p>
+              </div>
+            </div>
+          </motion.section>
         </div>
-      </motion.div>
+      </div>
+
+      <AnimatePresence>
+        {loginTransition && (
+          <motion.div
+            className="fixed inset-0 z-[120] overflow-hidden bg-[radial-gradient(1200px_circle_at_18%_8%,rgba(78,205,196,0.24),transparent_45%),radial-gradient(860px_circle_at_86%_24%,rgba(43,181,171,0.24),transparent_40%),linear-gradient(150deg,#e8f6f6_0%,#eef4ff_46%,#f5fffd_100%)]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <motion.div
+              className="absolute left-1/2 top-1/2 h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/40"
+              animate={{ scale: [1, 1.05, 1], opacity: [0.42, 0.68, 0.42] }}
+              transition={{ duration: 2.3, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <motion.div
+              className="border-brand-200/70 absolute left-1/2 top-1/2 h-[380px] w-[380px] -translate-x-1/2 -translate-y-1/2 rounded-full border"
+              animate={{ scale: [1, 1.08, 1], opacity: [0.32, 0.58, 0.32] }}
+              transition={{ duration: 2.1, repeat: Infinity, ease: 'easeInOut', delay: 0.15 }}
+            />
+
+            <div className="relative z-10 flex h-full items-center justify-center px-4">
+              <motion.div
+                className="border-border/60 bg-white/76 w-full max-w-md rounded-[28px] border px-8 py-9 text-center shadow-[0_30px_80px_rgba(15,23,42,0.18)] backdrop-blur-xl"
+                initial={{ y: 24, scale: 0.985, opacity: 0 }}
+                animate={{ y: 0, scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <motion.div
+                  className="border-brand-200/80 mx-auto mb-6 grid h-28 w-28 place-items-center rounded-[30px] border bg-white/85 shadow-[0_20px_44px_rgba(78,205,196,0.24)]"
+                  animate={{
+                    boxShadow: [
+                      '0 20px 44px rgba(78,205,196,0.24)',
+                      '0 28px 56px rgba(78,205,196,0.34)',
+                      '0 20px 44px rgba(78,205,196,0.24)',
+                    ],
+                  }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <div className="relative grid h-16 w-16 place-items-center">
+                    <motion.div
+                      className="border-brand-200/80 absolute inset-0 rounded-full border-2"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 2.3, repeat: Infinity, ease: 'linear' }}
+                    />
+                    <motion.div
+                      className="absolute inset-[7px] rounded-full border-2 border-transparent"
+                      style={{ borderTopColor: '#2bb5ab', borderRightColor: '#4ecdc4' }}
+                      animate={{ rotate: -360 }}
+                      transition={{ duration: 1.35, repeat: Infinity, ease: 'linear' }}
+                    />
+                    <div className="bg-brand-50 z-10 grid h-9 w-9 place-items-center rounded-full">
+                      <div className="bg-brand-600 h-2.5 w-2.5 rounded-full" />
+                    </div>
+                  </div>
+                </motion.div>
+
+                <p className="font-display text-foreground text-2xl font-semibold tracking-tight">
+                  Bem-vindo, {loginTransition.name}
+                </p>
+                <p className="text-muted-foreground mt-2 text-sm">
+                  Preparando ambiente de {loginTransition.roleLabel} com dados operacionais...
+                </p>
+
+                <div className="bg-brand-100/70 mx-auto mt-6 h-[6px] w-full max-w-[280px] overflow-hidden rounded-full">
+                  <motion.div
+                    className="from-brand-400 to-brand-700 h-full w-[45%] rounded-full bg-gradient-to-r"
+                    initial={{ x: '-100%' }}
+                    animate={{ x: '240%' }}
+                    transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -15,6 +15,9 @@ import { Label } from '@/components/ui/label'
 import { ProductLogo } from '@/components/brand/product-logo'
 import { API_BASE_URL } from '@/lib/env'
 import { useAuthStore } from '@/store/auth.store'
+import { useSchedulesStore } from '@/store/schedules.store'
+import { useProfessionalsStore } from '@/store/professionals.store'
+import { useInstitutionStore } from '@/store/institution.store'
 import { cn } from '@/lib/utils'
 import { BRAND_NAME } from '@/lib/brand'
 
@@ -102,7 +105,11 @@ export default function RegisterPage() {
       }
 
       const { user, accessToken } = await res.json()
-      setUser(user)
+      // Clear any leftover demo data and initialize from the new user's org
+      useSchedulesStore.getState().resetSchedules()
+      useProfessionalsStore.getState().resetProfessionals()
+      useInstitutionStore.getState().initFromUser(user)
+      setUser(user, false)
       setAccessToken(accessToken)
       toast.success('Conta criada com sucesso')
       router.push('/overview')

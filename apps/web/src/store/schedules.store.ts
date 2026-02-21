@@ -46,6 +46,7 @@ interface SchedulesState {
   addExtraShift: (scheduleId: string, input: ScheduleExtraShiftInput) => ScheduleExtraShift
   removeExtraShift: (scheduleId: string, extraShiftId: string) => void
   resetSchedules: () => void
+  initDemoData: () => void
 }
 
 const DEMO_ORGANIZATION_ID = 'org-demo'
@@ -219,7 +220,8 @@ function buildScheduleRecord(
 export const useSchedulesStore = create<SchedulesState>()(
   persist(
     (set, get) => ({
-      schedules: buildInitialSchedules(),
+      // Start EMPTY — populated via initDemoData() on demo login
+      schedules: [],
 
       createSchedule: (input) => {
         validateInput(input)
@@ -323,7 +325,10 @@ export const useSchedulesStore = create<SchedulesState>()(
           ),
         })),
 
-      resetSchedules: () => set({ schedules: buildInitialSchedules() }),
+      // Reset to empty (real users) — does NOT restore demo data
+      resetSchedules: () => set({ schedules: [] }),
+      // Populate with demo data (call on demo login only)
+      initDemoData: () => set({ schedules: buildInitialSchedules() }),
     }),
     {
       name: 'confirma-plantao-schedules',
