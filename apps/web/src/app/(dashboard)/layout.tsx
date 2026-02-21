@@ -8,10 +8,11 @@ import { Sidebar } from '@/components/layout/sidebar'
 import { BottomNav, type BottomNavItem } from '@/components/layout/bottom-nav'
 import { StatusBarSync } from '@/components/layout/status-bar-sync'
 import { ProductLogo } from '@/components/brand/product-logo'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { OrgAvatar } from '@/components/ui/org-avatar'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/auth.store'
-import { cn, getInitials } from '@/lib/utils'
+import { useInstitutionStore } from '@/store/institution.store'
+import { cn } from '@/lib/utils'
 
 const mobileNavItems: BottomNavItem[] = [
   { href: '/overview', label: 'Início', icon: LayoutDashboard },
@@ -24,7 +25,9 @@ const mobileNavItems: BottomNavItem[] = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { user, logout } = useAuthStore()
+  const institution = useInstitutionStore()
   const [logoAnimating, setLogoAnimating] = useState(false)
+  const orgName = institution.name || user?.organization?.name || 'Hospital'
 
   const handleLogoTap = useCallback(() => {
     if (logoAnimating) return
@@ -46,19 +49,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Mobile header — SOLID background, centered logo */}
         <header className="mobile-header-solid">
           <div className="mobile-header-inner">
-            {/* Left: Avatar + greeting */}
-            <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.avatarUrl} />
-                <AvatarFallback className="bg-brand-50 text-brand-700 text-[10px] font-semibold">
-                  {getInitials(user?.name ?? 'US')}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-foreground text-xs font-medium leading-tight">Gestão</p>
-                <p className="text-muted-foreground text-[10px] leading-tight">
-                  {user?.organization?.name ?? 'Hospital'}
+            {/* Left: Institution logo + name */}
+            <div className="flex items-center gap-2 min-w-0">
+              <OrgAvatar name={orgName} logoUrl={institution.logoUrl} size="sm" />
+              <div className="min-w-0">
+                <p className="text-foreground text-xs font-semibold leading-tight truncate max-w-[110px]">
+                  {orgName}
                 </p>
+                <p className="text-muted-foreground text-[10px] leading-tight">Gestão</p>
               </div>
             </div>
 

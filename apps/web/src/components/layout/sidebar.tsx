@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   BarChart3,
+  Building2,
   Calendar,
   ChevronLeft,
   ChevronRight,
@@ -18,12 +19,12 @@ import {
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { OrgAvatar } from '@/components/ui/org-avatar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { ProductLogo } from '@/components/brand/product-logo'
-import { BRAND_SHORT_NAME } from '@/lib/brand'
 import { cn, getInitials } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth.store'
 import { useUIStore } from '@/store/ui.store'
+import { useInstitutionStore } from '@/store/institution.store'
 
 const navItems = [
   { href: '/overview', label: 'Dashboard', icon: LayoutDashboard },
@@ -35,6 +36,7 @@ const navItems = [
 ]
 
 const bottomItems = [
+  { href: '/institution', label: 'Instituição', icon: Building2 },
   { href: '/settings', label: 'Configurações', icon: Settings },
   { href: '/subscription', label: 'Plano', icon: CreditCard },
 ]
@@ -44,12 +46,15 @@ export function Sidebar() {
   const router = useRouter()
   const { sidebarCollapsed, toggleSidebar } = useUIStore()
   const { user, logout } = useAuthStore()
+  const institution = useInstitutionStore()
 
   const isActive = (href: string) => pathname.startsWith(href)
   const handleLogout = () => {
     logout()
     router.push('/login')
   }
+
+  const orgName = institution.name || user?.organization?.name || 'Hospital'
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -68,14 +73,12 @@ export function Sidebar() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -8 }}
                 transition={{ duration: 0.2 }}
-                className="flex items-center gap-2.5"
+                className="flex items-center gap-2.5 min-w-0"
               >
-                <div className="logo-container-light !shadow-subtle !rounded-lg !p-1.5">
-                  <ProductLogo variant="mark" className="h-6 w-6" imageClassName="h-full w-full" />
-                </div>
-                <div>
-                  <p className="text-foreground text-sm font-semibold tracking-tight">
-                    {BRAND_SHORT_NAME}
+                <OrgAvatar name={orgName} logoUrl={institution.logoUrl} size="sm" />
+                <div className="min-w-0">
+                  <p className="text-foreground text-sm font-semibold tracking-tight truncate">
+                    {orgName}
                   </p>
                   <p className="text-muted-foreground text-[10px] uppercase tracking-wider">
                     Gestão
@@ -89,9 +92,9 @@ export function Sidebar() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.18 }}
-                className="logo-container-light !shadow-subtle mx-auto !rounded-lg !p-1.5"
+                className="mx-auto"
               >
-                <ProductLogo variant="mark" className="h-6 w-6" imageClassName="h-full w-full" />
+                <OrgAvatar name={orgName} logoUrl={institution.logoUrl} size="sm" />
               </motion.div>
             )}
           </AnimatePresence>
