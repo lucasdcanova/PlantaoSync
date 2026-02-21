@@ -23,6 +23,7 @@ import { cn, formatCurrency, formatDate, SHIFT_STATUS_CONFIG } from '@/lib/utils
 import { DEMO_DOCTOR_AVAILABLE_SHIFTS, DEMO_MANAGER_ASSIGNED_SHIFTS } from '@/lib/demo-data'
 import { useSchedulesStore } from '@/store/schedules.store'
 import { useLocationsStore } from '@/store/locations.store'
+import { useAuthStore } from '@/store/auth.store'
 import Link from 'next/link'
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -94,8 +95,12 @@ function isShiftActiveNow(date: string, startTime: string, endTime: string, now:
 }
 
 export default function SchedulesPage() {
+  const isDemoMode = useAuthStore((s) => s.isDemoMode)
   const schedules = useSchedulesStore((state) => state.schedules)
   const locations = useLocationsStore((state) => state.locations)
+
+  const demoAvailableShifts = isDemoMode ? DEMO_DOCTOR_AVAILABLE_SHIFTS : []
+  const demoAssignedShifts = isDemoMode ? DEMO_MANAGER_ASSIGNED_SHIFTS : []
 
   const [search, setSearch] = useState('')
   const [selectedScheduleId, setSelectedScheduleId] = useState('')
@@ -158,8 +163,8 @@ export default function SchedulesPage() {
     }
 
     locations.forEach((location) => source.add(location.name))
-    DEMO_DOCTOR_AVAILABLE_SHIFTS.forEach((shift) => source.add(shift.sectorName))
-    DEMO_MANAGER_ASSIGNED_SHIFTS.forEach((shift) => source.add(shift.sectorName))
+    demoAvailableShifts.forEach((shift) => source.add(shift.sectorName))
+    demoAssignedShifts.forEach((shift) => source.add(shift.sectorName))
 
     return ['all', ...Array.from(source)]
   }, [locationNameById, locations, selectedSchedule])
@@ -173,7 +178,7 @@ export default function SchedulesPage() {
       date.slice(0, 10) >= selectedSchedule.startDate.slice(0, 10) &&
       date.slice(0, 10) <= selectedSchedule.endDate.slice(0, 10)
 
-    DEMO_DOCTOR_AVAILABLE_SHIFTS.forEach((shift) => {
+    demoAvailableShifts.forEach((shift) => {
       const date = new Date(`${shift.date}T00:00:00`)
       const sameMonth = date.getFullYear() === year && date.getMonth() === month
       const matchesSector = selectedSector === 'all' || shift.sectorName === selectedSector
@@ -246,7 +251,7 @@ export default function SchedulesPage() {
 
     if (!selectedSchedule) return map
 
-    DEMO_MANAGER_ASSIGNED_SHIFTS.forEach((assignedShift) => {
+    demoAssignedShifts.forEach((assignedShift) => {
       if (assignedShift.scheduleId !== selectedSchedule.id) return
       if (selectedSector !== 'all' && assignedShift.sectorName !== selectedSector) return
 
@@ -299,7 +304,7 @@ export default function SchedulesPage() {
 
     const now = new Date()
 
-    return DEMO_MANAGER_ASSIGNED_SHIFTS.filter((assignedShift) => {
+    return demoAssignedShifts.filter((assignedShift) => {
       if (assignedShift.scheduleId !== selectedSchedule.id) return false
       if (selectedSector !== 'all' && assignedShift.sectorName !== selectedSector) return false
 

@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useProfessionalsStore } from '@/store/professionals.store'
+import { useAuthStore } from '@/store/auth.store'
 import { DEMO_DOCTOR_INVITE_CODES } from '@/lib/demo-data'
 import { cn, getInitials } from '@/lib/utils'
 import type { DemoProfessional } from '@/lib/demo-data'
@@ -240,7 +241,9 @@ function ProfessionalCard({
 }
 
 export default function ProfessionalsPage() {
+  const isDemoMode = useAuthStore((s) => s.isDemoMode)
   const { professionals, removeProfessional, restoreProfessional } = useProfessionalsStore()
+  const inviteCodes = isDemoMode ? DEMO_DOCTOR_INVITE_CODES : []
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'ativos' | 'todos' | 'removidos'>('ativos')
   const [showAddForm, setShowAddForm] = useState(false)
@@ -342,8 +345,11 @@ export default function ProfessionalsPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             Compartilhe os códigos com médicos para auto-cadastro via <code className="text-xs bg-muted px-1 py-0.5 rounded">/invite</code>.
           </p>
+          {inviteCodes.length === 0 ? (
+            <p className="mt-4 text-sm text-muted-foreground">Nenhum código de convite gerado ainda.</p>
+          ) : (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {DEMO_DOCTOR_INVITE_CODES.map((invite) => (
+            {inviteCodes.map((invite) => (
               <article key={invite.id} className="rounded-xl border border-border bg-background p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
@@ -362,7 +368,7 @@ export default function ProfessionalsPage() {
                 </p>
               </article>
             ))}
-          </div>
+          )}
         </section>
       </div>
     </>

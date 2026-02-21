@@ -88,11 +88,10 @@ export default function OverviewPage() {
   const [window, setWindow] = useState<ProjectionWindow>('30d')
   const [activeSlice, setActiveSlice] = useState(0)
 
-  const monthlyCost = stats?.monthlyCost ?? DEMO_DASHBOARD_STATS.monthlyCost
-  const occupancyRate = stats?.occupancyRate ?? DEMO_DASHBOARD_STATS.occupancyRate
-  const pendingConfirmations =
-    stats?.pendingConfirmations ?? DEMO_DASHBOARD_STATS.pendingConfirmations
-  const confirmedThisWeek = stats?.confirmedThisWeek ?? DEMO_DASHBOARD_STATS.confirmedThisWeek
+  const monthlyCost = stats?.monthlyCost ?? 0
+  const occupancyRate = stats?.occupancyRate ?? 0
+  const pendingConfirmations = stats?.pendingConfirmations ?? 0
+  const confirmedThisWeek = stats?.confirmedThisWeek ?? 0
 
   const emsProjectionSeries = useMemo(() => {
     const segments =
