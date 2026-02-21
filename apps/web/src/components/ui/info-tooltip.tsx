@@ -13,36 +13,45 @@ interface InfoTooltipProps {
 }
 
 export function InfoTooltip({ title, description, side = 'top', className }: InfoTooltipProps) {
-  const [open, setOpen] = useState(false)
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Only track touch-forced state.
+  // When false → open=undefined → Radix handles hover natively (no conflict).
+  // When true  → open=true    → forced open from mobile long-press.
+  const [touchOpen, setTouchOpen] = useState(false)
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const clearTimers = useCallback(() => {
-    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null }
+  const cancelTimers = useCallback(() => {
+    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null }
     if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
   }, [])
 
-  const handleMouseEnter = useCallback(() => { clearTimers(); setOpen(true) }, [clearTimers])
-  const handleMouseLeave = useCallback(() => { clearTimers(); setOpen(false) }, [clearTimers])
-
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     e.preventDefault()
-    clearTimers()
-    longPressTimer.current = setTimeout(() => {
-      setOpen(true)
-      closeTimer.current = setTimeout(() => setOpen(false), 4000)
+    cancelTimers()
+    pressTimer.current = setTimeout(() => {
+      setTouchOpen(true)
+      closeTimer.current = setTimeout(() => setTouchOpen(false), 4000)
     }, 500)
-  }, [clearTimers])
+  }, [cancelTimers])
 
   const handleTouchEnd = useCallback(() => {
-    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null }
+    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null }
   }, [])
 
-  const handleTouchMove = useCallback(() => { clearTimers(); setOpen(false) }, [clearTimers])
+  const handleTouchMove = useCallback(() => {
+    cancelTimers()
+    setTouchOpen(false)
+  }, [cancelTimers])
+
+  // Stable callback — only used to close when Radix wants to (e.g. Escape key)
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open) setTouchOpen(false)
+  }, [])
 
   return (
-    <TooltipProvider>
-      <Tooltip open={open} onOpenChange={setOpen}>
+    <TooltipProvider delayDuration={250}>
+      {/* open={undefined} when touchOpen=false → uncontrolled, Radix manages hover */}
+      <Tooltip open={touchOpen || undefined} onOpenChange={handleOpenChange}>
         <TooltipTrigger asChild>
           <button
             type="button"
@@ -54,8 +63,6 @@ export function InfoTooltip({ title, description, side = 'top', className }: Inf
               'touch-manipulation select-none',
               className,
             )}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
             onTouchMove={handleTouchMove}
@@ -67,7 +74,6 @@ export function InfoTooltip({ title, description, side = 'top', className }: Inf
           side={side}
           sideOffset={6}
           className="max-w-[240px] border-border/80 bg-card p-0 shadow-elevated text-card-foreground"
-          onPointerDownOutside={() => setOpen(false)}
         >
           <div className="space-y-1 p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground">
