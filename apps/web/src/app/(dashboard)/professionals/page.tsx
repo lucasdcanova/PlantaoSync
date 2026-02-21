@@ -368,6 +368,7 @@ export default function ProfessionalsPage() {
                 </p>
               </article>
             ))}
+          </div>
           )}
         </section>
       </div>
