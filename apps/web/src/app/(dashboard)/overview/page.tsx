@@ -79,7 +79,11 @@ function getMinutesAgo(time: Date) {
 export default function OverviewPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
   const { data: activity, isLoading: activityLoading } = useRecentActivity()
-  const professionals = useProfessionalsStore((s) => s.professionals.filter((p) => p.hospitalStatus === 'ATIVO'))
+  const allProfessionals = useProfessionalsStore((s) => s.professionals)
+  const professionals = useMemo(
+    () => allProfessionals.filter((p) => p.hospitalStatus === 'ATIVO'),
+    [allProfessionals],
+  )
   const [persona, setPersona] = useState<InsightPersona>('gestor')
   const [window, setWindow] = useState<ProjectionWindow>('30d')
   const [activeSlice, setActiveSlice] = useState(0)
@@ -94,20 +98,20 @@ export default function OverviewPage() {
     const segments =
       window === '7d'
         ? [
-            { label: 'Seg', projectedShare: 0.028, confirmedShare: 0.024, pressure: 58 },
-            { label: 'Ter', projectedShare: 0.031, confirmedShare: 0.027, pressure: 54 },
-            { label: 'Qua', projectedShare: 0.033, confirmedShare: 0.029, pressure: 61 },
-            { label: 'Qui', projectedShare: 0.034, confirmedShare: 0.031, pressure: 64 },
-            { label: 'Sex', projectedShare: 0.037, confirmedShare: 0.033, pressure: 72 },
-            { label: 'Sáb', projectedShare: 0.029, confirmedShare: 0.026, pressure: 66 },
-            { label: 'Dom', projectedShare: 0.025, confirmedShare: 0.022, pressure: 57 },
-          ]
+          { label: 'Seg', projectedShare: 0.028, confirmedShare: 0.024, pressure: 58 },
+          { label: 'Ter', projectedShare: 0.031, confirmedShare: 0.027, pressure: 54 },
+          { label: 'Qua', projectedShare: 0.033, confirmedShare: 0.029, pressure: 61 },
+          { label: 'Qui', projectedShare: 0.034, confirmedShare: 0.031, pressure: 64 },
+          { label: 'Sex', projectedShare: 0.037, confirmedShare: 0.033, pressure: 72 },
+          { label: 'Sáb', projectedShare: 0.029, confirmedShare: 0.026, pressure: 66 },
+          { label: 'Dom', projectedShare: 0.025, confirmedShare: 0.022, pressure: 57 },
+        ]
         : [
-            { label: 'Sem 1', projectedShare: 0.24, confirmedShare: 0.22, pressure: 61 },
-            { label: 'Sem 2', projectedShare: 0.25, confirmedShare: 0.23, pressure: 63 },
-            { label: 'Sem 3', projectedShare: 0.26, confirmedShare: 0.24, pressure: 66 },
-            { label: 'Sem 4', projectedShare: 0.25, confirmedShare: 0.22, pressure: 68 },
-          ]
+          { label: 'Sem 1', projectedShare: 0.24, confirmedShare: 0.22, pressure: 61 },
+          { label: 'Sem 2', projectedShare: 0.25, confirmedShare: 0.23, pressure: 63 },
+          { label: 'Sem 3', projectedShare: 0.26, confirmedShare: 0.24, pressure: 66 },
+          { label: 'Sem 4', projectedShare: 0.25, confirmedShare: 0.22, pressure: 68 },
+        ]
 
     return segments.map((item) => ({
       ...item,
@@ -342,7 +346,7 @@ export default function OverviewPage() {
                     <p className="text-foreground mt-1 text-sm font-semibold">
                       {Math.round(
                         emsProjectionSeries.reduce((sum, item) => sum + item.pressure, 0) /
-                          emsProjectionSeries.length,
+                        emsProjectionSeries.length,
                       )}
                       %
                     </p>

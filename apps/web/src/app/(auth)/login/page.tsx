@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -11,7 +11,6 @@ import { Eye, EyeOff, ArrowRight, Loader2, Activity, ShieldCheck, Stethoscope } 
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { ProductLogo } from '@/components/brand/product-logo'
 import { API_BASE_URL } from '@/lib/env'
 import {
@@ -44,7 +43,7 @@ type LoginTransitionState = {
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loginTransition, setLoginTransition] = useState<LoginTransitionState | null>(null)
-  const [suppressAutoRedirect, setSuppressAutoRedirect] = useState(false)
+  const didInitialRedirect = useRef(false)
   const router = useRouter()
   const { setUser, setAccessToken, isAuthenticated, user } = useAuthStore()
   const validateRegisteredCredential = useDoctorDemoStore(
@@ -66,10 +65,12 @@ export default function LoginPage() {
 
   // Auto-redirect if already authenticated
   useEffect(() => {
-    if (!suppressAutoRedirect && isAuthenticated && user) {
+    if (didInitialRedirect.current) return
+    if (isAuthenticated && user) {
+      didInitialRedirect.current = true
       router.replace(user.role === 'PROFESSIONAL' ? '/doctor' : '/overview')
     }
-  }, [isAuthenticated, suppressAutoRedirect, user, router])
+  }, [isAuthenticated, user, router])
 
   const {
     register,
@@ -89,7 +90,6 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     if (isManagerDemoCredential(data.email, data.password)) {
-      setSuppressAutoRedirect(true)
       activateDemoMode()
       setUser(DEMO_MANAGER_USER, true)
       setAccessToken(DEMO_MANAGER_ACCESS_TOKEN)
@@ -98,7 +98,6 @@ export default function LoginPage() {
     }
 
     if (isDoctorDemoCredential(data.email, data.password)) {
-      setSuppressAutoRedirect(true)
       activateDemoMode()
       setUser(DEMO_DOCTOR_USER, true)
       setAccessToken(DEMO_DOCTOR_ACCESS_TOKEN)
@@ -114,7 +113,6 @@ export default function LoginPage() {
         name: invitedDoctor.fullName,
         email: invitedDoctor.email,
       }
-      setSuppressAutoRedirect(true)
       activateDemoMode()
       setUser(invitedUser, true)
       setAccessToken(`${DEMO_DOCTOR_ACCESS_TOKEN}-${invitedDoctor.id}`)
@@ -136,7 +134,6 @@ export default function LoginPage() {
       }
 
       const { user: authUser, accessToken } = await res.json()
-      setSuppressAutoRedirect(true)
       clearDemoData(authUser)
       setUser(authUser, false)
       setAccessToken(accessToken)
@@ -249,9 +246,9 @@ export default function LoginPage() {
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="email" className="text-xs font-semibold">
+                  <label htmlFor="email" className="text-foreground block text-xs font-semibold">
                     E-mail
-                  </Label>
+                  </label>
                   <Input
                     id="email"
                     type="email"
@@ -270,9 +267,12 @@ export default function LoginPage() {
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="password" className="text-xs font-semibold">
+                    <label
+                      htmlFor="password"
+                      className="text-foreground block text-xs font-semibold"
+                    >
                       Senha
-                    </Label>
+                    </label>
                     <Link
                       href="/forgot-password"
                       className="text-brand-700 hover:text-brand-800 text-xs font-medium"

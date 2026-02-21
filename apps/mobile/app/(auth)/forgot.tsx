@@ -15,7 +15,7 @@ export default function ForgotPasswordScreen() {
     <View style={{ flex: 1, backgroundColor: bg, paddingTop: insets.top + 32, paddingHorizontal: 24 }}>
       <Text style={{ fontSize: 24, fontWeight: '800', color: text }}>Recuperar acesso</Text>
       <Text style={{ marginTop: 8, fontSize: 14, color: muted }}>
-        No ambiente demo, utilize as credenciais fornecidas pelo gestor para entrar no hospital.
+        Informe seu e-mail institucional para seguir com a recuperação de acesso.
       </Text>
 
       <Link href="/(auth)/login" asChild>
