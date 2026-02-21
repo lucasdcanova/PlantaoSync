@@ -36,14 +36,10 @@ const loginSchema = z.object({
 })
 
 type LoginForm = z.infer<typeof loginSchema>
-type LoginTransitionState = {
-  name: string
-  roleLabel: string
-}
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
-  const [loginTransition, setLoginTransition] = useState<LoginTransitionState | null>(null)
+  const [loginTransition, setLoginTransition] = useState(false)
   const didInitialRedirect = useRef(false)
   const router = useRouter()
   const { setUser, setAccessToken, isAuthenticated, user } = useAuthStore()
@@ -81,13 +77,9 @@ export default function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) })
 
-  const runPremiumLoginTransition = async (
-    destination: '/overview' | '/doctor',
-    name: string,
-    roleLabel: string,
-  ) => {
-    setLoginTransition({ name, roleLabel })
-    await new Promise((resolve) => setTimeout(resolve, 1250))
+  const runPremiumLoginTransition = async (destination: '/overview' | '/doctor') => {
+    setLoginTransition(true)
+    await new Promise((resolve) => setTimeout(resolve, 980))
     router.push(destination)
   }
 
@@ -96,7 +88,7 @@ export default function LoginPage() {
       activateDemoMode()
       setUser(DEMO_MANAGER_USER, true)
       setAccessToken(DEMO_MANAGER_ACCESS_TOKEN)
-      await runPremiumLoginTransition('/overview', DEMO_MANAGER_USER.name.split(' ')[0], 'Gestão')
+      await runPremiumLoginTransition('/overview')
       return
     }
 
@@ -104,7 +96,7 @@ export default function LoginPage() {
       activateDemoMode()
       setUser(DEMO_DOCTOR_USER, true)
       setAccessToken(DEMO_DOCTOR_ACCESS_TOKEN)
-      await runPremiumLoginTransition('/doctor', DEMO_DOCTOR_USER.name.split(' ')[1], 'Médico')
+      await runPremiumLoginTransition('/doctor')
       return
     }
 
@@ -119,7 +111,7 @@ export default function LoginPage() {
       activateDemoMode()
       setUser(invitedUser, true)
       setAccessToken(`${DEMO_DOCTOR_ACCESS_TOKEN}-${invitedDoctor.id}`)
-      await runPremiumLoginTransition('/doctor', invitedDoctor.fullName.split(' ')[0], 'Médico')
+      await runPremiumLoginTransition('/doctor')
       return
     }
 
@@ -140,11 +132,7 @@ export default function LoginPage() {
       clearDemoData(authUser)
       setUser(authUser, false)
       setAccessToken(accessToken)
-      await runPremiumLoginTransition(
-        authUser.role === 'PROFESSIONAL' ? '/doctor' : '/overview',
-        authUser.name.split(' ')[0],
-        authUser.role === 'PROFESSIONAL' ? 'Médico' : 'Gestão',
-      )
+      await runPremiumLoginTransition(authUser.role === 'PROFESSIONAL' ? '/doctor' : '/overview')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao fazer login')
     }
@@ -355,74 +343,51 @@ export default function LoginPage() {
       <AnimatePresence>
         {loginTransition && (
           <motion.div
-            className="fixed inset-0 z-[120] overflow-hidden bg-[radial-gradient(1200px_circle_at_18%_8%,rgba(78,205,196,0.24),transparent_45%),radial-gradient(860px_circle_at_86%_24%,rgba(43,181,171,0.24),transparent_40%),linear-gradient(150deg,#e8f6f6_0%,#eef4ff_46%,#f5fffd_100%)]"
+            className="fixed inset-0 z-[120] overflow-hidden bg-[linear-gradient(160deg,#f4faf9_0%,#f6f9ff_50%,#eef8f7_100%)]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           >
             <motion.div
-              className="absolute left-1/2 top-1/2 h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/40"
-              animate={{ scale: [1, 1.05, 1], opacity: [0.42, 0.68, 0.42] }}
-              transition={{ duration: 2.3, repeat: Infinity, ease: 'easeInOut' }}
+              className="bg-brand-200/35 absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
+              animate={{ scale: [1, 1.06, 1], opacity: [0.35, 0.5, 0.35] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
             />
             <motion.div
-              className="border-brand-200/70 absolute left-1/2 top-1/2 h-[380px] w-[380px] -translate-x-1/2 -translate-y-1/2 rounded-full border"
-              animate={{ scale: [1, 1.08, 1], opacity: [0.32, 0.58, 0.32] }}
-              transition={{ duration: 2.1, repeat: Infinity, ease: 'easeInOut', delay: 0.15 }}
+              className="absolute left-1/2 top-1/2 h-[270px] w-[270px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70"
+              animate={{ scale: [1, 1.04, 1], opacity: [0.3, 0.55, 0.3] }}
+              transition={{ duration: 1.9, repeat: Infinity, ease: 'easeInOut', delay: 0.08 }}
             />
 
             <div className="relative z-10 flex h-full items-center justify-center px-4">
               <motion.div
-                className="border-border/60 bg-white/76 w-full max-w-md rounded-[28px] border px-8 py-9 text-center shadow-[0_30px_80px_rgba(15,23,42,0.18)] backdrop-blur-xl"
-                initial={{ y: 24, scale: 0.985, opacity: 0 }}
+                className="border-border/50 bg-white/72 relative grid h-36 w-36 place-items-center rounded-[34px] border shadow-[0_28px_70px_rgba(15,23,42,0.16)] backdrop-blur-xl"
+                initial={{ y: 14, scale: 0.96, opacity: 0 }}
                 animate={{ y: 0, scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               >
                 <motion.div
-                  className="border-brand-200/80 mx-auto mb-6 grid h-28 w-28 place-items-center rounded-[30px] border bg-white/85 shadow-[0_20px_44px_rgba(78,205,196,0.24)]"
-                  animate={{
-                    boxShadow: [
-                      '0 20px 44px rgba(78,205,196,0.24)',
-                      '0 28px 56px rgba(78,205,196,0.34)',
-                      '0 20px 44px rgba(78,205,196,0.24)',
-                    ],
-                  }}
-                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                  className="border-brand-200/70 absolute inset-3 rounded-[26px] border"
+                  animate={{ opacity: [0.45, 0.75, 0.45], scale: [1, 1.025, 1] }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                ></motion.div>
+
+                <motion.div
+                  className="absolute inset-0 rounded-[34px]"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
                 >
-                  <div className="relative grid h-16 w-16 place-items-center">
-                    <motion.div
-                      className="border-brand-200/80 absolute inset-0 rounded-full border-2"
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 2.3, repeat: Infinity, ease: 'linear' }}
-                    />
-                    <motion.div
-                      className="absolute inset-[7px] rounded-full border-2 border-transparent"
-                      style={{ borderTopColor: '#2bb5ab', borderRightColor: '#4ecdc4' }}
-                      animate={{ rotate: -360 }}
-                      transition={{ duration: 1.35, repeat: Infinity, ease: 'linear' }}
-                    />
-                    <div className="bg-brand-50 z-10 grid h-9 w-9 place-items-center rounded-full">
-                      <div className="bg-brand-600 h-2.5 w-2.5 rounded-full" />
-                    </div>
-                  </div>
+                  <div className="bg-brand-500/85 absolute left-1/2 top-2 h-1.5 w-1.5 -translate-x-1/2 rounded-full" />
                 </motion.div>
 
-                <p className="font-display text-foreground text-2xl font-semibold tracking-tight">
-                  Bem-vindo, {loginTransition.name}
-                </p>
-                <p className="text-muted-foreground mt-2 text-sm">
-                  Preparando ambiente de {loginTransition.roleLabel} com dados operacionais...
-                </p>
-
-                <div className="bg-brand-100/70 mx-auto mt-6 h-[6px] w-full max-w-[280px] overflow-hidden rounded-full">
-                  <motion.div
-                    className="from-brand-400 to-brand-700 h-full w-[45%] rounded-full bg-gradient-to-r"
-                    initial={{ x: '-100%' }}
-                    animate={{ x: '240%' }}
-                    transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-                  />
-                </div>
+                <ProductLogo
+                  variant="mark"
+                  className="h-16 w-16"
+                  imageClassName="h-full w-full"
+                  priority
+                />
+                <span className="sr-only">Entrando na plataforma</span>
               </motion.div>
             </div>
           </motion.div>
