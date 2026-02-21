@@ -379,12 +379,12 @@ export function LandingPage() {
             </div>
 
             <h1 className="font-display text-foreground text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-              Escalas médicas,
-              <span className="text-gradient block sm:inline"> sem ruído</span>
+              Chega de cobrar confirmação
+              <span className="text-gradient block"> de plantão pelo WhatsApp</span>
             </h1>
 
             <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-base leading-relaxed sm:text-lg">
-              Confirmação em 1 toque. Cobertura em tempo real.
+              Reduza de 4 horas para 30 minutos por semana o tempo gasto com sua escala médica.
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -394,7 +394,7 @@ export function LandingPage() {
                 asChild
               >
                 <Link href="/register">
-                  Começar gratuitamente
+                  Testar 7 dias grátis
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -416,7 +416,7 @@ export function LandingPage() {
             transition={{ delay: 0.45, duration: 0.5 }}
             className="text-muted-foreground relative z-10 mt-14 flex flex-wrap items-center justify-center gap-3 text-sm"
           >
-            {['Implementação em 24h', 'Conforme LGPD'].map((item) => (
+            {['Sem cartão de crédito', 'Configurado em 24h', 'Conforme LGPD'].map((item) => (
               <span
                 key={item}
                 className="border-border/60 bg-card/80 flex items-center gap-1.5 rounded-full border px-3 py-1.5 shadow-sm backdrop-blur"
