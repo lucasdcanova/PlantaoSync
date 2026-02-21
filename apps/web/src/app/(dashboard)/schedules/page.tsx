@@ -19,13 +19,10 @@ import { PageTransition, StaggerList, StaggerItem } from '@/components/shared/pa
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { cn, formatDate, SHIFT_STATUS_CONFIG } from '@/lib/utils'
-import {
-  DEMO_DOCTOR_AVAILABLE_SHIFTS,
-  DEMO_LOCATIONS,
-  DEMO_MANAGER_ASSIGNED_SHIFTS,
-} from '@/lib/demo-data'
+import { cn, formatCurrency, formatDate, SHIFT_STATUS_CONFIG } from '@/lib/utils'
+import { DEMO_DOCTOR_AVAILABLE_SHIFTS, DEMO_MANAGER_ASSIGNED_SHIFTS } from '@/lib/demo-data'
 import { useSchedulesStore } from '@/store/schedules.store'
+import { useLocationsStore } from '@/store/locations.store'
 import Link from 'next/link'
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -98,21 +95,31 @@ function isShiftActiveNow(date: string, startTime: string, endTime: string, now:
 
 export default function SchedulesPage() {
   const schedules = useSchedulesStore((state) => state.schedules)
+  const locations = useLocationsStore((state) => state.locations)
 
   const [search, setSearch] = useState('')
   const [selectedScheduleId, setSelectedScheduleId] = useState('')
   const [selectedSector, setSelectedSector] = useState('all')
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
 
+  const locationNameById = useMemo(
+    () => new Map(locations.map((location) => [location.id, location.name])),
+    [locations],
+  )
+
   const filtered = useMemo(
     () =>
       schedules.filter((schedule) =>
-        [schedule.title, schedule.description ?? '', schedule.location?.name ?? '']
+        [
+          schedule.title,
+          schedule.description ?? '',
+          locationNameById.get(schedule.locationId) ?? schedule.location?.name ?? '',
+        ]
           .join(' ')
           .toLowerCase()
           .includes(search.toLowerCase()),
       ),
-    [schedules, search],
+    [locationNameById, schedules, search],
   )
 
   useEffect(() => {
@@ -144,16 +151,18 @@ export default function SchedulesPage() {
   const sectorOptions = useMemo(() => {
     const source = new Set<string>()
 
-    if (selectedSchedule?.location?.name) {
-      source.add(selectedSchedule.location.name)
+    if (selectedSchedule?.locationId) {
+      const selectedLocationName =
+        locationNameById.get(selectedSchedule.locationId) ?? selectedSchedule.location?.name
+      if (selectedLocationName) source.add(selectedLocationName)
     }
 
-    DEMO_LOCATIONS.forEach((location) => source.add(location.name))
+    locations.forEach((location) => source.add(location.name))
     DEMO_DOCTOR_AVAILABLE_SHIFTS.forEach((shift) => source.add(shift.sectorName))
     DEMO_MANAGER_ASSIGNED_SHIFTS.forEach((shift) => source.add(shift.sectorName))
 
     return ['all', ...Array.from(source)]
-  }, [selectedSchedule])
+  }, [locationNameById, locations, selectedSchedule])
 
   const openEntriesByDay = useMemo(() => {
     const map = new Map<number, OpenDayEntry[]>()
@@ -188,7 +197,7 @@ export default function SchedulesPage() {
       const date = new Date(`${extraShift.date}T00:00:00`)
       const sameMonth = date.getFullYear() === year && date.getMonth() === month
       const extraSector =
-        DEMO_LOCATIONS.find((location) => location.id === extraShift.locationId)?.name ??
+        locationNameById.get(extraShift.locationId) ??
         selectedSchedule.location?.name ??
         'Setor da escala'
       const matchesSector = selectedSector === 'all' || extraSector === selectedSector
@@ -217,7 +226,7 @@ export default function SchedulesPage() {
     })
 
     return map
-  }, [month, selectedSchedule, selectedSector, year])
+  }, [locationNameById, month, selectedSchedule, selectedSector, year])
 
   const openCountByDay = useMemo(() => {
     const map = new Map<number, number>()
@@ -390,7 +399,9 @@ export default function SchedulesPage() {
 
                     <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
                       <MapPin className="h-3.5 w-3.5" />
-                      {selectedSchedule.location?.name ?? 'Não informado'}
+                      {locationNameById.get(selectedSchedule.locationId) ??
+                        selectedSchedule.location?.name ??
+                        'Não informado'}
                     </span>
                   </div>
 
@@ -677,7 +688,9 @@ export default function SchedulesPage() {
                     <div className="text-muted-foreground flex flex-wrap gap-4 text-xs">
                       <span className="flex items-center gap-1.5">
                         <MapPin className="text-brand-400 h-3.5 w-3.5" />
-                        {schedule.location?.name ?? 'Não informado'}
+                        {locationNameById.get(schedule.locationId) ??
+                          schedule.location?.name ??
+                          'Não informado'}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Calendar className="text-brand-400 h-3.5 w-3.5" />
@@ -689,6 +702,11 @@ export default function SchedulesPage() {
                           Publicada em {formatDate(schedule.publishedAt)}
                         </span>
                       )}
+                      <span className="flex items-center gap-1.5">
+                        <Badge className="border-brand-200 bg-brand-50 text-brand-700 text-[10px]">
+                          Valor/plantão {formatCurrency(schedule.shiftValue)}
+                        </Badge>
+                      </span>
                       <span className="flex items-center gap-1.5">
                         {schedule.requireSwapApproval ? (
                           <>

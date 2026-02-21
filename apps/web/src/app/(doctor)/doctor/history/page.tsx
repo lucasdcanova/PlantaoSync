@@ -3,6 +3,9 @@
 import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { useDoctorDemoStore } from '@/store/doctor-demo.store'
+import { useSchedulesStore } from '@/store/schedules.store'
+import { useLocationsStore } from '@/store/locations.store'
+import { createShiftValueResolver } from '@/lib/shift-pricing'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 type HistoryFilter = 'TODOS' | 'CONCLUIDO' | 'CONFIRMADO' | 'TROCA_SOLICITADA'
@@ -20,7 +23,14 @@ const statusClassName: Record<string, string> = {
 
 export default function DoctorHistoryPage() {
   const myShifts = useDoctorDemoStore((state) => state.myShifts)
+  const schedules = useSchedulesStore((state) => state.schedules)
+  const locations = useLocationsStore((state) => state.locations)
   const [filter, setFilter] = useState<HistoryFilter>('TODOS')
+
+  const resolveShiftValue = useMemo(
+    () => createShiftValueResolver(schedules, locations),
+    [locations, schedules],
+  )
 
   const shifts = useMemo(() => {
     return myShifts.filter((shift) => (filter === 'TODOS' ? true : shift.status === filter))
@@ -28,9 +38,9 @@ export default function DoctorHistoryPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
-        <h2 className="font-display text-xl font-bold text-foreground">Histórico do médico</h2>
-        <p className="text-sm text-muted-foreground">
+      <section className="border-border bg-card shadow-card rounded-2xl border p-5">
+        <h2 className="font-display text-foreground text-xl font-bold">Histórico do médico</h2>
+        <p className="text-muted-foreground text-sm">
           Consulte plantões concluídos, confirmados e plantões em processo de troca.
         </p>
 
@@ -54,36 +64,53 @@ export default function DoctorHistoryPage() {
 
       <section className="space-y-3">
         {shifts.map((shift) => (
-          <article key={shift.id} className="rounded-2xl border border-border bg-card p-5 shadow-card">
+          <article
+            key={shift.id}
+            className="border-border bg-card shadow-card rounded-2xl border p-5"
+          >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 className="font-display text-lg font-semibold text-foreground">{shift.sectorName}</h3>
-                <p className="text-sm text-muted-foreground">
+                <h3 className="font-display text-foreground text-lg font-semibold">
+                  {shift.sectorName}
+                </h3>
+                <p className="text-muted-foreground text-sm">
                   {formatDate(shift.date)} · {shift.startTime} - {shift.endTime}
                 </p>
               </div>
-              <Badge className={statusClassName[shift.status]}>{shift.status.replace('_', ' ')}</Badge>
+              <Badge className={statusClassName[shift.status]}>
+                {shift.status.replace('_', ' ')}
+              </Badge>
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Carga assistencial</p>
-                <p className="mt-1 text-sm text-foreground">{shift.patientLoad}</p>
+                <p className="text-muted-foreground text-xs uppercase tracking-wide">
+                  Carga assistencial
+                </p>
+                <p className="text-foreground mt-1 text-sm">{shift.patientLoad}</p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Valor</p>
-                <p className="mt-1 text-sm text-foreground">{formatCurrency(shift.value)}</p>
+                <p className="text-muted-foreground text-xs uppercase tracking-wide">Valor</p>
+                <p className="text-foreground mt-1 text-sm">
+                  {formatCurrency(
+                    resolveShiftValue({
+                      date: shift.date,
+                      sectorName: shift.sectorName,
+                      fallbackValue: shift.value,
+                    }),
+                  )}
+                </p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Observação</p>
-                <p className="mt-1 text-sm text-foreground">{shift.notes ?? 'Sem observações.'}</p>
+                <p className="text-muted-foreground text-xs uppercase tracking-wide">Observação</p>
+                <p className="text-foreground mt-1 text-sm">{shift.notes ?? 'Sem observações.'}</p>
               </div>
             </div>
           </article>
         ))}
 
         {shifts.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
+          <div className="border-border bg-card text-muted-foreground rounded-2xl border border-dashed p-10 text-center text-sm">
             Nenhum plantão encontrado para o filtro selecionado.
           </div>
         )}

@@ -16,10 +16,13 @@ export interface ScheduleExtraShift {
 export interface ManagerSchedule extends Schedule {
   extraShifts: ScheduleExtraShift[]
   requireSwapApproval: boolean
+  shiftValue: number
 }
 
 export interface ScheduleEditorInput {
   locationId: string
+  locationName?: string
+  shiftValue: number
   title: string
   description?: string
   startDate: string
@@ -50,6 +53,13 @@ interface SchedulesState {
 }
 
 const DEMO_ORGANIZATION_ID = 'org-demo'
+const DEFAULT_SHIFT_VALUE = 140_000
+const DEMO_SHIFT_VALUE_BY_LOCATION: Record<string, number> = {
+  'loc-uti': 145_000,
+  'loc-ps': 135_000,
+  'loc-clinica': 95_000,
+  'loc-centro-cir': 120_000,
+}
 
 const DEMO_EXTRA_SHIFTS_BY_SCHEDULE: Record<string, ScheduleExtraShift[]> = {
   '1': [
@@ -83,6 +93,18 @@ function todayDate() {
 function normalizeDate(value?: string) {
   if (!value) return undefined
   return value.slice(0, 10)
+}
+
+function normalizeShiftValue(value?: number, locationId?: string) {
+  if (Number.isFinite(value) && Number(value) > 0) {
+    return Math.round(Number(value))
+  }
+
+  if (locationId && Number.isFinite(DEMO_SHIFT_VALUE_BY_LOCATION[locationId])) {
+    return DEMO_SHIFT_VALUE_BY_LOCATION[locationId]
+  }
+
+  return DEFAULT_SHIFT_VALUE
 }
 
 function buildLocation(locationId: string, fallbackName?: string) {
@@ -135,6 +157,7 @@ function normalizeSchedule(schedule: Partial<ManagerSchedule>) {
     shifts: schedule.shifts ?? [],
     extraShifts,
     requireSwapApproval: schedule.requireSwapApproval ?? true,
+    shiftValue: normalizeShiftValue(schedule.shiftValue, locationId),
   } satisfies ManagerSchedule
 }
 
@@ -170,6 +193,10 @@ function validateInput(input: ScheduleEditorInput) {
   if (input.startDate > input.endDate) {
     throw new Error('A data de início não pode ser maior que a data final.')
   }
+
+  if (!Number.isFinite(input.shiftValue) || input.shiftValue <= 0) {
+    throw new Error('Informe um valor por plantão maior que zero.')
+  }
 }
 
 function validateExtraShiftInput(input: ScheduleExtraShiftInput) {
@@ -198,11 +225,19 @@ function buildScheduleRecord(
 ) {
   const normalizedPublishedAt =
     input.status === 'DRAFT' ? undefined : (normalizeDate(input.publishedAt) ?? todayDate())
+  const normalizedLocationName = input.locationName?.trim()
 
   return normalizeSchedule({
     id: base.id,
     organizationId: base.organizationId,
     locationId: input.locationId,
+    location: normalizedLocationName
+      ? {
+          id: input.locationId,
+          name: normalizedLocationName,
+        }
+      : undefined,
+    shiftValue: normalizeShiftValue(input.shiftValue, input.locationId),
     title: input.title.trim(),
     description: input.description?.trim() || undefined,
     startDate: normalizeDate(input.startDate) ?? todayDate(),

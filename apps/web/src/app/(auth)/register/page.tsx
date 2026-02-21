@@ -18,6 +18,7 @@ import { useAuthStore } from '@/store/auth.store'
 import { useSchedulesStore } from '@/store/schedules.store'
 import { useProfessionalsStore } from '@/store/professionals.store'
 import { useInstitutionStore } from '@/store/institution.store'
+import { useLocationsStore } from '@/store/locations.store'
 import { cn } from '@/lib/utils'
 import { BRAND_NAME } from '@/lib/brand'
 
@@ -100,7 +101,7 @@ export default function RegisterPage() {
         const err = await res.json().catch(() => null)
         const message = Array.isArray(err?.message)
           ? err.message.join(', ')
-          : err?.message ?? 'Não foi possível criar a conta'
+          : (err?.message ?? 'Não foi possível criar a conta')
         throw new Error(message)
       }
 
@@ -108,6 +109,7 @@ export default function RegisterPage() {
       // Clear any leftover demo data and initialize from the new user's org
       useSchedulesStore.getState().resetSchedules()
       useProfessionalsStore.getState().resetProfessionals()
+      useLocationsStore.getState().resetLocations()
       useInstitutionStore.getState().initFromUser(user)
       setUser(user, false)
       setAccessToken(accessToken)
@@ -126,7 +128,12 @@ export default function RegisterPage() {
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         className="hidden w-1/2 flex-col justify-between bg-[linear-gradient(145deg,#1a1d23_0%,#22313a_55%,#2bb5ab_140%)] p-12 text-white lg:flex"
       >
-        <ProductLogo variant="full" className="max-w-[300px]" imageClassName="w-full h-auto" priority />
+        <ProductLogo
+          variant="full"
+          className="max-w-[300px]"
+          imageClassName="w-full h-auto"
+          priority
+        />
 
         <div className="space-y-6">
           <div>
@@ -135,8 +142,9 @@ export default function RegisterPage() {
               <br />
               <span className="text-brand-200">de escala com previsibilidade</span>
             </h1>
-            <p className="mt-3 max-w-sm text-brand-100/85">
-              Configure o ambiente da instituição e troque urgência reativa por planejamento assistencial.
+            <p className="text-brand-100/85 mt-3 max-w-sm">
+              Configure o ambiente da instituição e troque urgência reativa por planejamento
+              assistencial.
             </p>
           </div>
 
@@ -156,7 +164,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <p className="text-xs text-brand-100/70">Diagnóstico inicial guiado · sem cartão</p>
+        <p className="text-brand-100/70 text-xs">Diagnóstico inicial guiado · sem cartão</p>
       </motion.div>
 
       <motion.div
@@ -167,15 +175,21 @@ export default function RegisterPage() {
       >
         <div className="w-full max-w-xl">
           <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <div className="h-9 w-9 rounded-md bg-card p-1 shadow-card">
-              <ProductLogo variant="mark" className="h-full w-full" imageClassName="h-full w-full" />
+            <div className="bg-card shadow-card h-9 w-9 rounded-md p-1">
+              <ProductLogo
+                variant="mark"
+                className="h-full w-full"
+                imageClassName="h-full w-full"
+              />
             </div>
             <span className="font-display text-base font-semibold">{BRAND_NAME}</span>
           </div>
 
           <div>
-            <h2 className="font-display text-2xl font-bold text-foreground">Criar ambiente da instituição</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h2 className="font-display text-foreground text-2xl font-bold">
+              Criar ambiente da instituição
+            </h2>
+            <p className="text-muted-foreground mt-1 text-sm">
               Em poucos passos, sua equipe entra com o fluxo de escala padronizado
             </p>
           </div>
@@ -190,7 +204,7 @@ export default function RegisterPage() {
                 {...register('name')}
                 className={cn(errors.name && 'border-destructive focus-visible:ring-destructive')}
               />
-              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+              {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -199,7 +213,9 @@ export default function RegisterPage() {
                 id="organizationName"
                 placeholder="Hospital São Lucas"
                 {...register('organizationName')}
-                className={cn(errors.organizationName && 'border-destructive focus-visible:ring-destructive')}
+                className={cn(
+                  errors.organizationName && 'border-destructive focus-visible:ring-destructive',
+                )}
                 onBlur={() => {
                   if (!organizationSlug) {
                     setValue('organizationSlug', slugify(organizationName ?? ''), {
@@ -209,7 +225,7 @@ export default function RegisterPage() {
                 }}
               />
               {errors.organizationName && (
-                <p className="text-xs text-destructive">{errors.organizationName.message}</p>
+                <p className="text-destructive text-xs">{errors.organizationName.message}</p>
               )}
             </div>
 
@@ -219,10 +235,12 @@ export default function RegisterPage() {
                 id="organizationSlug"
                 placeholder="hospital-são-lucas"
                 {...register('organizationSlug')}
-                className={cn(errors.organizationSlug && 'border-destructive focus-visible:ring-destructive')}
+                className={cn(
+                  errors.organizationSlug && 'border-destructive focus-visible:ring-destructive',
+                )}
               />
               {errors.organizationSlug && (
-                <p className="text-xs text-destructive">{errors.organizationSlug.message}</p>
+                <p className="text-destructive text-xs">{errors.organizationSlug.message}</p>
               )}
             </div>
 
@@ -241,7 +259,7 @@ export default function RegisterPage() {
                 {...register('email')}
                 className={cn(errors.email && 'border-destructive focus-visible:ring-destructive')}
               />
-              {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+              {errors.email && <p className="text-destructive text-xs">{errors.email.message}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -253,17 +271,22 @@ export default function RegisterPage() {
                   placeholder="••••••••"
                   autoComplete="new-password"
                   {...register('password')}
-                  className={cn('pr-10', errors.password && 'border-destructive focus-visible:ring-destructive')}
+                  className={cn(
+                    'pr-10',
+                    errors.password && 'border-destructive focus-visible:ring-destructive',
+                  )}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+              {errors.password && (
+                <p className="text-destructive text-xs">{errors.password.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -283,7 +306,7 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2"
                 >
                   {showConfirmPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -293,7 +316,7 @@ export default function RegisterPage() {
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
+                <p className="text-destructive text-xs">{errors.confirmPassword.message}</p>
               )}
             </div>
 
@@ -301,7 +324,7 @@ export default function RegisterPage() {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full gap-2 bg-brand-700 text-white shadow-brand hover:bg-brand-800"
+                className="bg-brand-700 shadow-brand hover:bg-brand-800 w-full gap-2 text-white"
               >
                 {isSubmitting ? (
                   <>
@@ -318,14 +341,14 @@ export default function RegisterPage() {
             </div>
           </form>
 
-          <p className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          <p className="text-muted-foreground mt-6 flex items-center justify-center gap-2 text-xs">
             <ShieldCheck className="h-3.5 w-3.5 text-green-600" />
             Dados protegidos com trilha de acesso e conformidade LGPD
           </p>
 
-          <p className="mt-3 text-center text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-3 text-center text-sm">
             Já possui acesso liberado?{' '}
-            <Link href="/login" className="font-medium text-brand-800 hover:underline">
+            <Link href="/login" className="text-brand-800 font-medium hover:underline">
               Fazer login
             </Link>
           </p>

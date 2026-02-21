@@ -22,18 +22,19 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { DEMO_LOCATIONS } from '@/lib/demo-data'
-import { SHIFT_STATUS_CONFIG, formatDate } from '@/lib/utils'
+import { SHIFT_STATUS_CONFIG, formatCurrency, formatDate } from '@/lib/utils'
 import {
   useSchedulesStore,
   type ScheduleEditorInput,
   type ScheduleExtraShiftInput,
 } from '@/store/schedules.store'
+import { useLocationsStore } from '@/store/locations.store'
 
 type ScheduleFormValues = {
   title: string
   description: string
   locationId: string
+  shiftValue: string
   startDate: string
   endDate: string
   status: ScheduleStatus
@@ -56,15 +57,18 @@ const STATUS_OPTIONS: Array<{ value: ScheduleStatus; label: string }> = [
   { value: 'ARCHIVED', label: SHIFT_STATUS_CONFIG.ARCHIVED.label },
 ]
 
-const DEFAULT_FORM: ScheduleFormValues = {
-  title: '',
-  description: '',
-  locationId: DEMO_LOCATIONS[0]?.id ?? '',
-  startDate: '',
-  endDate: '',
-  status: 'DRAFT',
-  publishedAt: '',
-  requireSwapApproval: true,
+function buildDefaultForm(defaultLocationId = ''): ScheduleFormValues {
+  return {
+    title: '',
+    description: '',
+    locationId: defaultLocationId,
+    shiftValue: '1400,00',
+    startDate: '',
+    endDate: '',
+    status: 'DRAFT',
+    publishedAt: '',
+    requireSwapApproval: true,
+  }
 }
 
 const DEFAULT_EXTRA_SHIFT_FORM: ExtraShiftFormValues = {
@@ -79,6 +83,7 @@ function toFormValues(input: {
   title: string
   description?: string
   locationId: string
+  shiftValue: number
   startDate: string
   endDate: string
   status: ScheduleStatus
@@ -89,12 +94,24 @@ function toFormValues(input: {
     title: input.title,
     description: input.description ?? '',
     locationId: input.locationId,
+    shiftValue: (input.shiftValue / 100).toFixed(2).replace('.', ','),
     startDate: input.startDate.slice(0, 10),
     endDate: input.endDate.slice(0, 10),
     status: input.status,
     publishedAt: input.publishedAt?.slice(0, 10) ?? '',
     requireSwapApproval: input.requireSwapApproval,
   } satisfies ScheduleFormValues
+}
+
+function parseCurrencyToCents(value: string) {
+  const cleaned = value.replace(/[^\d,.-]/g, '').trim()
+  if (!cleaned) return Number.NaN
+
+  const hasComma = cleaned.includes(',')
+  const normalized = Number(hasComma ? cleaned.replace(/\./g, '').replace(',', '.') : cleaned)
+
+  if (!Number.isFinite(normalized) || normalized <= 0) return Number.NaN
+  return Math.round(normalized * 100)
 }
 
 export default function ScheduleDetailsPage() {
@@ -111,13 +128,21 @@ export default function ScheduleDetailsPage() {
   const deleteSchedule = useSchedulesStore((state) => state.deleteSchedule)
   const addExtraShift = useSchedulesStore((state) => state.addExtraShift)
   const removeExtraShift = useSchedulesStore((state) => state.removeExtraShift)
+  const locations = useLocationsStore((state) => state.locations)
+
+  const defaultLocationId =
+    locations.find((location) => location.isActive)?.id ?? locations[0]?.id ?? ''
+  const locationNameById = useMemo(
+    () => new Map(locations.map((location) => [location.id, location.name])),
+    [locations],
+  )
 
   const schedule = useMemo(
     () => (isCreateMode ? null : (schedules.find((item) => item.id === scheduleId) ?? null)),
     [isCreateMode, scheduleId, schedules],
   )
 
-  const [form, setForm] = useState<ScheduleFormValues>(DEFAULT_FORM)
+  const [form, setForm] = useState<ScheduleFormValues>(() => buildDefaultForm(defaultLocationId))
   const [extraShiftForm, setExtraShiftForm] =
     useState<ExtraShiftFormValues>(DEFAULT_EXTRA_SHIFT_FORM)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -125,17 +150,18 @@ export default function ScheduleDetailsPage() {
 
   useEffect(() => {
     if (isCreateMode) {
-      setForm(DEFAULT_FORM)
+      setForm(buildDefaultForm(defaultLocationId))
       return
     }
 
     if (schedule) {
       setForm(toFormValues(schedule))
     }
-  }, [isCreateMode, schedule])
+  }, [defaultLocationId, isCreateMode, schedule])
 
   const statusConfig = SHIFT_STATUS_CONFIG[form.status]
-  const selectedLocation = DEMO_LOCATIONS.find((location) => location.id === form.locationId)
+  const selectedLocation = locations.find((location) => location.id === form.locationId)
+  const hasLocations = locations.length > 0
 
   const canEditPublishedAt = form.status !== 'DRAFT'
 
@@ -144,8 +170,13 @@ export default function ScheduleDetailsPage() {
     : 'Edite todos os dados operacionais desta escala'
 
   const formTitle = isCreateMode ? 'Nova Escala Mensal' : 'Edição Completa da Escala'
+  const parsedShiftValue = parseCurrencyToCents(form.shiftValue)
 
   const validateForm = () => {
+    if (!hasLocations) {
+      return 'Cadastre pelo menos um setor antes de criar ou editar escalas.'
+    }
+
     if (!form.title.trim()) {
       return 'Informe o título da escala.'
     }
@@ -160,6 +191,10 @@ export default function ScheduleDetailsPage() {
 
     if (form.startDate > form.endDate) {
       return 'A data de início não pode ser maior que a data final.'
+    }
+
+    if (!Number.isFinite(parsedShiftValue) || parsedShiftValue <= 0) {
+      return 'Informe um valor por plantão válido e maior que zero.'
     }
 
     return null
@@ -181,6 +216,8 @@ export default function ScheduleDetailsPage() {
       title: form.title,
       description: form.description,
       locationId: form.locationId,
+      locationName: selectedLocation?.name,
+      shiftValue: parsedShiftValue,
       startDate: form.startDate,
       endDate: form.endDate,
       status: form.status,
@@ -220,7 +257,7 @@ export default function ScheduleDetailsPage() {
 
   const handleReset = () => {
     if (isCreateMode) {
-      setForm(DEFAULT_FORM)
+      setForm(buildDefaultForm(defaultLocationId))
       return
     }
 
@@ -373,6 +410,7 @@ export default function ScheduleDetailsPage() {
                     <select
                       id="schedule-location"
                       value={form.locationId}
+                      disabled={!hasLocations}
                       onChange={(event) =>
                         setForm((prev) => ({
                           ...prev,
@@ -381,12 +419,18 @@ export default function ScheduleDetailsPage() {
                       }
                       className="border-input bg-card text-foreground shadow-card focus-visible:ring-ring focus-visible:ring-offset-background h-10 w-full rounded-md border px-3 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                     >
-                      {DEMO_LOCATIONS.map((location) => (
+                      {locations.map((location) => (
                         <option key={location.id} value={location.id}>
                           {location.name}
+                          {!location.isActive ? ' (inativo)' : ''}
                         </option>
                       ))}
                     </select>
+                    {!hasLocations && (
+                      <p className="text-muted-foreground text-xs">
+                        Cadastre um setor na página de setores para habilitar a criação da escala.
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -414,6 +458,25 @@ export default function ScheduleDetailsPage() {
                       ))}
                     </select>
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="schedule-shift-value">Valor por plantão (R$)</Label>
+                  <Input
+                    id="schedule-shift-value"
+                    value={form.shiftValue}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        shiftValue: event.target.value,
+                      }))
+                    }
+                    placeholder="1400,00"
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    Este valor alimenta os relatórios financeiros do gestor e os relatórios de
+                    ganhos dos médicos vinculados à escala.
+                  </p>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
@@ -633,8 +696,7 @@ export default function ScheduleDetailsPage() {
                             </p>
                             <p className="text-muted-foreground text-xs">
                               {extraShift.requiredCount} médico(s) ·{' '}
-                              {DEMO_LOCATIONS.find((item) => item.id === extraShift.locationId)
-                                ?.name || 'Local não informado'}
+                              {locationNameById.get(extraShift.locationId) || 'Local não informado'}
                             </p>
                             {extraShift.notes && (
                               <p className="text-muted-foreground mt-0.5 text-xs">
@@ -697,6 +759,17 @@ export default function ScheduleDetailsPage() {
                   <p className="text-foreground mt-2 flex items-center gap-2">
                     <Clock className="text-brand-500 h-4 w-4" />
                     {form.publishedAt ? formatDate(form.publishedAt) : 'Ainda não publicada'}
+                  </p>
+                </div>
+
+                <div className="border-border bg-background rounded-xl border p-4">
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide">
+                    Valor por plantão
+                  </p>
+                  <p className="text-foreground mt-2 font-medium">
+                    {Number.isFinite(parsedShiftValue) && parsedShiftValue > 0
+                      ? formatCurrency(parsedShiftValue)
+                      : 'Não informado'}
                   </p>
                 </div>
 

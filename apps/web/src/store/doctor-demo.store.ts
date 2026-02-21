@@ -46,7 +46,7 @@ interface DoctorDemoState {
   swapRequests: DemoDoctorSwapRequest[]
   inviteCodes: DemoDoctorInviteCode[]
   registrations: DemoDoctorRegistration[]
-  claimShift: (shiftId: string) => void
+  claimShift: (shiftId: string, valueOverride?: number) => void
   requestSwap: (payload: RequestSwapPayload) => void
   respondSwapRequest: (requestId: string, decision: 'ACEITA' | 'RECUSADA') => void
   registerDoctorByInvite: (payload: RegisterDoctorPayload) => {
@@ -73,7 +73,7 @@ export const useDoctorDemoStore = create<DoctorDemoState>()(
     (set, get) => ({
       ...buildInitialDoctorState(),
 
-      claimShift: (shiftId) =>
+      claimShift: (shiftId, valueOverride) =>
         set((state) => {
           const shift = state.availableShifts.find((item) => item.id === shiftId)
           if (!shift) return state
@@ -95,7 +95,10 @@ export const useDoctorDemoStore = create<DoctorDemoState>()(
             sectorName: shift.sectorName,
             specialty: shift.specialty,
             status: 'CONFIRMADO',
-            value: shift.value,
+            value:
+              Number.isFinite(valueOverride) && Number(valueOverride) > 0
+                ? Math.round(Number(valueOverride))
+                : shift.value,
             patientLoad: 'Moderada',
             notes: `Plantão assumido via painel do médico (${shift.issuedBy}).`,
           }
@@ -113,7 +116,8 @@ export const useDoctorDemoStore = create<DoctorDemoState>()(
           if (!shift) return state
           if (shift.status !== 'CONFIRMADO' && shift.status !== 'TROCA_SOLICITADA') return state
           const hasPendingSwap = state.swapRequests.some(
-            (item) => item.direction === 'saida' && item.shiftId === shift.id && item.status === 'PENDENTE',
+            (item) =>
+              item.direction === 'saida' && item.shiftId === shift.id && item.status === 'PENDENTE',
           )
           if (hasPendingSwap) return state
 
@@ -175,7 +179,14 @@ export const useDoctorDemoStore = create<DoctorDemoState>()(
         const normalizedCode = inviteCode.trim().toUpperCase()
         const state = get()
 
-        if (!normalizedCode || !normalizedEmail || !fullName.trim() || !password || !crm.trim() || !specialty.trim()) {
+        if (
+          !normalizedCode ||
+          !normalizedEmail ||
+          !fullName.trim() ||
+          !password ||
+          !crm.trim() ||
+          !specialty.trim()
+        ) {
           return { ok: false, message: 'Preencha todos os campos obrigatórios.' }
         }
 
@@ -210,14 +221,18 @@ export const useDoctorDemoStore = create<DoctorDemoState>()(
           ),
         }))
 
-        return { ok: true, message: 'Cadastro realizado com sucesso. Faça login para acessar o ambiente médico.' }
+        return {
+          ok: true,
+          message: 'Cadastro realizado com sucesso. Faça login para acessar o ambiente médico.',
+        }
       },
 
       validateRegisteredCredential: (email, password) => {
         const normalizedEmail = email.trim().toLowerCase()
         return (
           get().registrations.find(
-            (registration) => registration.email === normalizedEmail && registration.password === password,
+            (registration) =>
+              registration.email === normalizedEmail && registration.password === password,
           ) ?? null
         )
       },

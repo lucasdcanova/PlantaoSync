@@ -8,6 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useDoctorDemoStore } from '@/store/doctor-demo.store'
+import { useSchedulesStore } from '@/store/schedules.store'
+import { useLocationsStore } from '@/store/locations.store'
+import { createShiftValueResolver } from '@/lib/shift-pricing'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 export default function DoctorAvailableShiftsPage() {
@@ -15,8 +18,15 @@ export default function DoctorAvailableShiftsPage() {
   const sectors = useDoctorDemoStore((state) => state.sectors)
   const availableShifts = useDoctorDemoStore((state) => state.availableShifts)
   const claimShift = useDoctorDemoStore((state) => state.claimShift)
+  const schedules = useSchedulesStore((state) => state.schedules)
+  const locations = useLocationsStore((state) => state.locations)
   const [search, setSearch] = useState('')
   const [sectorFilter, setSectorFilter] = useState<string>(searchParams.get('sector') ?? 'all')
+
+  const resolveShiftValue = useMemo(
+    () => createShiftValueResolver(schedules, locations),
+    [locations, schedules],
+  )
 
   const filteredShifts = useMemo(() => {
     return availableShifts.filter((shift) => {
@@ -31,18 +41,18 @@ export default function DoctorAvailableShiftsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
+      <section className="border-border bg-card shadow-card rounded-2xl border p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="font-display text-xl font-bold text-foreground">Plantões disponíveis</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="font-display text-foreground text-xl font-bold">Plantões disponíveis</h2>
+            <p className="text-muted-foreground text-sm">
               Veja todos os plantões abertos pelo gestor e assuma cobertura em poucos cliques.
             </p>
           </div>
 
           <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
             <div className="relative">
-              <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Filter className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder="Buscar setor ou especialidade"
                 value={search}
@@ -83,46 +93,59 @@ export default function DoctorAvailableShiftsPage() {
       </section>
 
       <section className="space-y-3">
-        {filteredShifts.map((shift) => (
-          <article key={shift.id} className="rounded-2xl border border-border bg-card p-5 shadow-card">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="font-display text-lg font-semibold text-foreground">{shift.sectorName}</h3>
-                <p className="text-sm text-muted-foreground">{shift.specialty}</p>
+        {filteredShifts.map((shift) => {
+          const resolvedValue = resolveShiftValue({
+            date: shift.date,
+            sectorName: shift.sectorName,
+            fallbackValue: shift.value,
+          })
+
+          return (
+            <article
+              key={shift.id}
+              className="border-border bg-card shadow-card rounded-2xl border p-5"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-display text-foreground text-lg font-semibold">
+                    {shift.sectorName}
+                  </h3>
+                  <p className="text-muted-foreground text-sm">{shift.specialty}</p>
+                </div>
+                <Badge className="border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900 dark:bg-brand-900/30 dark:text-brand-300 border">
+                  {shift.slotsLeft} vaga{shift.slotsLeft > 1 ? 's' : ''}
+                </Badge>
               </div>
-              <Badge className="border border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900 dark:bg-brand-900/30 dark:text-brand-300">
-                {shift.slotsLeft} vaga{shift.slotsLeft > 1 ? 's' : ''}
-              </Badge>
-            </div>
 
-            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-              <p className="flex items-center gap-2 text-muted-foreground">
-                <CalendarDays className="h-4 w-4 text-brand-500" />
-                {formatDate(shift.date)} · {shift.startTime} - {shift.endTime}
-              </p>
-              <p className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="h-4 w-4 text-brand-500" />
-                {shift.issuedBy}
-              </p>
-              <p className="text-foreground">{formatCurrency(shift.value)}</p>
-            </div>
+              <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                <p className="text-muted-foreground flex items-center gap-2">
+                  <CalendarDays className="text-brand-500 h-4 w-4" />
+                  {formatDate(shift.date)} · {shift.startTime} - {shift.endTime}
+                </p>
+                <p className="text-muted-foreground flex items-center gap-2">
+                  <MapPin className="text-brand-500 h-4 w-4" />
+                  {shift.issuedBy}
+                </p>
+                <p className="text-foreground">{formatCurrency(resolvedValue)}</p>
+              </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button
-                className="bg-brand-600 text-white shadow-brand hover:bg-brand-700"
-                onClick={() => {
-                  claimShift(shift.id)
-                  toast.success('Plantão assumido com sucesso.')
-                }}
-              >
-                Assumir plantão
-              </Button>
-            </div>
-          </article>
-        ))}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button
+                  className="bg-brand-600 shadow-brand hover:bg-brand-700 text-white"
+                  onClick={() => {
+                    claimShift(shift.id, resolvedValue)
+                    toast.success('Plantão assumido com sucesso.')
+                  }}
+                >
+                  Assumir plantão
+                </Button>
+              </div>
+            </article>
+          )
+        })}
 
         {filteredShifts.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
+          <div className="border-border bg-card text-muted-foreground rounded-2xl border border-dashed p-10 text-center text-sm">
             Nenhum plantão disponível para os filtros aplicados.
           </div>
         )}

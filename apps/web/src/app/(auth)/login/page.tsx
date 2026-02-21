@@ -26,6 +26,7 @@ import { useAuthStore } from '@/store/auth.store'
 import { useSchedulesStore } from '@/store/schedules.store'
 import { useProfessionalsStore } from '@/store/professionals.store'
 import { useInstitutionStore } from '@/store/institution.store'
+import { useLocationsStore } from '@/store/locations.store'
 import { cn } from '@/lib/utils'
 import { BRAND_NAME } from '@/lib/brand'
 
@@ -54,12 +55,14 @@ export default function LoginPage() {
   const activateDemoMode = () => {
     useSchedulesStore.getState().initDemoData()
     useProfessionalsStore.getState().initDemoData()
+    useLocationsStore.getState().initDemoData()
     useInstitutionStore.getState().initDemoData()
   }
 
   const clearDemoData = (authUser: Parameters<typeof setUser>[0]) => {
     useSchedulesStore.getState().resetSchedules()
     useProfessionalsStore.getState().resetProfessionals()
+    useLocationsStore.getState().resetLocations()
     useInstitutionStore.getState().initFromUser(authUser)
   }
 

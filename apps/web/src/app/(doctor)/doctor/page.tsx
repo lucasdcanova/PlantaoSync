@@ -32,6 +32,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import { useDoctorDemoStore } from '@/store/doctor-demo.store'
+import { useSchedulesStore } from '@/store/schedules.store'
+import { useLocationsStore } from '@/store/locations.store'
+import { createShiftValueResolver } from '@/lib/shift-pricing'
 
 type TimelineWindow = '4s' | 'mes'
 type HoursWindow = 'semana' | 'mes'
@@ -40,10 +43,17 @@ export default function DoctorOverviewPage() {
   const availableShifts = useDoctorDemoStore((state) => state.availableShifts)
   const myShifts = useDoctorDemoStore((state) => state.myShifts)
   const swapRequests = useDoctorDemoStore((state) => state.swapRequests)
+  const schedules = useSchedulesStore((state) => state.schedules)
+  const locations = useLocationsStore((state) => state.locations)
 
   const [timelineWindow, setTimelineWindow] = useState<TimelineWindow>('mes')
   const [hoursWindow, setHoursWindow] = useState<HoursWindow>('semana')
   const [activeSwapSlice, setActiveSwapSlice] = useState(0)
+
+  const resolveShiftValue = useMemo(
+    () => createShiftValueResolver(schedules, locations),
+    [locations, schedules],
+  )
 
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -82,10 +92,26 @@ export default function DoctorOverviewPage() {
 
   const confirmedInMonth = monthShifts.filter((shift) => shift.status !== 'CANCELADO').length
   const pendingSwaps = swapRequests.filter((swap) => swap.status === 'PENDENTE').length
-  const monthProjection = monthShifts.reduce((sum, shift) => sum + shift.value, 0)
-  const upsideProjection = monthOpportunities
-    .slice(0, 3)
-    .reduce((sum, shift) => sum + shift.value, 0)
+  const monthProjection = monthShifts.reduce(
+    (sum, shift) =>
+      sum +
+      resolveShiftValue({
+        date: shift.date,
+        sectorName: shift.sectorName,
+        fallbackValue: shift.value,
+      }),
+    0,
+  )
+  const upsideProjection = monthOpportunities.slice(0, 3).reduce(
+    (sum, shift) =>
+      sum +
+      resolveShiftValue({
+        date: shift.date,
+        sectorName: shift.sectorName,
+        fallbackValue: shift.value,
+      }),
+    0,
+  )
   const potentialProjection = monthProjection + upsideProjection
   const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
   const emsTarget = Math.max(potentialProjection, 680_000)
@@ -103,7 +129,11 @@ export default function DoctorOverviewPage() {
       const date = parseISO(shift.date)
       const weekIndex = Math.min(4, Math.max(0, Math.ceil(date.getDate() / 7) - 1))
       if (shift.status !== 'CANCELADO') {
-        base[weekIndex].confirmed += shift.value
+        base[weekIndex].confirmed += resolveShiftValue({
+          date: shift.date,
+          sectorName: shift.sectorName,
+          fallbackValue: shift.value,
+        })
       }
       base[weekIndex].shifts += 1
     })
@@ -111,7 +141,11 @@ export default function DoctorOverviewPage() {
     monthOpportunities.forEach((shift) => {
       const date = parseISO(shift.date)
       const weekIndex = Math.min(4, Math.max(0, Math.ceil(date.getDate() / 7) - 1))
-      base[weekIndex].projected += shift.value
+      base[weekIndex].projected += resolveShiftValue({
+        date: shift.date,
+        sectorName: shift.sectorName,
+        fallbackValue: shift.value,
+      })
     })
 
     const merged = base.map((item) => ({
@@ -120,7 +154,7 @@ export default function DoctorOverviewPage() {
     }))
 
     return timelineWindow === '4s' ? merged.slice(0, 4) : merged
-  }, [monthOpportunities, monthShifts, timelineWindow])
+  }, [monthOpportunities, monthShifts, resolveShiftValue, timelineWindow])
 
   const workedShifts = useMemo(
     () =>
@@ -649,7 +683,15 @@ export default function DoctorOverviewPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-foreground font-medium">{shift.sectorName}</p>
-                    <p className="text-muted-foreground text-xs">{formatCurrency(shift.value)}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {formatCurrency(
+                        resolveShiftValue({
+                          date: shift.date,
+                          sectorName: shift.sectorName,
+                          fallbackValue: shift.value,
+                        }),
+                      )}
+                    </p>
                   </div>
                   <Badge className="border border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-900/30 dark:text-green-300">
                     {shift.status.replace('_', ' ')}

@@ -6,9 +6,11 @@ import { BRAND_NAME } from '@/lib/brand'
 const baseUrl = getSiteUrl()
 
 export const metadata: Metadata = {
-  title: 'Gestão de Escalas Médicas com Confirmação em Tempo Real | CONFIRMA PLANTÃO',
+  title: {
+    absolute: 'Software de Escalas Médicas em Tempo Real | Confirma Plantão',
+  },
   description:
-    'Substitua planilhas e WhatsApp por uma plataforma completa de gestão de escalas e plantões. Confirmação em 1 toque, cobertura em tempo real, financeiro integrado. Conforme LGPD.',
+    'Gestão de escalas e plantões sem planilhas: confirmação em 1 toque, cobertura em tempo real e financeiro integrado para hospitais, UPAs e clínicas.',
   keywords: [
     'software de escalas médicas',
     'gestão de plantões hospitalares',
@@ -23,6 +25,13 @@ export const metadata: Metadata = {
   ],
   alternates: {
     canonical: '/',
+    languages: {
+      'pt-BR': '/',
+    },
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
   openGraph: {
     title: 'Gestão de Escalas Médicas com Confirmação em Tempo Real',
@@ -32,12 +41,21 @@ export const metadata: Metadata = {
     siteName: BRAND_NAME,
     locale: 'pt_BR',
     type: 'website',
+    images: [
+      {
+        url: `${baseUrl}/opengraph-image`,
+        width: 1200,
+        height: 630,
+        alt: `${BRAND_NAME} - Gestão de escalas médicas em tempo real`,
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: `${BRAND_NAME} | Escala médica sem planilha`,
     description:
       'Confirmação de plantão em 1 toque. Dashboard de cobertura em tempo real. Financeiro integrado. Para hospitais, UPAs e clínicas.',
+    images: [`${baseUrl}/twitter-image`],
   },
 }
 
@@ -135,6 +153,28 @@ const faqSchema = {
   ],
 }
 
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: BRAND_NAME,
+  url: baseUrl,
+  logo: `${baseUrl}/brand/logo-mark-square.png`,
+  sameAs: [],
+}
+
+const webSiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: BRAND_NAME,
+  url: baseUrl,
+  inLanguage: 'pt-BR',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: `${baseUrl}/faq?q={search_term_string}`,
+    'query-input': 'required name=search_term_string',
+  },
+}
+
 export default function MarketingHomePage() {
   return (
     <>
@@ -145,6 +185,14 @@ export default function MarketingHomePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteSchema) }}
       />
       <LandingPage />
     </>
