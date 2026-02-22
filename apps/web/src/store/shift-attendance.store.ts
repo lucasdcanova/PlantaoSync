@@ -1,0 +1,1382 @@
+import { create } from 'zustand'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import {
+  DEMO_DOCTOR_MY_SHIFTS,
+  DEMO_DOCTOR_SECTORS,
+  DEMO_MANAGER_ASSIGNED_SHIFTS,
+  DEMO_PROFESSIONALS,
+} from '@/lib/demo-data'
+
+export type GeoCaptureSource = 'browser' | 'demo-simulado'
+export type AttendanceStatus = 'PENDENTE' | 'CHECKED_IN' | 'CHECKED_OUT'
+export type StressRiskLevel = 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRITICO'
+export type StressTriggerCode =
+  | 'LOTACAO'
+  | 'EQUIPE_REDUZIDA'
+  | 'CASOS_GRAVES'
+  | 'ATRASO_PASSAGEM'
+  | 'FALHA_SISTEMA'
+  | 'CONFLITO_EQUIPE'
+  | 'FALTA_PAUSA'
+  | 'SONO'
+  | 'DOR_FISICA'
+  | 'OUTRO'
+
+export interface ShiftGeofence {
+  sectorId: string
+  sectorName: string
+  lat: number
+  lng: number
+  radiusMeters: number
+  label: string
+}
+
+export interface AttendanceGeoSnapshot {
+  lat: number
+  lng: number
+  accuracyMeters: number
+  capturedAt: string
+  distanceMeters: number
+  withinGeofence: boolean
+  source: GeoCaptureSource
+}
+
+export interface StressSelfReport {
+  level: 1 | 2 | 3 | 4 | 5
+  energyLevel: 1 | 2 | 3 | 4 | 5
+  supportLevel: 1 | 2 | 3 | 4 | 5
+  triggers: StressTriggerCode[]
+  note?: string
+}
+
+export interface StressScoreBreakdown {
+  selfReport: number
+  lateness: number
+  overtime: number
+  workload: number
+  nightShift: number
+  triggers: number
+  lowEnergy: number
+  lowSupport: number
+  shortRest: number
+}
+
+export interface StressAnalytics {
+  score: number
+  riskLevel: StressRiskLevel
+  breakdown: StressScoreBreakdown
+  flags: string[]
+  recoveryMinutesRecommended: number
+  dominantDrivers: Array<{ key: keyof StressScoreBreakdown; value: number }>
+}
+
+export interface ShiftAttendanceRecord {
+  id: string
+  shiftId: string
+  professionalId: string
+  professionalUserId: string
+  professionalName: string
+  sectorId: string
+  sectorName: string
+  shiftDate: string
+  startTime: string
+  endTime: string
+  patientLoad?: 'Baixa' | 'Moderada' | 'Alta'
+  scheduledStartAt: string
+  scheduledEndAt: string
+  status: AttendanceStatus
+  onTime: boolean
+  lateMinutes: number
+  earlyCheckoutMinutes: number
+  overtimeMinutes: number
+  workedMinutes: number
+  checkIn?: AttendanceGeoSnapshot
+  checkOut?: AttendanceGeoSnapshot
+  stressSelfReport?: StressSelfReport
+  stressAnalytics?: StressAnalytics
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CheckInShiftInput {
+  shiftId: string
+  professionalId: string
+  professionalUserId: string
+  professionalName: string
+  sectorId: string
+  sectorName: string
+  shiftDate: string
+  startTime: string
+  endTime: string
+  patientLoad?: 'Baixa' | 'Moderada' | 'Alta'
+  geo: {
+    lat: number
+    lng: number
+    accuracyMeters?: number
+    source?: GeoCaptureSource
+    capturedAt?: string
+  }
+}
+
+export interface CheckOutShiftInput {
+  shiftId: string
+  professionalUserId: string
+  geo: {
+    lat: number
+    lng: number
+    accuracyMeters?: number
+    source?: GeoCaptureSource
+    capturedAt?: string
+  }
+  stress: StressSelfReport
+}
+
+export interface AttendanceManagerAnalytics {
+  totals: {
+    plannedRecords: number
+    checkedInRecords: number
+    checkedOutRecords: number
+    checkInRate: number
+    checkoutRate: number
+    onTimeRate: number
+    avgLateMinutes: number
+    avgOvertimeMinutes: number
+    avgCheckInDistanceMeters: number
+    avgStressScore: number
+    avgStressLevel: number
+    highRiskRate: number
+  }
+  lateRanking: Array<{
+    professionalId: string
+    professionalName: string
+    specialty?: string
+    records: number
+    lateCount: number
+    lateRate: number
+    avgLateMinutes: number
+    maxLateMinutes: number
+    avgCheckInDistanceMeters: number
+  }>
+  stressRanking: Array<{
+    professionalId: string
+    professionalName: string
+    specialty?: string
+    checkouts: number
+    avgStressLevel: number
+    avgStressScore: number
+    highRiskCount: number
+    criticalCount: number
+    recurringTriggers: string[]
+  }>
+  riskDistribution: Array<{ name: string; value: number; color: string }>
+  stressTimeline: Array<{
+    label: string
+    avgStressScore: number
+    avgStressLevel: number
+    avgLateMinutes: number
+    checkouts: number
+  }>
+  topTriggers: Array<{ code: StressTriggerCode; label: string; count: number }>
+  highRiskCheckouts: Array<{
+    id: string
+    professionalName: string
+    sectorName: string
+    shiftDate: string
+    score: number
+    level: number
+    riskLevel: StressRiskLevel
+    lateMinutes: number
+    triggers: string[]
+  }>
+}
+
+interface ShiftAttendanceState {
+  geofences: Record<string, ShiftGeofence>
+  records: ShiftAttendanceRecord[]
+  checkInShift: (input: CheckInShiftInput) => ShiftAttendanceRecord
+  checkOutShift: (input: CheckOutShiftInput) => ShiftAttendanceRecord
+  getShiftAttendance: (shiftId: string, professionalUserId?: string) => ShiftAttendanceRecord | null
+  resetAttendanceDemoData: () => void
+}
+
+type DemoProfessionalLike = {
+  id: string
+  userId: string
+  name: string
+  specialty?: string
+}
+
+const DEMO_REFERENCE_TODAY = '2026-02-22'
+
+export const STRESS_TRIGGER_LABELS: Record<StressTriggerCode, string> = {
+  LOTACAO: 'Lotação acima do esperado',
+  EQUIPE_REDUZIDA: 'Equipe reduzida',
+  CASOS_GRAVES: 'Casos graves/críticos',
+  ATRASO_PASSAGEM: 'Atraso na passagem de plantão',
+  FALHA_SISTEMA: 'Falha/lentidão no sistema',
+  CONFLITO_EQUIPE: 'Conflito de equipe',
+  FALTA_PAUSA: 'Sem pausa adequada',
+  SONO: 'Sono/cansaço',
+  DOR_FISICA: 'Dor física',
+  OUTRO: 'Outro',
+}
+
+export const STRESS_LEVEL_META: Record<
+  StressSelfReport['level'],
+  { label: string; colorClassName: string; scoreBase: number }
+> = {
+  1: {
+    label: 'Muito tranquilo',
+    colorClassName: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    scoreBase: 12,
+  },
+  2: {
+    label: 'Leve',
+    colorClassName: 'border-lime-200 bg-lime-50 text-lime-700',
+    scoreBase: 28,
+  },
+  3: {
+    label: 'Moderado',
+    colorClassName: 'border-amber-200 bg-amber-50 text-amber-700',
+    scoreBase: 46,
+  },
+  4: {
+    label: 'Alto',
+    colorClassName: 'border-orange-200 bg-orange-50 text-orange-700',
+    scoreBase: 64,
+  },
+  5: {
+    label: 'Crítico',
+    colorClassName: 'border-red-200 bg-red-50 text-red-700',
+    scoreBase: 82,
+  },
+}
+
+export const STRESS_RISK_META: Record<
+  StressRiskLevel,
+  { label: string; color: string; className: string }
+> = {
+  BAIXO: {
+    label: 'Baixo',
+    color: '#22c55e',
+    className: 'border-green-200 bg-green-50 text-green-700',
+  },
+  MODERADO: {
+    label: 'Moderado',
+    color: '#f59e0b',
+    className: 'border-amber-200 bg-amber-50 text-amber-700',
+  },
+  ALTO: {
+    label: 'Alto',
+    color: '#f97316',
+    className: 'border-orange-200 bg-orange-50 text-orange-700',
+  },
+  CRITICO: {
+    label: 'Crítico',
+    color: '#ef4444',
+    className: 'border-red-200 bg-red-50 text-red-700',
+  },
+}
+
+const DEFAULT_GEOFENCE_RADIUS_METERS = 180
+
+function clamp(value: number, min: number, max: number) {
+  if (!Number.isFinite(value)) return min
+  return Math.min(max, Math.max(min, value))
+}
+
+function round1(value: number) {
+  return Math.round(value * 10) / 10
+}
+
+function roundInt(value: number) {
+  return Math.round(value)
+}
+
+function toIsoDate(value: string) {
+  return value.slice(0, 10)
+}
+
+function parseShiftWindow(shiftDate: string, startTime: string, endTime: string) {
+  const dateKey = toIsoDate(shiftDate)
+  const start = new Date(`${dateKey}T${startTime}:00`)
+  const end = new Date(`${dateKey}T${endTime}:00`)
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    throw new Error('Horário do plantão inválido.')
+  }
+
+  if (end <= start) {
+    end.setDate(end.getDate() + 1)
+  }
+
+  return { start, end }
+}
+
+function minutesBetween(later: Date, earlier: Date) {
+  return Math.round((later.getTime() - earlier.getTime()) / 60000)
+}
+
+function normalizeSectorName(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+}
+
+function haversineDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const R = 6371000
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
+function stableNoise(seed: number) {
+  const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453
+  return x - Math.floor(x)
+}
+
+function resolveSectorIdByName(sectorName: string) {
+  const normalized = normalizeSectorName(sectorName)
+  const match = DEMO_DOCTOR_SECTORS.find((sector) => normalizeSectorName(sector.name) === normalized)
+  return match?.id
+}
+
+function buildDefaultGeofences() {
+  const geofences: Record<string, ShiftGeofence> = {
+    'sec-uti-adulto': {
+      sectorId: 'sec-uti-adulto',
+      sectorName: 'UTI Adulto',
+      lat: -23.561414,
+      lng: -46.655881,
+      radiusMeters: 170,
+      label: 'UTI Adulto · Bloco A',
+    },
+    'sec-ps': {
+      sectorId: 'sec-ps',
+      sectorName: 'Pronto-Socorro',
+      lat: -23.562004,
+      lng: -46.656491,
+      radiusMeters: 220,
+      label: 'Pronto-Socorro · Entrada principal',
+    },
+    'sec-clinica': {
+      sectorId: 'sec-clinica',
+      sectorName: 'Clínica Médica',
+      lat: -23.561895,
+      lng: -46.654934,
+      radiusMeters: 180,
+      label: 'Clínica Médica · Bloco C',
+    },
+    'sec-neonatal': {
+      sectorId: 'sec-neonatal',
+      sectorName: 'UTI Neonatal',
+      lat: -23.560987,
+      lng: -46.655422,
+      radiusMeters: 160,
+      label: 'UTI Neonatal · 5º andar',
+    },
+  }
+
+  return geofences
+}
+
+function buildFallbackGeofence(sectorId: string, sectorName: string): ShiftGeofence {
+  const campusLat = -23.5616
+  const campusLng = -46.6556
+  const hash = sectorName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  const jitterLat = ((hash % 9) - 4) * 0.00012
+  const jitterLng = ((Math.floor(hash / 3) % 9) - 4) * 0.00012
+
+  return {
+    sectorId,
+    sectorName,
+    lat: campusLat + jitterLat,
+    lng: campusLng + jitterLng,
+    radiusMeters: DEFAULT_GEOFENCE_RADIUS_METERS,
+    label: `${sectorName} · Geofence padrão`,
+  }
+}
+
+function ensureGeofence(
+  geofences: Record<string, ShiftGeofence>,
+  sectorId: string,
+  sectorName: string,
+): ShiftGeofence {
+  return geofences[sectorId] ?? buildFallbackGeofence(sectorId, sectorName)
+}
+
+function buildGeoSnapshot(
+  geofence: ShiftGeofence,
+  input: { lat: number; lng: number; accuracyMeters?: number; source?: GeoCaptureSource; capturedAt?: string },
+) {
+  const accuracyMeters = clamp(input.accuracyMeters ?? 30, 1, 5000)
+  const capturedAt = input.capturedAt ?? new Date().toISOString()
+  const distanceMeters = haversineDistanceMeters(geofence.lat, geofence.lng, input.lat, input.lng)
+  const tolerance = geofence.radiusMeters + Math.min(accuracyMeters, 120)
+  const withinGeofence = distanceMeters <= tolerance
+
+  return {
+    lat: input.lat,
+    lng: input.lng,
+    accuracyMeters,
+    capturedAt,
+    distanceMeters: roundInt(distanceMeters),
+    withinGeofence,
+    source: input.source ?? 'browser',
+  } satisfies AttendanceGeoSnapshot
+}
+
+function isNightShiftWindow(start: Date, end: Date) {
+  if (end.getDate() !== start.getDate() || end.getMonth() !== start.getMonth()) return true
+  const startHour = start.getHours()
+  const endHour = end.getHours()
+  return startHour >= 18 || startHour < 6 || endHour <= 8
+}
+
+function triggerWeight(trigger: StressTriggerCode) {
+  switch (trigger) {
+    case 'CASOS_GRAVES':
+      return 7
+    case 'EQUIPE_REDUZIDA':
+      return 6
+    case 'LOTACAO':
+      return 6
+    case 'FALTA_PAUSA':
+      return 5
+    case 'SONO':
+      return 5
+    case 'CONFLITO_EQUIPE':
+      return 4
+    case 'ATRASO_PASSAGEM':
+      return 4
+    case 'DOR_FISICA':
+      return 4
+    case 'FALHA_SISTEMA':
+      return 3
+    case 'OUTRO':
+      return 2
+    default:
+      return 2
+  }
+}
+
+function patientLoadScore(load?: ShiftAttendanceRecord['patientLoad']) {
+  if (load === 'Alta') return 12
+  if (load === 'Moderada') return 6
+  if (load === 'Baixa') return 2
+  return 0
+}
+
+function detectStressRisk(score: number): StressRiskLevel {
+  if (score >= 75) return 'CRITICO'
+  if (score >= 58) return 'ALTO'
+  if (score >= 36) return 'MODERADO'
+  return 'BAIXO'
+}
+
+function computePreviousRestHours(
+  records: ShiftAttendanceRecord[],
+  professionalUserId: string,
+  checkInAt: Date,
+  currentRecordId?: string,
+) {
+  const previousCheckout = records
+    .filter(
+      (record) =>
+        record.professionalUserId === professionalUserId &&
+        record.id !== currentRecordId &&
+        Boolean(record.checkOut?.capturedAt),
+    )
+    .map((record) => record.checkOut?.capturedAt)
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value))
+    .filter((value) => value.getTime() < checkInAt.getTime())
+    .sort((a, b) => b.getTime() - a.getTime())[0]
+
+  if (!previousCheckout) return null
+  return (checkInAt.getTime() - previousCheckout.getTime()) / (1000 * 60 * 60)
+}
+
+function computeStressAnalytics(
+  record: ShiftAttendanceRecord,
+  stress: StressSelfReport,
+  allRecords: ShiftAttendanceRecord[],
+) {
+  const checkInAt = record.checkIn ? new Date(record.checkIn.capturedAt) : new Date(record.scheduledStartAt)
+  const scheduledStart = new Date(record.scheduledStartAt)
+  const scheduledEnd = new Date(record.scheduledEndAt)
+
+  const restHours = computePreviousRestHours(allRecords, record.professionalUserId, checkInAt, record.id)
+  const shortRestPenalty =
+    restHours === null
+      ? 0
+      : restHours < 8
+        ? 12
+        : restHours < 12
+          ? 7
+          : restHours < 16
+            ? 3
+            : 0
+
+  const triggerScore = clamp(
+    stress.triggers.reduce((sum, trigger) => sum + triggerWeight(trigger), 0),
+    0,
+    18,
+  )
+
+  const breakdown: StressScoreBreakdown = {
+    selfReport: STRESS_LEVEL_META[stress.level].scoreBase,
+    lateness: clamp(Math.round(record.lateMinutes * 0.22), 0, 20),
+    overtime: clamp(Math.round(record.overtimeMinutes * 0.08), 0, 18),
+    workload: patientLoadScore(record.patientLoad),
+    nightShift: isNightShiftWindow(scheduledStart, scheduledEnd) ? 7 : 0,
+    triggers: triggerScore,
+    lowEnergy: clamp((5 - stress.energyLevel) * 4, 0, 16),
+    lowSupport: clamp((5 - stress.supportLevel) * 3, 0, 12),
+    shortRest: shortRestPenalty,
+  }
+
+  const score = clamp(
+    Object.values(breakdown).reduce((sum, value) => sum + value, 0),
+    0,
+    100,
+  )
+
+  const riskLevel = detectStressRisk(score)
+  const flags: string[] = []
+
+  if (record.lateMinutes >= 15) flags.push('atraso_relevante')
+  if (record.overtimeMinutes >= 60) flags.push('hora_extra_alta')
+  if (stress.level >= 4) flags.push('autopercepcao_alta')
+  if (stress.supportLevel <= 2) flags.push('baixo_suporte')
+  if (stress.energyLevel <= 2) flags.push('baixa_energia')
+  if (stress.triggers.includes('CASOS_GRAVES')) flags.push('exposicao_casos_graves')
+  if (restHours !== null && restHours < 12) flags.push('janela_descanso_curta')
+  if (riskLevel === 'CRITICO') flags.push('risco_critico')
+
+  const dominantDrivers = (Object.entries(breakdown) as Array<[keyof StressScoreBreakdown, number]>)
+    .filter(([, value]) => value > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([key, value]) => ({ key, value }))
+
+  const recoveryMinutesRecommended = clamp(
+    Math.round(45 + score * 2.1 + record.overtimeMinutes * 0.25),
+    45,
+    720,
+  )
+
+  return {
+    score: roundInt(score),
+    riskLevel,
+    breakdown,
+    flags,
+    recoveryMinutesRecommended: roundInt(recoveryMinutesRecommended),
+    dominantDrivers,
+  } satisfies StressAnalytics
+}
+
+function baseRecordFromShift(input: {
+  shiftId: string
+  professionalId: string
+  professionalUserId: string
+  professionalName: string
+  sectorId: string
+  sectorName: string
+  shiftDate: string
+  startTime: string
+  endTime: string
+  patientLoad?: ShiftAttendanceRecord['patientLoad']
+}) {
+  const { start, end } = parseShiftWindow(input.shiftDate, input.startTime, input.endTime)
+  const now = new Date().toISOString()
+
+  return {
+    id: `att-${input.shiftId}-${input.professionalUserId}`,
+    shiftId: input.shiftId,
+    professionalId: input.professionalId,
+    professionalUserId: input.professionalUserId,
+    professionalName: input.professionalName,
+    sectorId: input.sectorId,
+    sectorName: input.sectorName,
+    shiftDate: toIsoDate(input.shiftDate),
+    startTime: input.startTime,
+    endTime: input.endTime,
+    patientLoad: input.patientLoad,
+    scheduledStartAt: start.toISOString(),
+    scheduledEndAt: end.toISOString(),
+    status: 'PENDENTE' as const,
+    onTime: false,
+    lateMinutes: 0,
+    earlyCheckoutMinutes: 0,
+    overtimeMinutes: 0,
+    workedMinutes: 0,
+    createdAt: now,
+    updatedAt: now,
+  } satisfies ShiftAttendanceRecord
+}
+
+function sortAttendanceRecords(records: ShiftAttendanceRecord[]) {
+  return [...records].sort((a, b) => {
+    const keyA = `${a.shiftDate} ${a.startTime} ${a.professionalName}`
+    const keyB = `${b.shiftDate} ${b.startTime} ${b.professionalName}`
+    return keyB.localeCompare(keyA, 'pt-BR')
+  })
+}
+
+function buildInitialRecords() {
+  const geofences = buildDefaultGeofences()
+  const professionalsById = new Map(
+    DEMO_PROFESSIONALS.map((professional) => [professional.id, professional] as const),
+  )
+
+  const records: ShiftAttendanceRecord[] = []
+
+  const buildSyntheticPosition = (geofence: ShiftGeofence, distanceMeters: number, seed: number) => {
+    const angle = stableNoise(seed + 17) * Math.PI * 2
+    const metersPerLat = 111320
+    const metersPerLng = 111320 * Math.cos((geofence.lat * Math.PI) / 180)
+    const lat = geofence.lat + (Math.cos(angle) * distanceMeters) / metersPerLat
+    const lng = geofence.lng + (Math.sin(angle) * distanceMeters) / metersPerLng
+
+    return { lat, lng }
+  }
+
+  DEMO_MANAGER_ASSIGNED_SHIFTS.forEach((assignment, index) => {
+    if (assignment.date > DEMO_REFERENCE_TODAY) return
+
+    const professional = professionalsById.get(assignment.professionalId)
+    const sectorId = resolveSectorIdByName(assignment.sectorName) ?? `sector-${index}`
+    const geofence = ensureGeofence(geofences, sectorId, assignment.sectorName)
+
+    const base = baseRecordFromShift({
+      shiftId: assignment.id,
+      professionalId: assignment.professionalId,
+      professionalUserId: professional?.userId ?? `user-${assignment.professionalId}`,
+      professionalName: professional?.name ?? assignment.professionalName,
+      sectorId,
+      sectorName: assignment.sectorName,
+      shiftDate: assignment.date,
+      startTime: assignment.startTime,
+      endTime: assignment.endTime,
+      patientLoad:
+        index % 4 === 0 ? 'Alta' : index % 3 === 0 ? 'Baixa' : 'Moderada',
+    })
+
+    const scheduledStart = new Date(base.scheduledStartAt)
+    const scheduledEnd = new Date(base.scheduledEndAt)
+    const lateMinutes = Math.max(0, Math.round((stableNoise(index + 3) - 0.35) * 34))
+    const earlyArrivalMinutes = Math.round(stableNoise(index + 5) * 8)
+    const checkInAt = new Date(
+      scheduledStart.getTime() - earlyArrivalMinutes * 60000 + lateMinutes * 60000,
+    )
+    const overtimeMinutes = Math.max(0, Math.round((stableNoise(index + 7) - 0.55) * 140))
+    const earlyCheckoutMinutes = overtimeMinutes > 0 ? 0 : Math.max(0, Math.round((stableNoise(index + 11) - 0.8) * 40))
+    const checkOutAt = new Date(
+      scheduledEnd.getTime() + overtimeMinutes * 60000 - earlyCheckoutMinutes * 60000,
+    )
+
+    const checkInDistance = clamp(Math.round(40 + stableNoise(index + 13) * 120), 15, 220)
+    const checkOutDistance = clamp(Math.round(35 + stableNoise(index + 17) * 110), 10, 220)
+    const checkInPos = buildSyntheticPosition(geofence, checkInDistance, index + 19)
+    const checkOutPos = buildSyntheticPosition(geofence, checkOutDistance, index + 29)
+
+    const checkInSnapshot = buildGeoSnapshot(geofence, {
+      ...checkInPos,
+      accuracyMeters: clamp(Math.round(12 + stableNoise(index + 23) * 35), 8, 60),
+      source: 'demo-simulado',
+      capturedAt: checkInAt.toISOString(),
+    })
+
+    const shouldKeepOpen = assignment.date === DEMO_REFERENCE_TODAY && index % 5 === 0
+
+    let record: ShiftAttendanceRecord = {
+      ...base,
+      status: 'CHECKED_IN',
+      checkIn: checkInSnapshot,
+      lateMinutes,
+      onTime: lateMinutes <= 5,
+      updatedAt: checkInAt.toISOString(),
+    }
+
+    if (!shouldKeepOpen) {
+      const checkOutSnapshot = buildGeoSnapshot(geofence, {
+        ...checkOutPos,
+        accuracyMeters: clamp(Math.round(10 + stableNoise(index + 31) * 30), 8, 55),
+        source: 'demo-simulado',
+        capturedAt: checkOutAt.toISOString(),
+      })
+
+      const stressLevel = (Math.min(5, Math.max(1, Math.round(2 + stableNoise(index + 37) * 3)))) as 1 | 2 | 3 | 4 | 5
+      const energyLevel = (Math.min(5, Math.max(1, Math.round(4 - stableNoise(index + 41) * 3)))) as 1 | 2 | 3 | 4 | 5
+      const supportLevel = (Math.min(5, Math.max(1, Math.round(3 + stableNoise(index + 43) * 2)))) as 1 | 2 | 3 | 4 | 5
+
+      const triggerPool: StressTriggerCode[] = [
+        'LOTACAO',
+        'EQUIPE_REDUZIDA',
+        'CASOS_GRAVES',
+        'ATRASO_PASSAGEM',
+        'FALHA_SISTEMA',
+        'FALTA_PAUSA',
+        'SONO',
+      ]
+      const triggers = triggerPool.filter((_, triggerIndex) => stableNoise(index * 3 + triggerIndex) > 0.58)
+      if (triggers.length === 0) triggers.push(index % 2 === 0 ? 'LOTACAO' : 'FALTA_PAUSA')
+
+      const workedMinutes = Math.max(0, minutesBetween(checkOutAt, checkInAt))
+      record = {
+        ...record,
+        status: 'CHECKED_OUT',
+        checkOut: checkOutSnapshot,
+        overtimeMinutes,
+        earlyCheckoutMinutes,
+        workedMinutes,
+        updatedAt: checkOutAt.toISOString(),
+        stressSelfReport: {
+          level: stressLevel,
+          energyLevel,
+          supportLevel,
+          triggers: triggers.slice(0, 4),
+          note:
+            stressLevel >= 4
+              ? 'Turno com alta carga assistencial e pausas limitadas.'
+              : undefined,
+        },
+      }
+
+      record.stressAnalytics = computeStressAnalytics(record, record.stressSelfReport, records)
+    }
+
+    records.push(record)
+  })
+
+  DEMO_DOCTOR_MY_SHIFTS.forEach((shift, index) => {
+    if (shift.status !== 'CONCLUIDO') return
+    if (records.some((record) => record.shiftId === shift.id && record.professionalUserId === shift.professionalUserId)) {
+      return
+    }
+
+    const professional = professionalsById.get(shift.professionalId)
+    const geofence = ensureGeofence(
+      geofences,
+      shift.sectorId,
+      shift.sectorName,
+    )
+    const base = baseRecordFromShift({
+      shiftId: shift.id,
+      professionalId: shift.professionalId,
+      professionalUserId: shift.professionalUserId,
+      professionalName: professional?.name ?? 'Médico demo',
+      sectorId: shift.sectorId,
+      sectorName: shift.sectorName,
+      shiftDate: shift.date,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      patientLoad: shift.patientLoad,
+    })
+
+    const scheduledStart = new Date(base.scheduledStartAt)
+    const scheduledEnd = new Date(base.scheduledEndAt)
+    const checkInAt = new Date(scheduledStart.getTime() + (index + 1) * 4 * 60000)
+    const checkOutAt = new Date(scheduledEnd.getTime() + index * 18 * 60000)
+
+    const checkInSnapshot = buildGeoSnapshot(geofence, {
+      lat: geofence.lat + 0.00018,
+      lng: geofence.lng - 0.00005,
+      accuracyMeters: 14,
+      source: 'demo-simulado',
+      capturedAt: checkInAt.toISOString(),
+    })
+
+    const checkOutSnapshot = buildGeoSnapshot(geofence, {
+      lat: geofence.lat - 0.0001,
+      lng: geofence.lng + 0.00006,
+      accuracyMeters: 12,
+      source: 'demo-simulado',
+      capturedAt: checkOutAt.toISOString(),
+    })
+
+    const stressSelfReport: StressSelfReport = {
+      level: shift.patientLoad === 'Alta' ? 4 : shift.patientLoad === 'Moderada' ? 3 : 2,
+      energyLevel: shift.patientLoad === 'Alta' ? 2 : 3,
+      supportLevel: 3,
+      triggers:
+        shift.patientLoad === 'Alta'
+          ? ['LOTACAO', 'CASOS_GRAVES', 'FALTA_PAUSA']
+          : ['ATRASO_PASSAGEM'],
+      note: shift.notes,
+    }
+
+    let record: ShiftAttendanceRecord = {
+      ...base,
+      status: 'CHECKED_IN',
+      checkIn: checkInSnapshot,
+      onTime: minutesBetween(checkInAt, scheduledStart) <= 5,
+      lateMinutes: Math.max(0, minutesBetween(checkInAt, scheduledStart)),
+      updatedAt: checkInAt.toISOString(),
+    }
+
+    record = {
+      ...record,
+      status: 'CHECKED_OUT',
+      checkOut: checkOutSnapshot,
+      earlyCheckoutMinutes: 0,
+      overtimeMinutes: Math.max(0, minutesBetween(checkOutAt, scheduledEnd)),
+      workedMinutes: Math.max(0, minutesBetween(checkOutAt, checkInAt)),
+      stressSelfReport,
+      updatedAt: checkOutAt.toISOString(),
+    }
+    record.stressAnalytics = computeStressAnalytics(record, stressSelfReport, records)
+    records.push(record)
+  })
+
+  return sortAttendanceRecords(records)
+}
+
+function buildInitialState() {
+  return {
+    geofences: buildDefaultGeofences(),
+    records: buildInitialRecords(),
+  }
+}
+
+function requireRecordGeofence(
+  state: ShiftAttendanceState,
+  recordLike: { sectorId: string; sectorName: string },
+) {
+  return ensureGeofence(state.geofences, recordLike.sectorId, recordLike.sectorName)
+}
+
+function upsertRecord(records: ShiftAttendanceRecord[], updated: ShiftAttendanceRecord) {
+  const next = records.some((record) => record.id === updated.id)
+    ? records.map((record) => (record.id === updated.id ? updated : record))
+    : [...records, updated]
+
+  return sortAttendanceRecords(next)
+}
+
+function validateStressReport(stress: StressSelfReport) {
+  if (!stress || typeof stress !== 'object') {
+    throw new Error('Informe o nível de estresse para finalizar o checkout.')
+  }
+
+  if (![1, 2, 3, 4, 5].includes(stress.level)) {
+    throw new Error('Nível de estresse inválido.')
+  }
+
+  if (![1, 2, 3, 4, 5].includes(stress.energyLevel)) {
+    throw new Error('Nível de energia inválido.')
+  }
+
+  if (![1, 2, 3, 4, 5].includes(stress.supportLevel)) {
+    throw new Error('Nível de suporte inválido.')
+  }
+
+  if (!Array.isArray(stress.triggers)) {
+    throw new Error('Gatilhos de estresse inválidos.')
+  }
+}
+
+export function buildAttendanceManagerAnalytics(
+  records: ShiftAttendanceRecord[],
+  professionals: Array<{ id: string; name: string; specialty?: string }> = [],
+): AttendanceManagerAnalytics {
+  const professionalsById = new Map(professionals.map((professional) => [professional.id, professional]))
+
+  const checkedIn = records.filter((record) => Boolean(record.checkIn))
+  const checkedOut = records.filter((record) => Boolean(record.checkOut))
+  const onTime = checkedIn.filter((record) => record.onTime)
+
+  const avgLateMinutes =
+    checkedIn.length > 0
+      ? round1(checkedIn.reduce((sum, record) => sum + record.lateMinutes, 0) / checkedIn.length)
+      : 0
+
+  const avgOvertimeMinutes =
+    checkedOut.length > 0
+      ? round1(
+          checkedOut.reduce((sum, record) => sum + record.overtimeMinutes, 0) / checkedOut.length,
+        )
+      : 0
+
+  const avgCheckInDistanceMeters =
+    checkedIn.length > 0
+      ? round1(
+          checkedIn.reduce((sum, record) => sum + (record.checkIn?.distanceMeters ?? 0), 0) /
+            checkedIn.length,
+        )
+      : 0
+
+  const completedWithStress = checkedOut.filter((record) => record.stressSelfReport && record.stressAnalytics)
+  const avgStressScore =
+    completedWithStress.length > 0
+      ? round1(
+          completedWithStress.reduce((sum, record) => sum + (record.stressAnalytics?.score ?? 0), 0) /
+            completedWithStress.length,
+        )
+      : 0
+  const avgStressLevel =
+    completedWithStress.length > 0
+      ? round1(
+          completedWithStress.reduce((sum, record) => sum + (record.stressSelfReport?.level ?? 0), 0) /
+            completedWithStress.length,
+        )
+      : 0
+
+  const highRiskRate =
+    completedWithStress.length > 0
+      ? round1(
+          (completedWithStress.filter((record) =>
+            ['ALTO', 'CRITICO'].includes(record.stressAnalytics?.riskLevel ?? ''),
+          ).length /
+            completedWithStress.length) *
+            100,
+        )
+      : 0
+
+  type LateAccumulator = {
+    professionalId: string
+    professionalName: string
+    specialty?: string
+    records: number
+    lateCount: number
+    lateMinutesSum: number
+    maxLateMinutes: number
+    checkInDistanceSum: number
+    checkInDistanceCount: number
+  }
+
+  const lateMap = new Map<string, LateAccumulator>()
+  checkedIn.forEach((record) => {
+    const professional = professionalsById.get(record.professionalId)
+    const key = record.professionalId || record.professionalUserId
+    const current = lateMap.get(key) ?? {
+      professionalId: record.professionalId || key,
+      professionalName: professional?.name ?? record.professionalName,
+      specialty: professional?.specialty,
+      records: 0,
+      lateCount: 0,
+      lateMinutesSum: 0,
+      maxLateMinutes: 0,
+      checkInDistanceSum: 0,
+      checkInDistanceCount: 0,
+    }
+    current.records += 1
+    current.lateMinutesSum += record.lateMinutes
+    if (record.lateMinutes > 0) current.lateCount += 1
+    current.maxLateMinutes = Math.max(current.maxLateMinutes, record.lateMinutes)
+    if (record.checkIn?.distanceMeters !== undefined) {
+      current.checkInDistanceSum += record.checkIn.distanceMeters
+      current.checkInDistanceCount += 1
+    }
+    lateMap.set(key, current)
+  })
+
+  const lateRanking = Array.from(lateMap.values())
+    .map((row) => ({
+      professionalId: row.professionalId,
+      professionalName: row.professionalName,
+      specialty: row.specialty,
+      records: row.records,
+      lateCount: row.lateCount,
+      lateRate: row.records > 0 ? round1((row.lateCount / row.records) * 100) : 0,
+      avgLateMinutes: row.records > 0 ? round1(row.lateMinutesSum / row.records) : 0,
+      maxLateMinutes: row.maxLateMinutes,
+      avgCheckInDistanceMeters:
+        row.checkInDistanceCount > 0 ? round1(row.checkInDistanceSum / row.checkInDistanceCount) : 0,
+    }))
+    .sort(
+      (a, b) =>
+        b.avgLateMinutes - a.avgLateMinutes ||
+        b.lateRate - a.lateRate ||
+        b.maxLateMinutes - a.maxLateMinutes ||
+        a.professionalName.localeCompare(b.professionalName, 'pt-BR'),
+    )
+
+  const triggerCount = new Map<StressTriggerCode, number>()
+  const stressByProfessional = new Map<
+    string,
+    {
+      professionalId: string
+      professionalName: string
+      specialty?: string
+      checkouts: number
+      stressLevelSum: number
+      stressScoreSum: number
+      highRiskCount: number
+      criticalCount: number
+      triggers: Map<StressTriggerCode, number>
+    }
+  >()
+
+  completedWithStress.forEach((record) => {
+    const report = record.stressSelfReport
+    const analytics = record.stressAnalytics
+    if (!report || !analytics) return
+
+    report.triggers.forEach((trigger) => {
+      triggerCount.set(trigger, (triggerCount.get(trigger) ?? 0) + 1)
+    })
+
+    const professional = professionalsById.get(record.professionalId)
+    const key = record.professionalId || record.professionalUserId
+    const current = stressByProfessional.get(key) ?? {
+      professionalId: record.professionalId || key,
+      professionalName: professional?.name ?? record.professionalName,
+      specialty: professional?.specialty,
+      checkouts: 0,
+      stressLevelSum: 0,
+      stressScoreSum: 0,
+      highRiskCount: 0,
+      criticalCount: 0,
+      triggers: new Map<StressTriggerCode, number>(),
+    }
+
+    current.checkouts += 1
+    current.stressLevelSum += report.level
+    current.stressScoreSum += analytics.score
+    if (analytics.riskLevel === 'ALTO' || analytics.riskLevel === 'CRITICO') current.highRiskCount += 1
+    if (analytics.riskLevel === 'CRITICO') current.criticalCount += 1
+    report.triggers.forEach((trigger) => {
+      current.triggers.set(trigger, (current.triggers.get(trigger) ?? 0) + 1)
+    })
+    stressByProfessional.set(key, current)
+  })
+
+  const stressRanking = Array.from(stressByProfessional.values())
+    .map((row) => ({
+      professionalId: row.professionalId,
+      professionalName: row.professionalName,
+      specialty: row.specialty,
+      checkouts: row.checkouts,
+      avgStressLevel: row.checkouts > 0 ? round1(row.stressLevelSum / row.checkouts) : 0,
+      avgStressScore: row.checkouts > 0 ? round1(row.stressScoreSum / row.checkouts) : 0,
+      highRiskCount: row.highRiskCount,
+      criticalCount: row.criticalCount,
+      recurringTriggers: Array.from(row.triggers.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([trigger]) => STRESS_TRIGGER_LABELS[trigger]),
+    }))
+    .sort(
+      (a, b) =>
+        b.avgStressScore - a.avgStressScore ||
+        b.highRiskCount - a.highRiskCount ||
+        a.professionalName.localeCompare(b.professionalName, 'pt-BR'),
+    )
+
+  const riskBuckets: Record<StressRiskLevel, number> = {
+    BAIXO: 0,
+    MODERADO: 0,
+    ALTO: 0,
+    CRITICO: 0,
+  }
+  completedWithStress.forEach((record) => {
+    const riskLevel = record.stressAnalytics?.riskLevel
+    if (!riskLevel) return
+    riskBuckets[riskLevel] += 1
+  })
+
+  const riskDistribution = (Object.keys(riskBuckets) as StressRiskLevel[]).map((riskLevel) => ({
+    name: STRESS_RISK_META[riskLevel].label,
+    value: riskBuckets[riskLevel],
+    color: STRESS_RISK_META[riskLevel].color,
+  }))
+
+  const timelineBucketMap = new Map<
+    string,
+    { label: string; stressScoreSum: number; stressLevelSum: number; lateMinutesSum: number; checkouts: number }
+  >()
+  completedWithStress.forEach((record) => {
+    const key = record.shiftDate
+    const bucket = timelineBucketMap.get(key) ?? {
+      label: key.split('-').reverse().join('/'),
+      stressScoreSum: 0,
+      stressLevelSum: 0,
+      lateMinutesSum: 0,
+      checkouts: 0,
+    }
+    bucket.checkouts += 1
+    bucket.stressScoreSum += record.stressAnalytics?.score ?? 0
+    bucket.stressLevelSum += record.stressSelfReport?.level ?? 0
+    bucket.lateMinutesSum += record.lateMinutes
+    timelineBucketMap.set(key, bucket)
+  })
+
+  const stressTimeline = Array.from(timelineBucketMap.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .slice(-10)
+    .map(([, bucket]) => ({
+      label: bucket.label,
+      avgStressScore: round1(bucket.stressScoreSum / Math.max(bucket.checkouts, 1)),
+      avgStressLevel: round1(bucket.stressLevelSum / Math.max(bucket.checkouts, 1)),
+      avgLateMinutes: round1(bucket.lateMinutesSum / Math.max(bucket.checkouts, 1)),
+      checkouts: bucket.checkouts,
+    }))
+
+  const topTriggers = Array.from(triggerCount.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([code, count]) => ({ code, label: STRESS_TRIGGER_LABELS[code], count }))
+
+  const highRiskCheckouts = completedWithStress
+    .filter((record) => {
+      const risk = record.stressAnalytics?.riskLevel
+      return risk === 'ALTO' || risk === 'CRITICO'
+    })
+    .sort(
+      (a, b) =>
+        (b.stressAnalytics?.score ?? 0) - (a.stressAnalytics?.score ?? 0) ||
+        b.shiftDate.localeCompare(a.shiftDate),
+    )
+    .slice(0, 8)
+    .map((record) => ({
+      id: record.id,
+      professionalName: professionalsById.get(record.professionalId)?.name ?? record.professionalName,
+      sectorName: record.sectorName,
+      shiftDate: record.shiftDate,
+      score: record.stressAnalytics?.score ?? 0,
+      level: record.stressSelfReport?.level ?? 0,
+      riskLevel: record.stressAnalytics?.riskLevel ?? 'MODERADO',
+      lateMinutes: record.lateMinutes,
+      triggers: (record.stressSelfReport?.triggers ?? []).map((trigger) => STRESS_TRIGGER_LABELS[trigger]),
+    }))
+
+  return {
+    totals: {
+      plannedRecords: records.length,
+      checkedInRecords: checkedIn.length,
+      checkedOutRecords: checkedOut.length,
+      checkInRate: records.length > 0 ? round1((checkedIn.length / records.length) * 100) : 0,
+      checkoutRate: checkedIn.length > 0 ? round1((checkedOut.length / checkedIn.length) * 100) : 0,
+      onTimeRate: checkedIn.length > 0 ? round1((onTime.length / checkedIn.length) * 100) : 0,
+      avgLateMinutes,
+      avgOvertimeMinutes,
+      avgCheckInDistanceMeters,
+      avgStressScore,
+      avgStressLevel,
+      highRiskRate,
+    },
+    lateRanking,
+    stressRanking,
+    riskDistribution,
+    stressTimeline,
+    topTriggers,
+    highRiskCheckouts,
+  }
+}
+
+export const useShiftAttendanceStore = create<ShiftAttendanceState>()(
+  persist(
+    (set, get) => ({
+      ...buildInitialState(),
+
+      getShiftAttendance: (shiftId, professionalUserId) => {
+        const records = get().records
+        if (professionalUserId) {
+          return (
+            records.find(
+              (record) =>
+                record.shiftId === shiftId && record.professionalUserId === professionalUserId,
+            ) ?? null
+          )
+        }
+
+        return records.find((record) => record.shiftId === shiftId) ?? null
+      },
+
+      checkInShift: (input) => {
+        let result: ShiftAttendanceRecord | null = null
+
+        set((state) => {
+          const geofence = requireRecordGeofence(state, { sectorId: input.sectorId, sectorName: input.sectorName })
+          const geo = buildGeoSnapshot(geofence, input.geo)
+
+          if (!geo.withinGeofence) {
+            throw new Error(
+              `Localização fora da área do plantão (${geo.distanceMeters}m do ponto esperado em ${geofence.label}).`,
+            )
+          }
+
+          const existing = state.records.find(
+            (record) =>
+              record.shiftId === input.shiftId && record.professionalUserId === input.professionalUserId,
+          )
+
+          if (existing?.status === 'CHECKED_IN') {
+            throw new Error('Check-in já realizado para este plantão.')
+          }
+
+          if (existing?.status === 'CHECKED_OUT') {
+            throw new Error('Este plantão já foi finalizado com checkout.')
+          }
+
+          const base =
+            existing ??
+            baseRecordFromShift({
+              shiftId: input.shiftId,
+              professionalId: input.professionalId,
+              professionalUserId: input.professionalUserId,
+              professionalName: input.professionalName,
+              sectorId: input.sectorId,
+              sectorName: input.sectorName,
+              shiftDate: input.shiftDate,
+              startTime: input.startTime,
+              endTime: input.endTime,
+              patientLoad: input.patientLoad,
+            })
+
+          const scheduledStart = new Date(base.scheduledStartAt)
+          const checkInAt = new Date(geo.capturedAt)
+          const lateMinutes = Math.max(0, minutesBetween(checkInAt, scheduledStart))
+
+          const updated: ShiftAttendanceRecord = {
+            ...base,
+            patientLoad: input.patientLoad ?? base.patientLoad,
+            status: 'CHECKED_IN',
+            checkIn: geo,
+            onTime: lateMinutes <= 5,
+            lateMinutes,
+            updatedAt: geo.capturedAt,
+          }
+
+          result = updated
+          return { records: upsertRecord(state.records, updated) }
+        })
+
+        if (!result) {
+          throw new Error('Não foi possível concluir o check-in.')
+        }
+
+        return result
+      },
+
+      checkOutShift: (input) => {
+        validateStressReport(input.stress)
+
+        let result: ShiftAttendanceRecord | null = null
+
+        set((state) => {
+          const record = state.records.find(
+            (item) => item.shiftId === input.shiftId && item.professionalUserId === input.professionalUserId,
+          )
+
+          if (!record) {
+            throw new Error('Faça o check-in antes de finalizar o checkout.')
+          }
+
+          if (!record.checkIn) {
+            throw new Error('Check-in não encontrado para este plantão.')
+          }
+
+          if (record.status === 'CHECKED_OUT') {
+            throw new Error('Checkout já realizado para este plantão.')
+          }
+
+          const geofence = requireRecordGeofence(state, record)
+          const geo = buildGeoSnapshot(geofence, input.geo)
+          if (!geo.withinGeofence) {
+            throw new Error(
+              `Checkout fora da área do plantão (${geo.distanceMeters}m do ponto esperado em ${geofence.label}).`,
+            )
+          }
+
+          const scheduledEnd = new Date(record.scheduledEndAt)
+          const checkInAt = new Date(record.checkIn.capturedAt)
+          const checkOutAt = new Date(geo.capturedAt)
+          const overtimeMinutes = Math.max(0, minutesBetween(checkOutAt, scheduledEnd))
+          const earlyCheckoutMinutes = Math.max(0, minutesBetween(scheduledEnd, checkOutAt))
+          const workedMinutes = Math.max(0, minutesBetween(checkOutAt, checkInAt))
+
+          let updated: ShiftAttendanceRecord = {
+            ...record,
+            status: 'CHECKED_OUT',
+            checkOut: geo,
+            overtimeMinutes,
+            earlyCheckoutMinutes,
+            workedMinutes,
+            stressSelfReport: {
+              ...input.stress,
+              triggers: Array.from(new Set(input.stress.triggers)).slice(0, 6),
+              note: input.stress.note?.trim() || undefined,
+            },
+            updatedAt: geo.capturedAt,
+          }
+
+          updated = {
+            ...updated,
+            stressAnalytics: computeStressAnalytics(updated, updated.stressSelfReport!, state.records),
+          }
+
+          result = updated
+          return { records: upsertRecord(state.records, updated) }
+        })
+
+        if (!result) {
+          throw new Error('Não foi possível concluir o checkout.')
+        }
+
+        return result
+      },
+
+      resetAttendanceDemoData: () => set(() => ({ ...buildInitialState() })),
+    }),
+    {
+      name: 'confirma-plantao-shift-attendance',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        geofences: state.geofences,
+        records: state.records,
+      }),
+    },
+  ),
+)
+
+export function buildDemoGeoPositionFromGeofence(
+  geofence: ShiftGeofence,
+  source: GeoCaptureSource = 'demo-simulado',
+) {
+  const lat = geofence.lat + 0.00009
+  const lng = geofence.lng - 0.00004
+  return {
+    lat,
+    lng,
+    accuracyMeters: 14,
+    source,
+  }
+}
+
+export function listStressTriggerOptions() {
+  return (Object.keys(STRESS_TRIGGER_LABELS) as StressTriggerCode[]).map((code) => ({
+    code,
+    label: STRESS_TRIGGER_LABELS[code],
+  }))
+}
+
+export function formatStressDrivers(analytics?: StressAnalytics) {
+  if (!analytics) return []
+
+  const labels: Record<keyof StressScoreBreakdown, string> = {
+    selfReport: 'Autopercepção',
+    lateness: 'Atraso no check-in',
+    overtime: 'Hora extra',
+    workload: 'Carga assistencial',
+    nightShift: 'Turno noturno',
+    triggers: 'Gatilhos reportados',
+    lowEnergy: 'Baixa energia',
+    lowSupport: 'Baixo suporte',
+    shortRest: 'Descanso curto',
+  }
+
+  return analytics.dominantDrivers.map((driver) => ({
+    label: labels[driver.key],
+    value: driver.value,
+  }))
+}

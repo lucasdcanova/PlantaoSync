@@ -36,6 +36,11 @@ import { useDoctorDemoStore } from '@/store/doctor-demo.store'
 import { useLocationsStore } from '@/store/locations.store'
 import { useProfessionalsStore } from '@/store/professionals.store'
 import { useSchedulesStore } from '@/store/schedules.store'
+import {
+  buildAttendanceManagerAnalytics,
+  STRESS_RISK_META,
+  useShiftAttendanceStore,
+} from '@/store/shift-attendance.store'
 import { createShiftValueResolver, getShiftDurationHours } from '@/lib/shift-pricing'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
 
@@ -184,6 +189,7 @@ export default function ReportsPage() {
   const availableShifts = useDoctorDemoStore((state) => state.availableShifts)
   const swapRequests = useDoctorDemoStore((state) => state.swapRequests)
   const sectors = useDoctorDemoStore((state) => state.sectors)
+  const attendanceRecords = useShiftAttendanceStore((state) => state.records)
 
   const [reportWindow, setReportWindow] = useState<ReportWindow>('month')
   const [analysisPerspective, setAnalysisPerspective] = useState<AnalysisPerspective>('setores')
@@ -253,6 +259,29 @@ export default function ReportsPage() {
           schedule.startDate <= dateRange.endKey,
       ),
     [dateRange.endKey, dateRange.startKey, schedules],
+  )
+
+  const attendanceRecordsInRange = useMemo(
+    () =>
+      attendanceRecords.filter((record) =>
+        isDateInRange(record.shiftDate, dateRange.startKey, dateRange.endKey),
+      ),
+    [attendanceRecords, dateRange.endKey, dateRange.startKey],
+  )
+
+  const attendanceAnalytics = useMemo(
+    () => buildAttendanceManagerAnalytics(attendanceRecordsInRange, professionals),
+    [attendanceRecordsInRange, professionals],
+  )
+
+  const punctualityChartData = useMemo(
+    () =>
+      attendanceAnalytics.lateRanking.slice(0, 6).map((row) => ({
+        name: row.professionalName.split(' ').slice(0, 2).join(' '),
+        atrasoMedio: row.avgLateMinutes,
+        taxaAtraso: row.lateRate,
+      })),
+    [attendanceAnalytics.lateRanking],
   )
 
   const monthlyRows = useMemo(() => {
@@ -1141,6 +1170,399 @@ export default function ReportsPage() {
                 </div>
               </div>
             </motion.article>
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-5">
+            <article className="card-base p-5 xl:col-span-2">
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="font-display text-foreground text-base font-semibold">
+                    Presença e pontualidade
+                  </h3>
+                  <p className="text-muted-foreground text-xs">
+                    Check-in geolocalizado, aderência de horário e conclusão de checkout.
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-[11px]">
+                  Operacional
+                </Badge>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Check-in</p>
+                  <p className="text-foreground mt-1 text-lg font-semibold">
+                    {attendanceAnalytics.totals.checkInRate}%
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    {attendanceAnalytics.totals.checkedInRecords}/
+                    {attendanceAnalytics.totals.plannedRecords} registros
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Pontualidade</p>
+                  <p className="text-foreground mt-1 text-lg font-semibold">
+                    {attendanceAnalytics.totals.onTimeRate}%
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    atraso médio {attendanceAnalytics.totals.avgLateMinutes} min
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Checkout</p>
+                  <p className="text-foreground mt-1 text-lg font-semibold">
+                    {attendanceAnalytics.totals.checkoutRate}%
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    {attendanceAnalytics.totals.checkedOutRecords} finalizados
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Geo</p>
+                  <p className="text-foreground mt-1 text-lg font-semibold">
+                    {attendanceAnalytics.totals.avgCheckInDistanceMeters}m
+                  </p>
+                  <p className="text-xs text-slate-600">distância média no check-in</p>
+                </div>
+              </div>
+
+              <div className="mt-4 h-56">
+                {punctualityChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={punctualityChartData} barGap={8}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" opacity={0.2} />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                        interval={0}
+                        height={52}
+                      />
+                      <YAxis hide />
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: '10px',
+                          border: '1px solid rgba(148, 163, 184, 0.3)',
+                          boxShadow: '0 12px 28px rgba(15, 23, 42, 0.12)',
+                        }}
+                        formatter={(value: number, name: string) =>
+                          name === 'Taxa de atraso %' ? `${value}%` : `${value} min`
+                        }
+                      />
+                      <Bar
+                        dataKey="atrasoMedio"
+                        name="Atraso médio (min)"
+                        fill="#f97316"
+                        radius={[8, 8, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="taxaAtraso"
+                        name="Taxa de atraso %"
+                        fill="#0ea5e9"
+                        radius={[8, 8, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex h-full items-center justify-center rounded-xl border border-dashed">
+                    <p className="text-muted-foreground text-sm">
+                      Sem dados de presença para a janela selecionada.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </article>
+
+            <article className="card-base p-5 xl:col-span-3">
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="font-display text-foreground text-base font-semibold">
+                    Estresse pós-plantão (analítico)
+                  </h3>
+                  <p className="text-muted-foreground text-xs">
+                    Índice composto com autoavaliação, atraso, hora extra, carga e suporte.
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-[11px]">
+                  Robusto
+                </Badge>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                    Índice médio
+                  </p>
+                  <p className="text-foreground mt-1 text-lg font-semibold">
+                    {attendanceAnalytics.totals.avgStressScore}
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    autoestresse {attendanceAnalytics.totals.avgStressLevel}/5
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                    Risco alto/crítico
+                  </p>
+                  <p className="text-foreground mt-1 text-lg font-semibold">
+                    {attendanceAnalytics.totals.highRiskRate}%
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    entre checkouts com escala preenchida
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                    Hora extra média
+                  </p>
+                  <p className="text-foreground mt-1 text-lg font-semibold">
+                    {attendanceAnalytics.totals.avgOvertimeMinutes} min
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    correlação útil com fadiga e carga
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+                <div className="h-60 rounded-xl border border-slate-100 bg-background p-2">
+                  {attendanceAnalytics.stressTimeline.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={attendanceAnalytics.stressTimeline}>
+                        <defs>
+                          <linearGradient id="stressScoreFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0.02} />
+                          </linearGradient>
+                          <linearGradient id="stressLateFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.02} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" opacity={0.2} />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize: 11 }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis hide />
+                        <Tooltip
+                          contentStyle={{
+                            borderRadius: '10px',
+                            border: '1px solid rgba(148, 163, 184, 0.3)',
+                            boxShadow: '0 12px 28px rgba(15, 23, 42, 0.12)',
+                          }}
+                          formatter={(value: number, name: string) =>
+                            name === 'Índice de estresse' ? value : `${value} min`
+                          }
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="avgStressScore"
+                          name="Índice de estresse"
+                          stroke="#ef4444"
+                          strokeWidth={2}
+                          fill="url(#stressScoreFill)"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="avgLateMinutes"
+                          name="Atraso médio"
+                          stroke="#f59e0b"
+                          strokeWidth={2}
+                          fill="url(#stressLateFill)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <p className="text-muted-foreground text-sm">
+                        Sem checkouts com escala de estresse na janela.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="h-40 rounded-xl border border-slate-100 bg-background p-2">
+                    {attendanceAnalytics.riskDistribution.some((item) => item.value > 0) ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Tooltip
+                            formatter={(value: number) => `${value} checkout(s)`}
+                            contentStyle={{
+                              borderRadius: '10px',
+                              border: '1px solid rgba(148, 163, 184, 0.3)',
+                              boxShadow: '0 12px 28px rgba(15, 23, 42, 0.12)',
+                            }}
+                          />
+                          <Pie
+                            data={attendanceAnalytics.riskDistribution}
+                            dataKey="value"
+                            innerRadius={32}
+                            outerRadius={54}
+                            paddingAngle={2}
+                          >
+                            {attendanceAnalytics.riskDistribution.map((item) => (
+                              <Cell key={item.name} fill={item.color} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex h-full items-center justify-center">
+                        <p className="text-muted-foreground text-xs">Sem distribuição ainda</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border border-slate-100 bg-background p-3">
+                    <p className="text-foreground text-xs font-medium">Gatilhos recorrentes</p>
+                    <div className="mt-2 space-y-1.5">
+                      {attendanceAnalytics.topTriggers.length > 0 ? (
+                        attendanceAnalytics.topTriggers.slice(0, 5).map((trigger) => (
+                          <div
+                            key={trigger.code}
+                            className="flex items-center justify-between gap-2 text-xs"
+                          >
+                            <span className="text-muted-foreground line-clamp-1">
+                              {trigger.label}
+                            </span>
+                            <span className="text-foreground font-semibold">
+                              {trigger.count}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-muted-foreground text-xs">
+                          Nenhum gatilho reportado na janela.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-2">
+            <article className="card-base p-5">
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <h3 className="font-display text-foreground text-base font-semibold">
+                  Profissionais com mais atraso
+                </h3>
+                <Badge variant="outline" className="text-[11px]">
+                  Top {Math.min(5, attendanceAnalytics.lateRanking.length)}
+                </Badge>
+              </div>
+
+              <div className="space-y-2">
+                {attendanceAnalytics.lateRanking.length > 0 ? (
+                  attendanceAnalytics.lateRanking.slice(0, 5).map((row, index) => (
+                    <div
+                      key={row.professionalId}
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-foreground text-sm font-medium">
+                            {index + 1}. {row.professionalName}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            {row.specialty ?? 'Especialidade não informada'}
+                          </p>
+                        </div>
+                        <Badge
+                          className={
+                            row.avgLateMinutes >= 15
+                              ? 'border-red-200 bg-red-50 text-red-700'
+                              : row.avgLateMinutes >= 8
+                                ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                : 'border-green-200 bg-green-50 text-green-700'
+                          }
+                        >
+                          {row.avgLateMinutes} min
+                        </Badge>
+                      </div>
+                      <div className="mt-2 grid gap-1 text-xs text-slate-600 sm:grid-cols-3">
+                        <p>Taxa de atraso: {row.lateRate}%</p>
+                        <p>Pior atraso: {row.maxLateMinutes} min</p>
+                        <p>Geo médio: {row.avgCheckInDistanceMeters}m</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="rounded-xl border border-dashed px-3 py-4 text-sm text-muted-foreground">
+                    Nenhum dado de check-in disponível no período.
+                  </p>
+                )}
+              </div>
+            </article>
+
+            <article className="card-base p-5">
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <h3 className="font-display text-foreground text-base font-semibold">
+                  Alertas de estresse elevado
+                </h3>
+                <Badge variant="outline" className="text-[11px]">
+                  Pós-checkout
+                </Badge>
+              </div>
+
+              <div className="space-y-2">
+                {attendanceAnalytics.highRiskCheckouts.length > 0 ? (
+                  attendanceAnalytics.highRiskCheckouts.slice(0, 6).map((item) => {
+                    const risk = STRESS_RISK_META[item.riskLevel]
+                    return (
+                      <div
+                        key={item.id}
+                        className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="text-foreground text-sm font-medium">
+                              {item.professionalName}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              {item.sectorName} · {formatDate(item.shiftDate)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className={risk.className}>{risk.label}</Badge>
+                            <Badge className="border-slate-300 bg-slate-100 text-slate-700">
+                              Índice {item.score}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                          <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-slate-700">
+                            Estresse {item.level}/5
+                          </span>
+                          <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-slate-700">
+                            Atraso {item.lateMinutes} min
+                          </span>
+                          {item.triggers.slice(0, 3).map((trigger) => (
+                            <span
+                              key={`${item.id}-${trigger}`}
+                              className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-red-700"
+                            >
+                              {trigger}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="rounded-xl border border-dashed px-3 py-4 text-sm text-muted-foreground">
+                    Nenhum checkout de risco alto/crítico encontrado no período.
+                  </p>
+                )}
+              </div>
+            </article>
           </section>
 
           <section className="card-base p-6">

@@ -3,13 +3,19 @@
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
+  Activity,
+  AlertTriangle,
   CalendarPlus2,
   ChevronLeft,
   ChevronRight,
   Clock3,
   Hospital,
+  LocateFixed,
+  LogIn,
+  LogOut,
   MapPin,
   ShieldAlert,
+  Timer,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -19,6 +25,16 @@ import { useDoctorDemoStore } from '@/store/doctor-demo.store'
 import { useSchedulesStore } from '@/store/schedules.store'
 import { useLocationsStore } from '@/store/locations.store'
 import { useAuthStore } from '@/store/auth.store'
+import {
+  buildDemoGeoPositionFromGeofence,
+  formatStressDrivers,
+  listStressTriggerOptions,
+  STRESS_LEVEL_META,
+  STRESS_RISK_META,
+  type StressSelfReport,
+  type StressTriggerCode,
+  useShiftAttendanceStore,
+} from '@/store/shift-attendance.store'
 import { createShiftValueResolver } from '@/lib/shift-pricing'
 import { cn, formatCurrency } from '@/lib/utils'
 
@@ -57,6 +73,24 @@ const DEFAULT_PRIVATE_SHIFT_FORM: PrivateShiftFormValues = {
   endTime: '07:00',
   value: '1500,00',
   notes: '',
+}
+
+type CheckoutDraft = {
+  level: StressSelfReport['level']
+  energyLevel: StressSelfReport['energyLevel']
+  supportLevel: StressSelfReport['supportLevel']
+  triggers: StressTriggerCode[]
+  note: string
+}
+
+const STRESS_TRIGGER_OPTIONS = listStressTriggerOptions()
+
+const DEFAULT_CHECKOUT_DRAFT: CheckoutDraft = {
+  level: 3,
+  energyLevel: 3,
+  supportLevel: 3,
+  triggers: [],
+  note: '',
 }
 
 const shiftStatusClassName: Record<string, string> = {
@@ -98,12 +132,67 @@ function sortByStartTime<T extends { startTime: string }>(items: T[]) {
   return [...items].sort((a, b) => a.startTime.localeCompare(b.startTime))
 }
 
+function formatClockTime(iso?: string) {
+  if (!iso) return '—'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatMinutesLabel(minutes: number) {
+  if (!Number.isFinite(minutes) || minutes <= 0) return '0 min'
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60)
+    const remaining = minutes % 60
+    return remaining > 0 ? `${hours}h ${remaining}min` : `${hours}h`
+  }
+  return `${minutes} min`
+}
+
+function getAttendanceStatusBadge(record?: { status: string } | null) {
+  if (!record) {
+    return {
+      label: 'Sem check-in',
+      className: 'border-slate-200 bg-slate-50 text-slate-700',
+    }
+  }
+
+  if (record.status === 'CHECKED_IN') {
+    return {
+      label: 'Em plantão',
+      className: 'border-blue-200 bg-blue-50 text-blue-700',
+    }
+  }
+
+  if (record.status === 'CHECKED_OUT') {
+    return {
+      label: 'Checkout concluído',
+      className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    }
+  }
+
+  return {
+    label: 'Pendente',
+    className: 'border-slate-200 bg-slate-50 text-slate-700',
+  }
+}
+
+function createDefaultCheckoutDraft(): CheckoutDraft {
+  return { ...DEFAULT_CHECKOUT_DRAFT, triggers: [] }
+}
+
 export default function DoctorCalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 1))
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [privateShiftForm, setPrivateShiftForm] = useState<PrivateShiftFormValues>(
     DEFAULT_PRIVATE_SHIFT_FORM,
   )
+  const [checkoutDrafts, setCheckoutDrafts] = useState<Record<string, CheckoutDraft>>({})
+  const [expandedCheckoutShiftId, setExpandedCheckoutShiftId] = useState<string | null>(null)
+  const [activeGeoActionKey, setActiveGeoActionKey] = useState<string | null>(null)
 
   const myShifts = useDoctorDemoStore((state) => state.myShifts)
   const privateShifts = useDoctorDemoStore((state) => state.privateShifts)
@@ -113,10 +202,164 @@ export default function DoctorCalendarPage() {
   const schedules = useSchedulesStore((state) => state.schedules)
   const locations = useLocationsStore((state) => state.locations)
   const hospitalName = useAuthStore((state) => state.user?.organization?.name ?? 'Hospital')
+  const attendanceRecords = useShiftAttendanceStore((state) => state.records)
+  const attendanceGeofences = useShiftAttendanceStore((state) => state.geofences)
+  const checkInShift = useShiftAttendanceStore((state) => state.checkInShift)
+  const checkOutShift = useShiftAttendanceStore((state) => state.checkOutShift)
   const resolveShiftValue = useMemo(
     () => createShiftValueResolver(schedules, locations),
     [locations, schedules],
   )
+  const attendanceRecordMap = useMemo(
+    () =>
+      new Map(
+        attendanceRecords.map((record) => [
+          `${record.shiftId}::${record.professionalUserId}`,
+          record,
+        ]),
+      ),
+    [attendanceRecords],
+  )
+
+  const getCheckoutDraft = (shiftId: string) => checkoutDrafts[shiftId] ?? createDefaultCheckoutDraft()
+
+  const updateCheckoutDraft = (
+    shiftId: string,
+    updater: (draft: CheckoutDraft) => CheckoutDraft,
+  ) => {
+    setCheckoutDrafts((current) => ({
+      ...current,
+      [shiftId]: updater(current[shiftId] ?? createDefaultCheckoutDraft()),
+    }))
+  }
+
+  const requestBrowserLocation = () =>
+    new Promise<{ lat: number; lng: number; accuracyMeters?: number; source: 'browser' }>(
+      (resolve, reject) => {
+        if (typeof window === 'undefined' || !('geolocation' in navigator)) {
+          reject(new Error('Geolocalização não está disponível neste dispositivo/navegador.'))
+          return
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            resolve({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              accuracyMeters: position.coords.accuracy,
+              source: 'browser',
+            })
+          },
+          (error) => {
+            const message =
+              error.code === error.PERMISSION_DENIED
+                ? 'Permissão de localização negada.'
+                : error.code === error.TIMEOUT
+                  ? 'Tempo esgotado ao obter localização.'
+                  : 'Não foi possível obter a localização do dispositivo.'
+            reject(new Error(message))
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 12000,
+            maximumAge: 10_000,
+          },
+        )
+      },
+    )
+
+  const resolveGeoForShift = async (
+    shift: (typeof myShifts)[number],
+    mode: 'browser' | 'demo-simulado',
+  ) => {
+    if (mode === 'browser') {
+      return requestBrowserLocation()
+    }
+
+    const geofence =
+      attendanceGeofences[shift.sectorId] ??
+      ({
+        sectorId: shift.sectorId,
+        sectorName: shift.sectorName,
+        lat: -23.5616,
+        lng: -46.6556,
+        radiusMeters: 180,
+        label: shift.sectorName,
+      } as const)
+
+    return buildDemoGeoPositionFromGeofence(geofence)
+  }
+
+  const handleShiftCheckIn = async (
+    shift: (typeof myShifts)[number],
+    mode: 'browser' | 'demo-simulado' = 'browser',
+  ) => {
+    const actionKey = `checkin:${shift.id}`
+    setActiveGeoActionKey(actionKey)
+
+    try {
+      const geo = await resolveGeoForShift(shift, mode)
+      const record = checkInShift({
+        shiftId: shift.id,
+        professionalId: shift.professionalId,
+        professionalUserId: shift.professionalUserId,
+        professionalName: useAuthStore.getState().user?.name ?? 'Médico',
+        sectorId: shift.sectorId,
+        sectorName: shift.sectorName,
+        shiftDate: shift.date,
+        startTime: shift.startTime,
+        endTime: shift.endTime,
+        patientLoad: shift.patientLoad,
+        geo,
+      })
+
+      toast.success(
+        `Check-in realizado às ${formatClockTime(
+          record.checkIn?.capturedAt,
+        )}. Atraso registrado: ${record.lateMinutes} min.`,
+      )
+      setExpandedCheckoutShiftId(shift.id)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Falha ao realizar check-in.')
+    } finally {
+      setActiveGeoActionKey((current) => (current === actionKey ? null : current))
+    }
+  }
+
+  const handleShiftCheckOut = async (
+    shift: (typeof myShifts)[number],
+    mode: 'browser' | 'demo-simulado' = 'browser',
+  ) => {
+    const draft = getCheckoutDraft(shift.id)
+    const actionKey = `checkout:${shift.id}`
+    setActiveGeoActionKey(actionKey)
+
+    try {
+      const geo = await resolveGeoForShift(shift, mode)
+      const record = checkOutShift({
+        shiftId: shift.id,
+        professionalUserId: shift.professionalUserId,
+        geo,
+        stress: {
+          level: draft.level,
+          energyLevel: draft.energyLevel,
+          supportLevel: draft.supportLevel,
+          triggers: draft.triggers,
+          note: draft.note,
+        },
+      })
+
+      toast.success(
+        `Checkout concluído às ${formatClockTime(record.checkOut?.capturedAt)}. ` +
+          `Índice de estresse: ${record.stressAnalytics?.score ?? 0}.`,
+      )
+      setExpandedCheckoutShiftId(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Falha ao concluir checkout.')
+    } finally {
+      setActiveGeoActionKey((current) => (current === actionKey ? null : current))
+    }
+  }
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -374,42 +617,481 @@ export default function DoctorCalendarPage() {
                   </h4>
                   <div className="mt-3 space-y-2">
                     {selectedHospitalShifts.length > 0 ? (
-                      selectedHospitalShifts.map((shift) => (
-                        <article
-                          key={shift.id}
-                          className="border-border/70 bg-background rounded-xl border p-3"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <p className="text-foreground text-sm font-medium">
-                                {shift.sectorName}
-                              </p>
-                              <p className="text-muted-foreground text-xs">{shift.specialty}</p>
+                      selectedHospitalShifts.map((shift) => {
+                        const attendanceKey = `${shift.id}::${shift.professionalUserId}`
+                        const attendanceRecord = attendanceRecordMap.get(attendanceKey) ?? null
+                        const attendanceBadge = getAttendanceStatusBadge(attendanceRecord)
+                        const geofence = attendanceGeofences[shift.sectorId]
+                        const checkoutDraft = getCheckoutDraft(shift.id)
+                        const checkoutExpanded = expandedCheckoutShiftId === shift.id
+                        const canCheckIn = shift.status !== 'CANCELADO' && !attendanceRecord?.checkIn
+                        const canCheckOut =
+                          shift.status !== 'CANCELADO' && attendanceRecord?.status === 'CHECKED_IN'
+                        const checkInBusy = activeGeoActionKey === `checkin:${shift.id}`
+                        const checkOutBusy = activeGeoActionKey === `checkout:${shift.id}`
+                        const stressRiskMeta = attendanceRecord?.stressAnalytics
+                          ? STRESS_RISK_META[attendanceRecord.stressAnalytics.riskLevel]
+                          : null
+                        const stressLevelMeta = attendanceRecord?.stressSelfReport
+                          ? STRESS_LEVEL_META[attendanceRecord.stressSelfReport.level]
+                          : null
+                        const dominantStressDrivers = formatStressDrivers(
+                          attendanceRecord?.stressAnalytics,
+                        )
+
+                        return (
+                          <article
+                            key={shift.id}
+                            className="border-border/70 bg-background rounded-xl border p-3"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="text-foreground text-sm font-medium">
+                                  {shift.sectorName}
+                                </p>
+                                <p className="text-muted-foreground text-xs">{shift.specialty}</p>
+                              </div>
+                              <Badge
+                                className={
+                                  shiftStatusClassName[shift.status] ??
+                                  shiftStatusClassName.CONFIRMADO
+                                }
+                              >
+                                {shift.status.replace('_', ' ')}
+                              </Badge>
                             </div>
-                            <Badge
-                              className={
-                                shiftStatusClassName[shift.status] ??
-                                shiftStatusClassName.CONFIRMADO
-                              }
-                            >
-                              {shift.status.replace('_', ' ')}
-                            </Badge>
-                          </div>
-                          <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-3 text-xs">
-                            <span className="inline-flex items-center gap-1">
-                              <Clock3 className="text-brand-600 h-3.5 w-3.5" />
-                              {shift.startTime} - {shift.endTime}
-                            </span>
-                            <span className="inline-flex items-center gap-1">
-                              <MapPin className="text-brand-600 h-3.5 w-3.5" />
-                              {shift.patientLoad}
-                            </span>
-                            <span className="text-foreground font-medium">
-                              {formatCurrency(shift.value)}
-                            </span>
-                          </div>
-                        </article>
-                      ))
+
+                            <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-3 text-xs">
+                              <span className="inline-flex items-center gap-1">
+                                <Clock3 className="text-brand-600 h-3.5 w-3.5" />
+                                {shift.startTime} - {shift.endTime}
+                              </span>
+                              <span className="inline-flex items-center gap-1">
+                                <MapPin className="text-brand-600 h-3.5 w-3.5" />
+                                {shift.patientLoad}
+                              </span>
+                              <span className="text-foreground font-medium">
+                                {formatCurrency(shift.value)}
+                              </span>
+                            </div>
+
+                            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                  <p className="text-foreground text-xs font-semibold">
+                                    Presença no plantão (check-in / checkout)
+                                  </p>
+                                  <p className="text-muted-foreground mt-0.5 text-[11px]">
+                                    Compartilhe a localização ao chegar e ao sair para registrar os
+                                    horários.
+                                  </p>
+                                </div>
+                                <Badge className={attendanceBadge.className}>
+                                  {attendanceBadge.label}
+                                </Badge>
+                              </div>
+
+                              <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+                                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1">
+                                  <LocateFixed className="h-3 w-3" />
+                                  {geofence
+                                    ? `${geofence.label} · raio ${geofence.radiusMeters}m`
+                                    : 'Geofence padrão do setor'}
+                                </span>
+                                {attendanceRecord?.checkIn ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1">
+                                    <Timer className="h-3 w-3" />
+                                    Distância check-in {attendanceRecord.checkIn.distanceMeters}m
+                                  </span>
+                                ) : null}
+                              </div>
+
+                              <div className="mt-3 space-y-2 text-xs">
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <p className="text-[11px] font-medium text-slate-500">
+                                      Check-in
+                                    </p>
+                                    {attendanceRecord?.checkIn ? (
+                                      <>
+                                        <p className="text-foreground mt-1 font-semibold">
+                                          {formatClockTime(attendanceRecord.checkIn.capturedAt)}
+                                        </p>
+                                        <p className="mt-0.5 text-slate-600">
+                                          {attendanceRecord.onTime
+                                            ? 'No horário'
+                                            : `Atraso de ${attendanceRecord.lateMinutes} min`}
+                                          {' · '}
+                                          precisão {Math.round(attendanceRecord.checkIn.accuracyMeters)}m
+                                        </p>
+                                      </>
+                                    ) : (
+                                      <p className="mt-1 text-slate-500">
+                                        Ainda não registrado.
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <p className="text-[11px] font-medium text-slate-500">
+                                      Checkout
+                                    </p>
+                                    {attendanceRecord?.checkOut ? (
+                                      <>
+                                        <p className="text-foreground mt-1 font-semibold">
+                                          {formatClockTime(attendanceRecord.checkOut.capturedAt)}
+                                        </p>
+                                        <p className="mt-0.5 text-slate-600">
+                                          {attendanceRecord.overtimeMinutes > 0
+                                            ? `Hora extra ${formatMinutesLabel(attendanceRecord.overtimeMinutes)}`
+                                            : attendanceRecord.earlyCheckoutMinutes > 0
+                                              ? `Saída antecipada ${formatMinutesLabel(attendanceRecord.earlyCheckoutMinutes)}`
+                                              : 'Sem desvio relevante'}
+                                          {' · '}
+                                          duração {formatMinutesLabel(attendanceRecord.workedMinutes)}
+                                        </p>
+                                      </>
+                                    ) : (
+                                      <p className="mt-1 text-slate-500">
+                                        Ainda não registrado.
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {attendanceRecord?.stressAnalytics && attendanceRecord.stressSelfReport ? (
+                                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Badge className={stressRiskMeta?.className}>
+                                        Risco {stressRiskMeta?.label}
+                                      </Badge>
+                                      <Badge className={stressLevelMeta?.colorClassName}>
+                                        Estresse {attendanceRecord.stressSelfReport.level}/5
+                                      </Badge>
+                                      <Badge className="border-slate-300 bg-slate-100 text-slate-700">
+                                        Índice {attendanceRecord.stressAnalytics.score}
+                                      </Badge>
+                                    </div>
+
+                                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                      <div className="rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+                                        <p className="text-[11px] text-slate-500">
+                                          Energia ao sair
+                                        </p>
+                                        <p className="text-sm font-medium text-slate-800">
+                                          {attendanceRecord.stressSelfReport.energyLevel}/5
+                                        </p>
+                                      </div>
+                                      <div className="rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+                                        <p className="text-[11px] text-slate-500">
+                                          Suporte percebido
+                                        </p>
+                                        <p className="text-sm font-medium text-slate-800">
+                                          {attendanceRecord.stressSelfReport.supportLevel}/5
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {attendanceRecord.stressSelfReport.triggers.length > 0 ? (
+                                      <div className="mt-2 flex flex-wrap gap-1.5">
+                                        {attendanceRecord.stressSelfReport.triggers.map((trigger) => (
+                                          <span
+                                            key={trigger}
+                                            className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-700"
+                                          >
+                                            {
+                                              STRESS_TRIGGER_OPTIONS.find(
+                                                (option) => option.code === trigger,
+                                              )?.label
+                                            }
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : null}
+
+                                    {dominantStressDrivers.length > 0 ? (
+                                      <div className="mt-2">
+                                        <p className="text-[11px] font-medium text-slate-500">
+                                          Principais fatores analíticos
+                                        </p>
+                                        <div className="mt-1 flex flex-wrap gap-1.5">
+                                          {dominantStressDrivers.map((driver) => (
+                                            <span
+                                              key={`${driver.label}-${driver.value}`}
+                                              className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700"
+                                            >
+                                              {driver.label} (+{driver.value})
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ) : null}
+
+                                    <p className="mt-2 text-[11px] text-slate-600">
+                                      Pausa/recuperação sugerida:{' '}
+                                      <span className="font-medium text-slate-800">
+                                        {formatMinutesLabel(
+                                          attendanceRecord.stressAnalytics.recoveryMinutesRecommended,
+                                        )}
+                                      </span>
+                                    </p>
+
+                                    {attendanceRecord.stressSelfReport.note ? (
+                                      <p className="mt-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5 text-[11px] text-slate-700">
+                                        {attendanceRecord.stressSelfReport.note}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                ) : null}
+                              </div>
+
+                              {canCheckIn ? (
+                                <div className="mt-3 grid gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-8 w-full gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
+                                    disabled={checkInBusy}
+                                    onClick={() => void handleShiftCheckIn(shift, 'browser')}
+                                  >
+                                    <LogIn className="h-3.5 w-3.5" />
+                                    {checkInBusy
+                                      ? 'Capturando localização...'
+                                      : 'Compartilhar localização e fazer check-in'}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 w-full gap-2"
+                                    disabled={checkInBusy}
+                                    onClick={() => void handleShiftCheckIn(shift, 'demo-simulado')}
+                                  >
+                                    <LocateFixed className="h-3.5 w-3.5" />
+                                    Simular check-in (demo)
+                                  </Button>
+                                </div>
+                              ) : null}
+
+                              {canCheckOut ? (
+                                <div className="mt-3">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={checkoutExpanded ? 'outline' : 'default'}
+                                    className={cn(
+                                      'h-8 w-full gap-2',
+                                      !checkoutExpanded &&
+                                        'bg-foreground text-background hover:bg-foreground/90',
+                                    )}
+                                    onClick={() =>
+                                      setExpandedCheckoutShiftId((current) =>
+                                        current === shift.id ? null : shift.id,
+                                      )
+                                    }
+                                  >
+                                    <LogOut className="h-3.5 w-3.5" />
+                                    {checkoutExpanded
+                                      ? 'Ocultar checkout'
+                                      : 'Abrir checkout + escala de estresse'}
+                                  </Button>
+                                </div>
+                              ) : null}
+
+                              {canCheckOut && checkoutExpanded ? (
+                                <div className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50/60 p-3">
+                                  <div className="flex items-center gap-2">
+                                    <Activity className="h-4 w-4 text-indigo-700" />
+                                    <p className="text-sm font-semibold text-indigo-900">
+                                      Checkout com escala de estresse
+                                    </p>
+                                  </div>
+                                  <p className="mt-1 text-xs text-indigo-700">
+                                    Preencha rapidamente. Estes dados alimentam a análise de
+                                    estresse e os indicadores de carga assistencial.
+                                  </p>
+
+                                  <div className="mt-3">
+                                    <p className="text-xs font-medium text-indigo-900">
+                                      Como você saiu deste plantão?
+                                    </p>
+                                    <div className="mt-2 grid grid-cols-5 gap-1.5">
+                                      {([1, 2, 3, 4, 5] as const).map((level) => (
+                                        <button
+                                          key={level}
+                                          type="button"
+                                          onClick={() =>
+                                            updateCheckoutDraft(shift.id, (draft) => ({
+                                              ...draft,
+                                              level,
+                                            }))
+                                          }
+                                          className={cn(
+                                            'rounded-lg border px-2 py-2 text-center text-xs transition-colors',
+                                            checkoutDraft.level === level
+                                              ? STRESS_LEVEL_META[level].colorClassName
+                                              : 'border-indigo-100 bg-white text-indigo-800 hover:bg-indigo-100/60',
+                                          )}
+                                        >
+                                          <span className="block text-sm font-semibold">{level}</span>
+                                          <span className="block text-[10px] leading-tight">
+                                            {level === 1
+                                              ? 'Baixo'
+                                              : level === 2
+                                                ? 'Leve'
+                                                : level === 3
+                                                  ? 'Médio'
+                                                  : level === 4
+                                                    ? 'Alto'
+                                                    : 'Crítico'}
+                                          </span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                    <div>
+                                      <label className="text-xs font-medium text-indigo-900">
+                                        Energia ao sair ({checkoutDraft.energyLevel}/5)
+                                      </label>
+                                      <input
+                                        type="range"
+                                        min={1}
+                                        max={5}
+                                        step={1}
+                                        value={checkoutDraft.energyLevel}
+                                        onChange={(event) =>
+                                          updateCheckoutDraft(shift.id, (draft) => ({
+                                            ...draft,
+                                            energyLevel: Math.min(
+                                              5,
+                                              Math.max(1, Number(event.target.value)),
+                                            ) as CheckoutDraft['energyLevel'],
+                                          }))
+                                        }
+                                        className="mt-1 w-full accent-indigo-600"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-xs font-medium text-indigo-900">
+                                        Suporte da equipe ({checkoutDraft.supportLevel}/5)
+                                      </label>
+                                      <input
+                                        type="range"
+                                        min={1}
+                                        max={5}
+                                        step={1}
+                                        value={checkoutDraft.supportLevel}
+                                        onChange={(event) =>
+                                          updateCheckoutDraft(shift.id, (draft) => ({
+                                            ...draft,
+                                            supportLevel: Math.min(
+                                              5,
+                                              Math.max(1, Number(event.target.value)),
+                                            ) as CheckoutDraft['supportLevel'],
+                                          }))
+                                        }
+                                        className="mt-1 w-full accent-indigo-600"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-3">
+                                    <p className="text-xs font-medium text-indigo-900">
+                                      Fatores que mais impactaram (opcional)
+                                    </p>
+                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                      {STRESS_TRIGGER_OPTIONS.map((option) => {
+                                        const isActive = checkoutDraft.triggers.includes(option.code)
+
+                                        return (
+                                          <button
+                                            key={option.code}
+                                            type="button"
+                                            onClick={() =>
+                                              updateCheckoutDraft(shift.id, (draft) => ({
+                                                ...draft,
+                                                triggers: isActive
+                                                  ? draft.triggers.filter(
+                                                      (trigger) => trigger !== option.code,
+                                                    )
+                                                  : [...draft.triggers, option.code].slice(0, 6),
+                                              }))
+                                            }
+                                            className={cn(
+                                              'rounded-full border px-2 py-1 text-[11px] transition-colors',
+                                              isActive
+                                                ? 'border-indigo-300 bg-indigo-100 text-indigo-800'
+                                                : 'border-indigo-100 bg-white text-indigo-700 hover:bg-indigo-100/60',
+                                            )}
+                                          >
+                                            {option.label}
+                                          </button>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-3">
+                                    <textarea
+                                      value={checkoutDraft.note}
+                                      onChange={(event) =>
+                                        updateCheckoutDraft(shift.id, (draft) => ({
+                                          ...draft,
+                                          note: event.target.value,
+                                        }))
+                                      }
+                                      rows={3}
+                                      className="block w-full rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                                      placeholder="Observações rápidas (ex.: superlotação, casos graves, atraso de passagem, falta de apoio)"
+                                    />
+                                  </div>
+
+                                  <div className="mt-3 grid gap-2">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      className="h-8 w-full gap-2 bg-indigo-700 text-white hover:bg-indigo-800"
+                                      disabled={checkOutBusy}
+                                      onClick={() => void handleShiftCheckOut(shift, 'browser')}
+                                    >
+                                      <LogOut className="h-3.5 w-3.5" />
+                                      {checkOutBusy
+                                        ? 'Capturando localização...'
+                                        : 'Compartilhar localização e finalizar checkout'}
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 w-full gap-2"
+                                      disabled={checkOutBusy}
+                                      onClick={() => void handleShiftCheckOut(shift, 'demo-simulado')}
+                                    >
+                                      <LocateFixed className="h-3.5 w-3.5" />
+                                      Simular checkout (demo)
+                                    </Button>
+                                  </div>
+
+                                  <div className="mt-2 rounded-lg border border-indigo-200 bg-white px-2.5 py-2 text-[11px] text-indigo-800">
+                                    <p className="inline-flex items-center gap-1 font-medium">
+                                      <AlertTriangle className="h-3.5 w-3.5" />
+                                      Sinal analítico previsto (pré-checkout)
+                                    </p>
+                                    <p className="mt-1">
+                                      Estresse {checkoutDraft.level}/5, energia{' '}
+                                      {checkoutDraft.energyLevel}/5, suporte{' '}
+                                      {checkoutDraft.supportLevel}/5 e {checkoutDraft.triggers.length}{' '}
+                                      gatilho(s) selecionado(s).
+                                    </p>
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          </article>
+                        )
+                      })
                     ) : (
                       <p className="border-border text-muted-foreground rounded-xl border border-dashed px-3 py-4 text-sm">
                         Nenhum plantão seu no hospital neste dia.
