@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "generate-icons": "node scripts/generate-dark-icons.mjs"
   },
   "dependencies": {
     "@agendaplantao/shared": "workspace:*",
