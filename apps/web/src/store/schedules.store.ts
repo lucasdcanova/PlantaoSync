@@ -13,10 +13,19 @@ export interface ScheduleExtraShift {
   locationId: string
 }
 
+export interface ScheduleGeofenceConfig {
+  lat: number
+  lng: number
+  radiusMeters: number
+  autoCheckInEnabled: boolean
+  label?: string
+}
+
 export interface ManagerSchedule extends Schedule {
   extraShifts: ScheduleExtraShift[]
   requireSwapApproval: boolean
   shiftValue: number
+  geofence?: ScheduleGeofenceConfig
 }
 
 export interface ScheduleEditorInput {
@@ -30,6 +39,7 @@ export interface ScheduleEditorInput {
   status: ScheduleStatus
   publishedAt?: string
   requireSwapApproval: boolean
+  geofence?: ScheduleGeofenceConfig
 }
 
 export interface ScheduleExtraShiftInput {
@@ -59,6 +69,37 @@ const DEMO_SHIFT_VALUE_BY_LOCATION: Record<string, number> = {
   'loc-ps': 135_000,
   'loc-clinica': 95_000,
   'loc-centro-cir': 120_000,
+}
+
+const DEMO_GEOFENCE_BY_LOCATION: Record<string, ScheduleGeofenceConfig> = {
+  'loc-uti': {
+    lat: -23.561414,
+    lng: -46.655881,
+    radiusMeters: 170,
+    autoCheckInEnabled: true,
+    label: 'UTI Adulto · Bloco A',
+  },
+  'loc-ps': {
+    lat: -23.562004,
+    lng: -46.656491,
+    radiusMeters: 220,
+    autoCheckInEnabled: true,
+    label: 'Pronto-Socorro · Entrada principal',
+  },
+  'loc-clinica': {
+    lat: -23.561895,
+    lng: -46.654934,
+    radiusMeters: 180,
+    autoCheckInEnabled: true,
+    label: 'Clínica Médica · Bloco C',
+  },
+  'loc-centro-cir': {
+    lat: -23.561188,
+    lng: -46.65441,
+    radiusMeters: 160,
+    autoCheckInEnabled: false,
+    label: 'Centro Cirúrgico · Bloco D',
+  },
 }
 
 const DEMO_EXTRA_SHIFTS_BY_SCHEDULE: Record<string, ScheduleExtraShift[]> = {
@@ -105,6 +146,33 @@ function normalizeShiftValue(value?: number, locationId?: string) {
   }
 
   return DEFAULT_SHIFT_VALUE
+}
+
+function normalizeGeofence(
+  geofence: Partial<ScheduleGeofenceConfig> | undefined,
+  locationId?: string,
+): ScheduleGeofenceConfig | undefined {
+  const fallback = (locationId && DEMO_GEOFENCE_BY_LOCATION[locationId]) || undefined
+  const source = geofence ?? fallback
+  if (!source) return undefined
+
+  const lat = Number(source.lat)
+  const lng = Number(source.lng)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return undefined
+
+  return {
+    lat,
+    lng,
+    radiusMeters:
+      Number.isFinite(source.radiusMeters) && Number(source.radiusMeters) > 0
+        ? Math.round(Number(source.radiusMeters))
+        : fallback?.radiusMeters ?? 180,
+    autoCheckInEnabled:
+      typeof source.autoCheckInEnabled === 'boolean'
+        ? source.autoCheckInEnabled
+        : (fallback?.autoCheckInEnabled ?? false),
+    label: source.label?.trim() || fallback?.label,
+  }
 }
 
 function buildLocation(locationId: string, fallbackName?: string) {
@@ -158,6 +226,7 @@ function normalizeSchedule(schedule: Partial<ManagerSchedule>) {
     extraShifts,
     requireSwapApproval: schedule.requireSwapApproval ?? true,
     shiftValue: normalizeShiftValue(schedule.shiftValue, locationId),
+    geofence: normalizeGeofence(schedule.geofence, locationId),
   } satisfies ManagerSchedule
 }
 
@@ -196,6 +265,18 @@ function validateInput(input: ScheduleEditorInput) {
 
   if (!Number.isFinite(input.shiftValue) || input.shiftValue <= 0) {
     throw new Error('Informe um valor por plantão maior que zero.')
+  }
+
+  if (input.geofence) {
+    if (!Number.isFinite(input.geofence.lat) || input.geofence.lat < -90 || input.geofence.lat > 90) {
+      throw new Error('Latitude da geofence inválida.')
+    }
+    if (!Number.isFinite(input.geofence.lng) || input.geofence.lng < -180 || input.geofence.lng > 180) {
+      throw new Error('Longitude da geofence inválida.')
+    }
+    if (!Number.isFinite(input.geofence.radiusMeters) || input.geofence.radiusMeters < 30) {
+      throw new Error('Raio da geofence deve ser maior ou igual a 30m.')
+    }
   }
 }
 
@@ -249,6 +330,7 @@ function buildScheduleRecord(
     extraShifts: base.extraShifts,
     requireSwapApproval: input.requireSwapApproval,
     shifts: base.shifts ?? [],
+    geofence: normalizeGeofence(input.geofence, input.locationId),
   })
 }
 

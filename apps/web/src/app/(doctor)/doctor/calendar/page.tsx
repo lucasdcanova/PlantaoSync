@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Activity,
@@ -31,6 +31,7 @@ import {
   listStressTriggerOptions,
   STRESS_LEVEL_META,
   STRESS_RISK_META,
+  type InstitutionShiftEvaluation,
   type StressSelfReport,
   type StressTriggerCode,
   useShiftAttendanceStore,
@@ -81,6 +82,16 @@ type CheckoutDraft = {
   supportLevel: StressSelfReport['supportLevel']
   triggers: StressTriggerCode[]
   note: string
+  institutionEvaluationEnabled: boolean
+  institution: {
+    organization: InstitutionShiftEvaluation['organization']
+    patientVolume: InstitutionShiftEvaluation['patientVolume']
+    safety: InstitutionShiftEvaluation['safety']
+    structure: InstitutionShiftEvaluation['structure']
+    paymentOnTime: InstitutionShiftEvaluation['paymentOnTime']
+    teamEnvironment: InstitutionShiftEvaluation['teamEnvironment']
+    note: string
+  }
 }
 
 const STRESS_TRIGGER_OPTIONS = listStressTriggerOptions()
@@ -91,6 +102,16 @@ const DEFAULT_CHECKOUT_DRAFT: CheckoutDraft = {
   supportLevel: 3,
   triggers: [],
   note: '',
+  institutionEvaluationEnabled: false,
+  institution: {
+    organization: 4,
+    patientVolume: 3,
+    safety: 4,
+    structure: 4,
+    paymentOnTime: 4,
+    teamEnvironment: 4,
+    note: '',
+  },
 }
 
 const shiftStatusClassName: Record<string, string> = {
@@ -181,7 +202,11 @@ function getAttendanceStatusBadge(record?: { status: string } | null) {
 }
 
 function createDefaultCheckoutDraft(): CheckoutDraft {
-  return { ...DEFAULT_CHECKOUT_DRAFT, triggers: [] }
+  return {
+    ...DEFAULT_CHECKOUT_DRAFT,
+    triggers: [],
+    institution: { ...DEFAULT_CHECKOUT_DRAFT.institution },
+  }
 }
 
 export default function DoctorCalendarPage() {
@@ -206,6 +231,14 @@ export default function DoctorCalendarPage() {
   const attendanceGeofences = useShiftAttendanceStore((state) => state.geofences)
   const checkInShift = useShiftAttendanceStore((state) => state.checkInShift)
   const checkOutShift = useShiftAttendanceStore((state) => state.checkOutShift)
+  const autoCheckInConsent = useShiftAttendanceStore((state) => state.autoCheckInConsent)
+  const setAutoCheckInConsent = useShiftAttendanceStore((state) => state.setAutoCheckInConsent)
+  const autoCheckInWindowStartMinutesBefore = useShiftAttendanceStore(
+    (state) => state.autoCheckInWindowStartMinutesBefore,
+  )
+  const autoCheckInWindowEndMinutesAfter = useShiftAttendanceStore(
+    (state) => state.autoCheckInWindowEndMinutesAfter,
+  )
   const resolveShiftValue = useMemo(
     () => createShiftValueResolver(schedules, locations),
     [locations, schedules],
@@ -347,6 +380,17 @@ export default function DoctorCalendarPage() {
           triggers: draft.triggers,
           note: draft.note,
         },
+        institutionEvaluation: draft.institutionEvaluationEnabled
+          ? {
+              organization: draft.institution.organization,
+              patientVolume: draft.institution.patientVolume,
+              safety: draft.institution.safety,
+              structure: draft.institution.structure,
+              paymentOnTime: draft.institution.paymentOnTime,
+              teamEnvironment: draft.institution.teamEnvironment,
+              note: draft.institution.note,
+            }
+          : undefined,
       })
 
       toast.success(
@@ -360,6 +404,91 @@ export default function DoctorCalendarPage() {
       setActiveGeoActionKey((current) => (current === actionKey ? null : current))
     }
   }
+
+  useEffect(() => {
+    if (!autoCheckInConsent) return
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) return
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const now = new Date()
+        const liveGeo = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracyMeters: position.coords.accuracy,
+          source: 'browser' as const,
+        }
+
+        myShifts.forEach((shift) => {
+          if (shift.status === 'CANCELADO') return
+
+          const record = attendanceRecordMap.get(`${shift.id}::${shift.professionalUserId}`)
+          if (record?.checkIn) return
+
+          const geofence = attendanceGeofences[shift.sectorId]
+          if (!geofence?.autoCheckInEnabled) return
+
+          const start = new Date(`${shift.date}T${shift.startTime}:00`)
+          const end = new Date(`${shift.date}T${shift.endTime}:00`)
+          if (end <= start) end.setDate(end.getDate() + 1)
+
+          const windowStart = new Date(
+            start.getTime() - autoCheckInWindowStartMinutesBefore * 60 * 1000,
+          )
+          const windowEnd = new Date(
+            start.getTime() + autoCheckInWindowEndMinutesAfter * 60 * 1000,
+          )
+
+          if (now < windowStart || now > windowEnd) return
+
+          try {
+            const newRecord = checkInShift({
+              shiftId: shift.id,
+              professionalId: shift.professionalId,
+              professionalUserId: shift.professionalUserId,
+              professionalName: useAuthStore.getState().user?.name ?? 'Médico',
+              sectorId: shift.sectorId,
+              sectorName: shift.sectorName,
+              shiftDate: shift.date,
+              startTime: shift.startTime,
+              endTime: shift.endTime,
+              patientLoad: shift.patientLoad,
+              geo: liveGeo,
+            })
+
+            toast.success(
+              `Check-in automático no ${shift.sectorName} às ${formatClockTime(
+                newRecord.checkIn?.capturedAt,
+              )}.`,
+            )
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Falha no auto check-in.'
+            if (
+              message.includes('já realizado') ||
+              message.includes('já foi finalizado') ||
+              message.includes('fora da área')
+            ) {
+              return
+            }
+          }
+        })
+      },
+      () => {
+        // Silencioso: o usuário ainda pode usar check-in manual ou simulado.
+      },
+      { enableHighAccuracy: true, maximumAge: 15_000, timeout: 12_000 },
+    )
+
+    return () => navigator.geolocation.clearWatch(watchId)
+  }, [
+    attendanceGeofences,
+    attendanceRecordMap,
+    autoCheckInConsent,
+    autoCheckInWindowEndMinutesAfter,
+    autoCheckInWindowStartMinutesBefore,
+    checkInShift,
+    myShifts,
+  ])
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -494,6 +623,32 @@ export default function DoctorCalendarPage() {
           Selecione um dia para ver seus plantões, oportunidades de troca e registrar plantões
           externos privados.
         </p>
+        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-foreground text-sm font-medium">Check-in automático por geofence</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Com sua autorização, o app monitora sua localização e registra check-in
+                automaticamente ao entrar na área do plantão configurada pelo gestor.
+              </p>
+            </div>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={autoCheckInConsent}
+                onChange={(event) => setAutoCheckInConsent(event.target.checked)}
+                className="border-border text-brand-600 focus:ring-brand-500 h-4 w-4 rounded"
+              />
+              <span className="text-foreground text-xs font-medium">
+                {autoCheckInConsent ? 'Autorizado' : 'Desligado'}
+              </span>
+            </label>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-600">
+            Janela automática: {autoCheckInWindowStartMinutesBefore} min antes até{' '}
+            {autoCheckInWindowEndMinutesAfter} min após o início do plantão.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
@@ -1046,6 +1201,90 @@ export default function DoctorCalendarPage() {
                                       className="block w-full rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
                                       placeholder="Observações rápidas (ex.: superlotação, casos graves, atraso de passagem, falta de apoio)"
                                     />
+                                  </div>
+
+                                  <div className="mt-3 rounded-xl border border-indigo-200 bg-white p-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <div>
+                                        <p className="text-sm font-semibold text-indigo-900">
+                                          Avaliação da instituição (opcional)
+                                        </p>
+                                        <p className="text-xs text-indigo-700">
+                                          Feedback bidirecional do plantão para gestão de qualidade.
+                                        </p>
+                                      </div>
+                                      <label className="inline-flex items-center gap-2">
+                                        <input
+                                          type="checkbox"
+                                          checked={checkoutDraft.institutionEvaluationEnabled}
+                                          onChange={(event) =>
+                                            updateCheckoutDraft(shift.id, (draft) => ({
+                                              ...draft,
+                                              institutionEvaluationEnabled: event.target.checked,
+                                            }))
+                                          }
+                                          className="h-4 w-4 rounded border-indigo-300 text-indigo-600"
+                                        />
+                                        <span className="text-xs font-medium text-indigo-900">
+                                          Preencher
+                                        </span>
+                                      </label>
+                                    </div>
+
+                                    {checkoutDraft.institutionEvaluationEnabled ? (
+                                      <div className="mt-3 space-y-3">
+                                        {([
+                                          ['organization', 'Organização'],
+                                          ['patientVolume', 'Volume de pacientes'],
+                                          ['safety', 'Segurança'],
+                                          ['structure', 'Estrutura'],
+                                          ['paymentOnTime', 'Pagamento em dia'],
+                                          ['teamEnvironment', 'Ambiente de equipe'],
+                                        ] as const).map(([key, label]) => (
+                                          <div key={key}>
+                                            <label className="text-xs font-medium text-indigo-900">
+                                              {label} ({checkoutDraft.institution[key]}/5)
+                                            </label>
+                                            <input
+                                              type="range"
+                                              min={1}
+                                              max={5}
+                                              step={1}
+                                              value={checkoutDraft.institution[key]}
+                                              onChange={(event) =>
+                                                updateCheckoutDraft(shift.id, (draft) => ({
+                                                  ...draft,
+                                                  institution: {
+                                                    ...draft.institution,
+                                                    [key]: Math.min(
+                                                      5,
+                                                      Math.max(1, Number(event.target.value)),
+                                                    ) as number,
+                                                  },
+                                                }))
+                                              }
+                                              className="mt-1 w-full accent-indigo-600"
+                                            />
+                                          </div>
+                                        ))}
+
+                                        <textarea
+                                          value={checkoutDraft.institution.note}
+                                          onChange={(event) =>
+                                            updateCheckoutDraft(shift.id, (draft) => ({
+                                              ...draft,
+                                              institution: {
+                                                ...draft.institution,
+                                                note: event.target.value,
+                                              },
+                                            }))
+                                          }
+                                          rows={2}
+                                          className="block w-full rounded-md border border-indigo-200 bg-indigo-50/20 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                                          placeholder="Comentário opcional sobre operação, equipe, estrutura ou pagamento"
+                                        />
+                                      </div>
+                                    ) : null}
                                   </div>
 
                                   <div className="mt-3 grid gap-2">

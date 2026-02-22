@@ -24,6 +24,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SHIFT_STATUS_CONFIG, formatCurrency, formatDate } from '@/lib/utils'
 import {
+  inferAttendanceSectorIdByName,
+  useShiftAttendanceStore,
+} from '@/store/shift-attendance.store'
+import {
   useSchedulesStore,
   type ScheduleEditorInput,
   type ScheduleExtraShiftInput,
@@ -40,6 +44,11 @@ type ScheduleFormValues = {
   status: ScheduleStatus
   publishedAt: string
   requireSwapApproval: boolean
+  geofenceLat: string
+  geofenceLng: string
+  geofenceRadiusMeters: string
+  geofenceLabel: string
+  geofenceAutoCheckInEnabled: boolean
 }
 
 type ExtraShiftFormValues = {
@@ -68,6 +77,11 @@ function buildDefaultForm(defaultLocationId = ''): ScheduleFormValues {
     status: 'DRAFT',
     publishedAt: '',
     requireSwapApproval: true,
+    geofenceLat: '',
+    geofenceLng: '',
+    geofenceRadiusMeters: '180',
+    geofenceLabel: '',
+    geofenceAutoCheckInEnabled: false,
   }
 }
 
@@ -89,6 +103,13 @@ function toFormValues(input: {
   status: ScheduleStatus
   publishedAt?: string
   requireSwapApproval: boolean
+  geofence?: {
+    lat: number
+    lng: number
+    radiusMeters: number
+    autoCheckInEnabled: boolean
+    label?: string
+  }
 }) {
   return {
     title: input.title,
@@ -100,6 +121,13 @@ function toFormValues(input: {
     status: input.status,
     publishedAt: input.publishedAt?.slice(0, 10) ?? '',
     requireSwapApproval: input.requireSwapApproval,
+    geofenceLat:
+      input.geofence && Number.isFinite(input.geofence.lat) ? String(input.geofence.lat) : '',
+    geofenceLng:
+      input.geofence && Number.isFinite(input.geofence.lng) ? String(input.geofence.lng) : '',
+    geofenceRadiusMeters: String(input.geofence?.radiusMeters ?? 180),
+    geofenceLabel: input.geofence?.label ?? '',
+    geofenceAutoCheckInEnabled: input.geofence?.autoCheckInEnabled ?? false,
   } satisfies ScheduleFormValues
 }
 
@@ -129,6 +157,7 @@ export default function ScheduleDetailsPage() {
   const addExtraShift = useSchedulesStore((state) => state.addExtraShift)
   const removeExtraShift = useSchedulesStore((state) => state.removeExtraShift)
   const locations = useLocationsStore((state) => state.locations)
+  const upsertAttendanceGeofence = useShiftAttendanceStore((state) => state.upsertGeofence)
 
   const defaultLocationId =
     locations.find((location) => location.isActive)?.id ?? locations[0]?.id ?? ''
@@ -171,6 +200,9 @@ export default function ScheduleDetailsPage() {
 
   const formTitle = isCreateMode ? 'Nova Escala Mensal' : 'Edição Completa da Escala'
   const parsedShiftValue = parseCurrencyToCents(form.shiftValue)
+  const parsedGeofenceLat = Number(form.geofenceLat)
+  const parsedGeofenceLng = Number(form.geofenceLng)
+  const parsedGeofenceRadius = Number(form.geofenceRadiusMeters)
 
   const validateForm = () => {
     if (!hasLocations) {
@@ -195,6 +227,26 @@ export default function ScheduleDetailsPage() {
 
     if (!Number.isFinite(parsedShiftValue) || parsedShiftValue <= 0) {
       return 'Informe um valor por plantão válido e maior que zero.'
+    }
+
+    const hasAnyGeofenceField =
+      form.geofenceLat.trim() ||
+      form.geofenceLng.trim() ||
+      form.geofenceLabel.trim() ||
+      form.geofenceAutoCheckInEnabled
+
+    if (hasAnyGeofenceField) {
+      if (!Number.isFinite(parsedGeofenceLat) || parsedGeofenceLat < -90 || parsedGeofenceLat > 90) {
+        return 'Informe uma latitude válida para a geofence.'
+      }
+
+      if (!Number.isFinite(parsedGeofenceLng) || parsedGeofenceLng < -180 || parsedGeofenceLng > 180) {
+        return 'Informe uma longitude válida para a geofence.'
+      }
+
+      if (!Number.isFinite(parsedGeofenceRadius) || parsedGeofenceRadius < 30) {
+        return 'Informe um raio de geofence maior ou igual a 30m.'
+      }
     }
 
     return null
@@ -223,11 +275,40 @@ export default function ScheduleDetailsPage() {
       status: form.status,
       publishedAt: canEditPublishedAt ? form.publishedAt || undefined : undefined,
       requireSwapApproval: form.requireSwapApproval,
+      geofence:
+        Number.isFinite(parsedGeofenceLat) &&
+        Number.isFinite(parsedGeofenceLng) &&
+        form.geofenceLat.trim() &&
+        form.geofenceLng.trim()
+          ? {
+              lat: parsedGeofenceLat,
+              lng: parsedGeofenceLng,
+              radiusMeters:
+                Number.isFinite(parsedGeofenceRadius) && parsedGeofenceRadius > 0
+                  ? Math.round(parsedGeofenceRadius)
+                  : 180,
+              label: form.geofenceLabel.trim() || selectedLocation?.name,
+              autoCheckInEnabled: form.geofenceAutoCheckInEnabled,
+            }
+          : undefined,
     }
 
     try {
       if (isCreateMode) {
         const created = createSchedule(payload)
+        if (created.geofence && selectedLocation?.name) {
+          const sectorId = inferAttendanceSectorIdByName(selectedLocation.name) ?? selectedLocation.id
+          upsertAttendanceGeofence({
+            sectorId,
+            sectorName: selectedLocation.name,
+            lat: created.geofence.lat,
+            lng: created.geofence.lng,
+            radiusMeters: created.geofence.radiusMeters,
+            label: created.geofence.label ?? selectedLocation.name,
+            autoCheckInEnabled: created.geofence.autoCheckInEnabled,
+            configuredByManager: true,
+          })
+        }
         setSuccessMessage('Escala criada com sucesso.')
         router.replace(`/schedules/${created.id}`)
         return
@@ -238,7 +319,20 @@ export default function ScheduleDetailsPage() {
         return
       }
 
-      updateSchedule(scheduleId, payload)
+      const updated = updateSchedule(scheduleId, payload)
+      if (updated.geofence && selectedLocation?.name) {
+        const sectorId = inferAttendanceSectorIdByName(selectedLocation.name) ?? selectedLocation.id
+        upsertAttendanceGeofence({
+          sectorId,
+          sectorName: selectedLocation.name,
+          lat: updated.geofence.lat,
+          lng: updated.geofence.lng,
+          radiusMeters: updated.geofence.radiusMeters,
+          label: updated.geofence.label ?? selectedLocation.name,
+          autoCheckInEnabled: updated.geofence.autoCheckInEnabled,
+          configuredByManager: true,
+        })
+      }
       setSuccessMessage('Escala atualizada com sucesso.')
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Falha ao salvar a escala.')
@@ -563,6 +657,100 @@ export default function ScheduleDetailsPage() {
                   </div>
                 </div>
 
+                <div className="border-border bg-background rounded-xl border p-4">
+                  <div className="mb-3">
+                    <p className="text-foreground text-sm font-medium">
+                      Geofence do plantão (local exato)
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      Defina a localização exata usada para check-in geolocalizado e check-in
+                      automático com autorização do médico.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="schedule-geofence-lat">Latitude</Label>
+                      <Input
+                        id="schedule-geofence-lat"
+                        inputMode="decimal"
+                        value={form.geofenceLat}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, geofenceLat: event.target.value }))
+                        }
+                        placeholder="-23.561414"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="schedule-geofence-lng">Longitude</Label>
+                      <Input
+                        id="schedule-geofence-lng"
+                        inputMode="decimal"
+                        value={form.geofenceLng}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, geofenceLng: event.target.value }))
+                        }
+                        placeholder="-46.655881"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="schedule-geofence-radius">Raio (metros)</Label>
+                      <Input
+                        id="schedule-geofence-radius"
+                        type="number"
+                        min={30}
+                        value={form.geofenceRadiusMeters}
+                        onChange={(event) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            geofenceRadiusMeters: event.target.value,
+                          }))
+                        }
+                        placeholder="180"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="schedule-geofence-label">Etiqueta do ponto</Label>
+                      <Input
+                        id="schedule-geofence-label"
+                        value={form.geofenceLabel}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, geofenceLabel: event.target.value }))
+                        }
+                        placeholder="UTI Adulto · Bloco A"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <label className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-foreground text-sm font-medium">
+                          Permitir check-in automático
+                        </p>
+                        <p className="text-muted-foreground mt-0.5 text-xs">
+                          Quando o médico autorizar no app, o sistema registra check-in ao entrar
+                          na geofence durante a janela do plantão.
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={form.geofenceAutoCheckInEnabled}
+                        onChange={(event) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            geofenceAutoCheckInEnabled: event.target.checked,
+                          }))
+                        }
+                        className="border-border text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded"
+                      />
+                    </label>
+                  </div>
+                </div>
+
                 {errorMessage && (
                   <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -789,6 +977,20 @@ export default function ScheduleDetailsPage() {
                         Troca sem validação da gestão
                       </>
                     )}
+                  </p>
+                </div>
+
+                <div className="border-border bg-background rounded-xl border p-4">
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide">
+                    Geofence / auto check-in
+                  </p>
+                  <p className="text-foreground mt-2 text-sm">
+                    {form.geofenceLat && form.geofenceLng
+                      ? `${form.geofenceLat}, ${form.geofenceLng} · raio ${form.geofenceRadiusMeters || '180'}m`
+                      : 'Não configurada'}
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Auto check-in: {form.geofenceAutoCheckInEnabled ? 'habilitado' : 'desabilitado'}
                   </p>
                 </div>
               </div>

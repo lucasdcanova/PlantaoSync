@@ -29,6 +29,9 @@ export interface ShiftGeofence {
   lng: number
   radiusMeters: number
   label: string
+  autoCheckInEnabled?: boolean
+  configuredByManager?: boolean
+  configuredAt?: string
 }
 
 export interface AttendanceGeoSnapshot {
@@ -70,6 +73,16 @@ export interface StressAnalytics {
   dominantDrivers: Array<{ key: keyof StressScoreBreakdown; value: number }>
 }
 
+export interface InstitutionShiftEvaluation {
+  organization: 1 | 2 | 3 | 4 | 5
+  patientVolume: 1 | 2 | 3 | 4 | 5
+  safety: 1 | 2 | 3 | 4 | 5
+  structure: 1 | 2 | 3 | 4 | 5
+  paymentOnTime: 1 | 2 | 3 | 4 | 5
+  teamEnvironment: 1 | 2 | 3 | 4 | 5
+  note?: string
+}
+
 export interface ShiftAttendanceRecord {
   id: string
   shiftId: string
@@ -94,6 +107,7 @@ export interface ShiftAttendanceRecord {
   checkOut?: AttendanceGeoSnapshot
   stressSelfReport?: StressSelfReport
   stressAnalytics?: StressAnalytics
+  institutionEvaluation?: InstitutionShiftEvaluation
   createdAt: string
   updatedAt: string
 }
@@ -129,16 +143,40 @@ export interface CheckOutShiftInput {
     capturedAt?: string
   }
   stress: StressSelfReport
+  institutionEvaluation?: InstitutionShiftEvaluation
+}
+
+export interface ShiftCancellationEvent {
+  id: string
+  shiftId: string
+  professionalId: string
+  professionalUserId: string
+  professionalName: string
+  sectorId: string
+  sectorName: string
+  shiftDate: string
+  startTime: string
+  endTime: string
+  scheduledStartAt: string
+  cancelledAt: string
+  reason?: string
 }
 
 export interface AttendanceManagerAnalytics {
   totals: {
     plannedRecords: number
+    plannedCommitments: number
     checkedInRecords: number
     checkedOutRecords: number
+    institutionCompletedShifts: number
+    attendanceRate: number
     checkInRate: number
     checkoutRate: number
     onTimeRate: number
+    abandonmentCount: number
+    abandonmentRate: number
+    lastMinuteCancellationCount: number
+    lastMinuteCancellationRate: number
     avgLateMinutes: number
     avgOvertimeMinutes: number
     avgCheckInDistanceMeters: number
@@ -188,13 +226,87 @@ export interface AttendanceManagerAnalytics {
     lateMinutes: number
     triggers: string[]
   }>
+  institutionEvaluation: {
+    totalEvaluations: number
+    completionRate: number
+    averages: {
+      organization: number
+      patientVolume: number
+      safety: number
+      structure: number
+      paymentOnTime: number
+      teamEnvironment: number
+      overall: number
+    }
+    dimensionSeries: Array<{
+      key:
+        | 'organization'
+        | 'patientVolume'
+        | 'safety'
+        | 'structure'
+        | 'paymentOnTime'
+        | 'teamEnvironment'
+      label: string
+      avg: number
+    }>
+    recentNotes: Array<{
+      id: string
+      professionalName: string
+      sectorName: string
+      shiftDate: string
+      note: string
+      overall: number
+    }>
+  }
+  predictiveFailureRisk: {
+    totalUpcomingShifts: number
+    avgRiskPercent: number
+    highRiskCount: number
+    byProfessional: Array<{
+      professionalId: string
+      professionalName: string
+      specialty?: string
+      upcomingShifts: number
+      avgRiskPercent: number
+      maxRiskPercent: number
+    }>
+    topUpcomingShifts: Array<{
+      id: string
+      shiftId: string
+      professionalId: string
+      professionalName: string
+      specialty?: string
+      sectorName: string
+      shiftDate: string
+      startTime: string
+      endTime: string
+      riskPercent: number
+      riskBand: 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRITICO'
+      factors: string[]
+    }>
+  }
 }
 
 interface ShiftAttendanceState {
   geofences: Record<string, ShiftGeofence>
   records: ShiftAttendanceRecord[]
+  cancellationEvents: ShiftCancellationEvent[]
+  autoCheckInConsent: boolean
+  autoCheckInWindowStartMinutesBefore: number
+  autoCheckInWindowEndMinutesAfter: number
   checkInShift: (input: CheckInShiftInput) => ShiftAttendanceRecord
   checkOutShift: (input: CheckOutShiftInput) => ShiftAttendanceRecord
+  setAutoCheckInConsent: (value: boolean) => void
+  upsertGeofence: (input: {
+    sectorId: string
+    sectorName: string
+    lat: number
+    lng: number
+    radiusMeters?: number
+    label?: string
+    autoCheckInEnabled?: boolean
+    configuredByManager?: boolean
+  }) => ShiftGeofence
   getShiftAttendance: (shiftId: string, professionalUserId?: string) => ShiftAttendanceRecord | null
   resetAttendanceDemoData: () => void
 }
@@ -278,6 +390,17 @@ export const STRESS_RISK_META: Record<
   },
 }
 
+const INSTITUTION_EVALUATION_DIMENSION_LABELS = {
+  organization: 'Organização',
+  patientVolume: 'Volume de pacientes',
+  safety: 'Segurança',
+  structure: 'Estrutura',
+  paymentOnTime: 'Pagamento em dia',
+  teamEnvironment: 'Ambiente de equipe',
+} as const
+
+type InstitutionEvaluationDimensionKey = keyof InstitutionShiftEvaluation & keyof typeof INSTITUTION_EVALUATION_DIMENSION_LABELS
+
 const DEFAULT_GEOFENCE_RADIUS_METERS = 180
 
 function clamp(value: number, min: number, max: number) {
@@ -349,6 +472,7 @@ function resolveSectorIdByName(sectorName: string) {
 }
 
 function buildDefaultGeofences() {
+  const now = new Date().toISOString()
   const geofences: Record<string, ShiftGeofence> = {
     'sec-uti-adulto': {
       sectorId: 'sec-uti-adulto',
@@ -357,6 +481,9 @@ function buildDefaultGeofences() {
       lng: -46.655881,
       radiusMeters: 170,
       label: 'UTI Adulto · Bloco A',
+      autoCheckInEnabled: true,
+      configuredByManager: true,
+      configuredAt: now,
     },
     'sec-ps': {
       sectorId: 'sec-ps',
@@ -365,6 +492,9 @@ function buildDefaultGeofences() {
       lng: -46.656491,
       radiusMeters: 220,
       label: 'Pronto-Socorro · Entrada principal',
+      autoCheckInEnabled: true,
+      configuredByManager: true,
+      configuredAt: now,
     },
     'sec-clinica': {
       sectorId: 'sec-clinica',
@@ -373,6 +503,9 @@ function buildDefaultGeofences() {
       lng: -46.654934,
       radiusMeters: 180,
       label: 'Clínica Médica · Bloco C',
+      autoCheckInEnabled: true,
+      configuredByManager: true,
+      configuredAt: now,
     },
     'sec-neonatal': {
       sectorId: 'sec-neonatal',
@@ -381,6 +514,9 @@ function buildDefaultGeofences() {
       lng: -46.655422,
       radiusMeters: 160,
       label: 'UTI Neonatal · 5º andar',
+      autoCheckInEnabled: true,
+      configuredByManager: true,
+      configuredAt: now,
     },
   }
 
@@ -401,6 +537,8 @@ function buildFallbackGeofence(sectorId: string, sectorName: string): ShiftGeofe
     lng: campusLng + jitterLng,
     radiusMeters: DEFAULT_GEOFENCE_RADIUS_METERS,
     label: `${sectorName} · Geofence padrão`,
+    autoCheckInEnabled: false,
+    configuredByManager: false,
   }
 }
 
@@ -749,6 +887,21 @@ function buildInitialRecords() {
               ? 'Turno com alta carga assistencial e pausas limitadas.'
               : undefined,
         },
+        institutionEvaluation:
+          stableNoise(index + 47) > 0.35
+            ? {
+                organization: (Math.min(5, Math.max(1, Math.round(3 + stableNoise(index + 49) * 2)))) as 1 | 2 | 3 | 4 | 5,
+                patientVolume: (Math.min(5, Math.max(1, Math.round(2 + stableNoise(index + 51) * 3)))) as 1 | 2 | 3 | 4 | 5,
+                safety: (Math.min(5, Math.max(1, Math.round(3 + stableNoise(index + 53) * 2)))) as 1 | 2 | 3 | 4 | 5,
+                structure: (Math.min(5, Math.max(1, Math.round(3 + stableNoise(index + 55) * 2)))) as 1 | 2 | 3 | 4 | 5,
+                paymentOnTime: (Math.min(5, Math.max(1, Math.round(4 + stableNoise(index + 57) * 1)))) as 1 | 2 | 3 | 4 | 5,
+                teamEnvironment: (Math.min(5, Math.max(1, Math.round(3 + stableNoise(index + 59) * 2)))) as 1 | 2 | 3 | 4 | 5,
+                note:
+                  stableNoise(index + 63) > 0.7
+                    ? 'Fluxo bem organizado, mas houve sobrecarga em momentos críticos.'
+                    : undefined,
+              }
+            : undefined,
       }
 
       record.stressAnalytics = computeStressAnalytics(record, record.stressSelfReport, records)
@@ -831,6 +984,15 @@ function buildInitialRecords() {
       overtimeMinutes: Math.max(0, minutesBetween(checkOutAt, scheduledEnd)),
       workedMinutes: Math.max(0, minutesBetween(checkOutAt, checkInAt)),
       stressSelfReport,
+      institutionEvaluation: {
+        organization: 4,
+        patientVolume: shift.patientLoad === 'Alta' ? 2 : 3,
+        safety: 4,
+        structure: 4,
+        paymentOnTime: 5,
+        teamEnvironment: 4,
+        note: shift.patientLoad === 'Alta' ? 'Volume alto no turno, porém equipe colaborativa.' : undefined,
+      },
       updatedAt: checkOutAt.toISOString(),
     }
     record.stressAnalytics = computeStressAnalytics(record, stressSelfReport, records)
@@ -840,10 +1002,86 @@ function buildInitialRecords() {
   return sortAttendanceRecords(records)
 }
 
+function buildInitialCancellationEvents() {
+  const professionalsById = new Map(
+    DEMO_PROFESSIONALS.map((professional) => [professional.id, professional] as const),
+  )
+
+  const cancellationCandidates = DEMO_MANAGER_ASSIGNED_SHIFTS.filter((assignment, index) => {
+    const seed = stableNoise(index + 61)
+    return assignment.date <= DEMO_REFERENCE_TODAY && seed > 0.62
+  }).slice(0, 8)
+
+  return cancellationCandidates.map((assignment, index) => {
+    const professional = professionalsById.get(assignment.professionalId)
+    const sectorId = resolveSectorIdByName(assignment.sectorName) ?? `cancel-sector-${index}`
+    const { start } = parseShiftWindow(assignment.date, assignment.startTime, assignment.endTime)
+
+    const isLastMinute = index % 3 !== 0
+    const hoursBeforeStart = isLastMinute
+      ? clamp(Math.round(0.5 + stableNoise(index + 73) * 5), 1, 6)
+      : clamp(Math.round(8 + stableNoise(index + 79) * 20), 8, 24)
+
+    const cancelledAt = new Date(start.getTime() - hoursBeforeStart * 60 * 60000)
+
+    return {
+      id: `cancel-${assignment.id}`,
+      shiftId: assignment.id,
+      professionalId: assignment.professionalId,
+      professionalUserId: professional?.userId ?? `user-${assignment.professionalId}`,
+      professionalName: professional?.name ?? assignment.professionalName,
+      sectorId,
+      sectorName: assignment.sectorName,
+      shiftDate: assignment.date,
+      startTime: assignment.startTime,
+      endTime: assignment.endTime,
+      scheduledStartAt: start.toISOString(),
+      cancelledAt: cancelledAt.toISOString(),
+      reason: isLastMinute
+        ? 'Imprevisto pessoal informado próximo ao início do plantão.'
+        : 'Cancelamento antecipado com remanejamento da escala.',
+    } satisfies ShiftCancellationEvent
+  })
+}
+
+const ABANDONMENT_EARLY_CHECKOUT_THRESHOLD_MINUTES = 30
+const OPEN_SHIFT_ABANDONMENT_GRACE_MINUTES = 30
+const LAST_MINUTE_CANCELLATION_THRESHOLD_HOURS = 6
+
+function isLastMinuteCancellation(event: ShiftCancellationEvent) {
+  const scheduledStart = new Date(event.scheduledStartAt)
+  const cancelledAt = new Date(event.cancelledAt)
+  if (Number.isNaN(scheduledStart.getTime()) || Number.isNaN(cancelledAt.getTime())) return false
+  const diffHours = (scheduledStart.getTime() - cancelledAt.getTime()) / (1000 * 60 * 60)
+  return diffHours >= 0 && diffHours <= LAST_MINUTE_CANCELLATION_THRESHOLD_HOURS
+}
+
+function isShiftAbandonment(record: ShiftAttendanceRecord, now = new Date()) {
+  const scheduledEnd = new Date(record.scheduledEndAt)
+  if (Number.isNaN(scheduledEnd.getTime())) return false
+
+  if (record.checkOut) {
+    return record.earlyCheckoutMinutes >= ABANDONMENT_EARLY_CHECKOUT_THRESHOLD_MINUTES
+  }
+
+  if (!record.checkIn) return false
+
+  const cutoff = new Date(scheduledEnd.getTime() + OPEN_SHIFT_ABANDONMENT_GRACE_MINUTES * 60000)
+  return now.getTime() >= cutoff.getTime()
+}
+
+function isInstitutionCompletedShift(record: ShiftAttendanceRecord) {
+  return Boolean(record.checkOut) && !isShiftAbandonment(record)
+}
+
 function buildInitialState() {
   return {
     geofences: buildDefaultGeofences(),
     records: buildInitialRecords(),
+    cancellationEvents: buildInitialCancellationEvents(),
+    autoCheckInConsent: false,
+    autoCheckInWindowStartMinutesBefore: 30,
+    autoCheckInWindowEndMinutesAfter: 90,
   }
 }
 
@@ -884,15 +1122,108 @@ function validateStressReport(stress: StressSelfReport) {
   }
 }
 
+function normalizeInstitutionEvaluation(
+  input?: InstitutionShiftEvaluation,
+): InstitutionShiftEvaluation | undefined {
+  if (!input) return undefined
+
+  const keys: Array<keyof InstitutionShiftEvaluation> = [
+    'organization',
+    'patientVolume',
+    'safety',
+    'structure',
+    'paymentOnTime',
+    'teamEnvironment',
+  ]
+
+  const normalized = {} as InstitutionShiftEvaluation
+  for (const key of keys) {
+    const value = input[key]
+    if (![1, 2, 3, 4, 5].includes(value as number)) {
+      throw new Error('Avaliação da instituição inválida.')
+    }
+    ;(normalized as any)[key] = value
+  }
+
+  normalized.note = input.note?.trim() || undefined
+  return normalized
+}
+
+type PredictiveAssignmentInput = {
+  id: string
+  professionalId: string
+  professionalName: string
+  specialty?: string
+  sectorName: string
+  date: string
+  startTime: string
+  endTime: string
+}
+
+type AttendanceAnalyticsOptions = {
+  cancellationEvents?: ShiftCancellationEvent[]
+  upcomingAssignments?: PredictiveAssignmentInput[]
+  referenceDate?: Date | string
+}
+
+function getEvaluationOverallScore(evaluation: InstitutionShiftEvaluation) {
+  const keys = Object.keys(INSTITUTION_EVALUATION_DIMENSION_LABELS) as InstitutionEvaluationDimensionKey[]
+  const sum = keys.reduce((acc, key) => acc + Number(evaluation[key] ?? 0), 0)
+  return round1(sum / keys.length)
+}
+
+function averageNumbers(values: number[]) {
+  if (values.length === 0) return 0
+  return round1(values.reduce((acc, value) => acc + value, 0) / values.length)
+}
+
+function deterministicCommuteEstimateKm(professionalId: string) {
+  const seed = professionalId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  return round1(4 + stableNoise(seed) * 28)
+}
+
+function classifyPredictiveRiskBand(riskPercent: number): 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRITICO' {
+  if (riskPercent >= 35) return 'CRITICO'
+  if (riskPercent >= 22) return 'ALTO'
+  if (riskPercent >= 12) return 'MODERADO'
+  return 'BAIXO'
+}
+
+function isNightShiftByClock(startTime: string, endTime: string) {
+  return startTime >= '18:00' || startTime < '06:00' || endTime <= '08:00'
+}
+
 export function buildAttendanceManagerAnalytics(
   records: ShiftAttendanceRecord[],
   professionals: Array<{ id: string; name: string; specialty?: string }> = [],
+  options: AttendanceAnalyticsOptions = {},
 ): AttendanceManagerAnalytics {
   const professionalsById = new Map(professionals.map((professional) => [professional.id, professional]))
+  const referenceDate =
+    options.referenceDate instanceof Date
+      ? options.referenceDate
+      : options.referenceDate
+        ? new Date(options.referenceDate)
+        : new Date()
+  const cancellationEvents = options.cancellationEvents ?? []
+  const upcomingAssignments = options.upcomingAssignments ?? []
 
   const checkedIn = records.filter((record) => Boolean(record.checkIn))
   const checkedOut = records.filter((record) => Boolean(record.checkOut))
   const onTime = checkedIn.filter((record) => record.onTime)
+  const abandonmentRecords = checkedIn.filter((record) => isShiftAbandonment(record, referenceDate))
+  const institutionCompleted = checkedOut.filter((record) => isInstitutionCompletedShift(record))
+  const lastMinuteCancellations = cancellationEvents.filter(isLastMinuteCancellation)
+
+  const plannedCommitments = records.length + cancellationEvents.length
+  const attendanceRate =
+    plannedCommitments > 0 ? round1((checkedIn.length / plannedCommitments) * 100) : 0
+  const abandonmentRate =
+    checkedIn.length > 0 ? round1((abandonmentRecords.length / checkedIn.length) * 100) : 0
+  const lastMinuteCancellationRate =
+    plannedCommitments > 0
+      ? round1((lastMinuteCancellations.length / plannedCommitments) * 100)
+      : 0
 
   const avgLateMinutes =
     checkedIn.length > 0
@@ -914,19 +1245,26 @@ export function buildAttendanceManagerAnalytics(
         )
       : 0
 
-  const completedWithStress = checkedOut.filter((record) => record.stressSelfReport && record.stressAnalytics)
+  const completedWithStress = checkedOut.filter(
+    (record) => record.stressSelfReport && record.stressAnalytics,
+  )
   const avgStressScore =
     completedWithStress.length > 0
       ? round1(
-          completedWithStress.reduce((sum, record) => sum + (record.stressAnalytics?.score ?? 0), 0) /
-            completedWithStress.length,
+          completedWithStress.reduce(
+            (sum, record) => sum + (record.stressAnalytics?.score ?? 0),
+            0,
+          ) / completedWithStress.length,
         )
       : 0
+
   const avgStressLevel =
     completedWithStress.length > 0
       ? round1(
-          completedWithStress.reduce((sum, record) => sum + (record.stressSelfReport?.level ?? 0), 0) /
-            completedWithStress.length,
+          completedWithStress.reduce(
+            (sum, record) => sum + (record.stressSelfReport?.level ?? 0),
+            0,
+          ) / completedWithStress.length,
         )
       : 0
 
@@ -968,6 +1306,7 @@ export function buildAttendanceManagerAnalytics(
       checkInDistanceSum: 0,
       checkInDistanceCount: 0,
     }
+
     current.records += 1
     current.lateMinutesSum += record.lateMinutes
     if (record.lateMinutes > 0) current.lateCount += 1
@@ -990,7 +1329,9 @@ export function buildAttendanceManagerAnalytics(
       avgLateMinutes: row.records > 0 ? round1(row.lateMinutesSum / row.records) : 0,
       maxLateMinutes: row.maxLateMinutes,
       avgCheckInDistanceMeters:
-        row.checkInDistanceCount > 0 ? round1(row.checkInDistanceSum / row.checkInDistanceCount) : 0,
+        row.checkInDistanceCount > 0
+          ? round1(row.checkInDistanceSum / row.checkInDistanceCount)
+          : 0,
     }))
     .sort(
       (a, b) =>
@@ -1080,8 +1421,7 @@ export function buildAttendanceManagerAnalytics(
   }
   completedWithStress.forEach((record) => {
     const riskLevel = record.stressAnalytics?.riskLevel
-    if (!riskLevel) return
-    riskBuckets[riskLevel] += 1
+    if (riskLevel) riskBuckets[riskLevel] += 1
   })
 
   const riskDistribution = (Object.keys(riskBuckets) as StressRiskLevel[]).map((riskLevel) => ({
@@ -1092,7 +1432,13 @@ export function buildAttendanceManagerAnalytics(
 
   const timelineBucketMap = new Map<
     string,
-    { label: string; stressScoreSum: number; stressLevelSum: number; lateMinutesSum: number; checkouts: number }
+    {
+      label: string
+      stressScoreSum: number
+      stressLevelSum: number
+      lateMinutesSum: number
+      checkouts: number
+    }
   >()
   completedWithStress.forEach((record) => {
     const key = record.shiftDate
@@ -1139,24 +1485,224 @@ export function buildAttendanceManagerAnalytics(
     .slice(0, 8)
     .map((record) => ({
       id: record.id,
-      professionalName: professionalsById.get(record.professionalId)?.name ?? record.professionalName,
+      professionalName:
+        professionalsById.get(record.professionalId)?.name ?? record.professionalName,
       sectorName: record.sectorName,
       shiftDate: record.shiftDate,
       score: record.stressAnalytics?.score ?? 0,
       level: record.stressSelfReport?.level ?? 0,
       riskLevel: record.stressAnalytics?.riskLevel ?? 'MODERADO',
       lateMinutes: record.lateMinutes,
-      triggers: (record.stressSelfReport?.triggers ?? []).map((trigger) => STRESS_TRIGGER_LABELS[trigger]),
+      triggers: (record.stressSelfReport?.triggers ?? []).map(
+        (trigger) => STRESS_TRIGGER_LABELS[trigger],
+      ),
     }))
+
+  const evaluations = checkedOut
+    .filter((record) => record.institutionEvaluation)
+    .map((record) => ({
+      record,
+      evaluation: record.institutionEvaluation as InstitutionShiftEvaluation,
+    }))
+
+  const evaluationDimensionKeys = Object.keys(
+    INSTITUTION_EVALUATION_DIMENSION_LABELS,
+  ) as InstitutionEvaluationDimensionKey[]
+
+  const institutionEvaluationDimensionSeries = evaluationDimensionKeys.map((key) => ({
+    key,
+    label: INSTITUTION_EVALUATION_DIMENSION_LABELS[key],
+    avg: averageNumbers(evaluations.map(({ evaluation }) => Number(evaluation[key]))),
+  }))
+
+  const institutionEvaluationAverages = {
+    organization: institutionEvaluationDimensionSeries.find((item) => item.key === 'organization')?.avg ?? 0,
+    patientVolume: institutionEvaluationDimensionSeries.find((item) => item.key === 'patientVolume')?.avg ?? 0,
+    safety: institutionEvaluationDimensionSeries.find((item) => item.key === 'safety')?.avg ?? 0,
+    structure: institutionEvaluationDimensionSeries.find((item) => item.key === 'structure')?.avg ?? 0,
+    paymentOnTime: institutionEvaluationDimensionSeries.find((item) => item.key === 'paymentOnTime')?.avg ?? 0,
+    teamEnvironment: institutionEvaluationDimensionSeries.find((item) => item.key === 'teamEnvironment')?.avg ?? 0,
+    overall: averageNumbers(evaluations.map(({ evaluation }) => getEvaluationOverallScore(evaluation))),
+  }
+
+  const institutionEvaluationRecentNotes = evaluations
+    .filter(({ evaluation }) => Boolean(evaluation.note))
+    .sort((a, b) => b.record.shiftDate.localeCompare(a.record.shiftDate))
+    .slice(0, 8)
+    .map(({ record, evaluation }) => ({
+      id: record.id,
+      professionalName:
+        professionalsById.get(record.professionalId)?.name ?? record.professionalName,
+      sectorName: record.sectorName,
+      shiftDate: record.shiftDate,
+      note: evaluation.note ?? '',
+      overall: getEvaluationOverallScore(evaluation),
+    }))
+
+  // Predictive risk of failure/no-show for upcoming shifts
+  const pastRecordsByProfessional = new Map<string, ShiftAttendanceRecord[]>()
+  records.forEach((record) => {
+    const key = record.professionalId || record.professionalUserId
+    const list = pastRecordsByProfessional.get(key) ?? []
+    list.push(record)
+    pastRecordsByProfessional.set(key, list)
+  })
+
+  const cancellationByProfessional = new Map<string, ShiftCancellationEvent[]>()
+  cancellationEvents.forEach((event) => {
+    const key = event.professionalId || event.professionalUserId
+    const list = cancellationByProfessional.get(key) ?? []
+    list.push(event)
+    cancellationByProfessional.set(key, list)
+  })
+
+  const predictiveRows = upcomingAssignments
+    .filter((assignment) => {
+      const shiftStart = new Date(`${assignment.date.slice(0, 10)}T${assignment.startTime}:00`)
+      return shiftStart.getTime() > referenceDate.getTime()
+    })
+    .map((assignment) => {
+      const key = assignment.professionalId
+      const history = (pastRecordsByProfessional.get(key) ?? []).sort((a, b) =>
+        `${a.shiftDate}T${a.startTime}`.localeCompare(`${b.shiftDate}T${b.startTime}`),
+      )
+      const cancelHistory = cancellationByProfessional.get(key) ?? []
+      const totalHistory = history.length
+      const checkedInHistory = history.filter((record) => Boolean(record.checkIn))
+      const abandonmentHistory = history.filter((record) => isShiftAbandonment(record, referenceDate))
+      const noCheckInHistory = history.filter((record) => !record.checkIn)
+      const onTimeHistory = checkedInHistory.filter((record) => record.onTime)
+      const avgLate = averageNumbers(checkedInHistory.map((record) => record.lateMinutes))
+      const avgCheckInDistance = averageNumbers(
+        checkedInHistory.map((record) => record.checkIn?.distanceMeters ?? 0).filter((value) => value > 0),
+      )
+      const recent14dCount = history.filter((record) => {
+        const shiftStart = new Date(record.scheduledStartAt)
+        const diffDays = (referenceDate.getTime() - shiftStart.getTime()) / (1000 * 60 * 60 * 24)
+        return diffDays >= 0 && diffDays <= 14
+      }).length
+      const recent7dCount = history.filter((record) => {
+        const shiftStart = new Date(record.scheduledStartAt)
+        const diffDays = (referenceDate.getTime() - shiftStart.getTime()) / (1000 * 60 * 60 * 24)
+        return diffDays >= 0 && diffDays <= 7
+      }).length
+      const lastMinuteCancelCount = cancelHistory.filter(isLastMinuteCancellation).length
+      const commuteEstimateKm = deterministicCommuteEstimateKm(key || assignment.professionalName)
+      const nightShift = isNightShiftByClock(assignment.startTime, assignment.endTime)
+
+      const abandonmentRatePct =
+        checkedInHistory.length > 0
+          ? (abandonmentHistory.length / checkedInHistory.length) * 100
+          : 0
+      const noShowSignalPct =
+        totalHistory > 0 ? (noCheckInHistory.length / totalHistory) * 100 : 0
+      const lateRatePct =
+        checkedInHistory.length > 0
+          ? ((checkedInHistory.length - onTimeHistory.length) / checkedInHistory.length) * 100
+          : 0
+      const lastMinuteCancelRatePct =
+        cancelHistory.length > 0 ? (lastMinuteCancelCount / cancelHistory.length) * 100 : 0
+
+      let risk =
+        6 +
+        abandonmentRatePct * 0.22 +
+        noShowSignalPct * 0.16 +
+        lateRatePct * 0.08 +
+        avgLate * 0.35 +
+        lastMinuteCancelRatePct * 0.12 +
+        recent14dCount * 1.1 +
+        Math.max(0, recent7dCount - 2) * 1.4 +
+        commuteEstimateKm * 0.28 +
+        (nightShift ? 4 : 0) +
+        (avgCheckInDistance > 120 ? 3 : 0)
+
+      if (onTimeHistory.length >= 6) risk -= 4
+      if (institutionCompleted.filter((record) => record.professionalId === assignment.professionalId).length >= 8) {
+        risk -= 3
+      }
+
+      const riskPercent = clamp(round1(risk), 3, 92)
+      const factors: string[] = []
+      if (abandonmentRatePct >= 10) factors.push(`Histórico de abandono ${round1(abandonmentRatePct)}%`)
+      if (lastMinuteCancelCount > 0) factors.push(`Cancelamentos em cima da hora: ${lastMinuteCancelCount}`)
+      if (lateRatePct >= 25) factors.push(`Pontualidade pressionada (${round1(lateRatePct)}% atraso)`)
+      if (recent14dCount >= 6) factors.push(`Alta frequência recente (${recent14dCount} plantões/14d)`)
+      if (commuteEstimateKm >= 18) factors.push(`Distância estimada ${commuteEstimateKm} km`)
+      if (nightShift) factors.push('Turno noturno')
+      if (factors.length === 0) factors.push('Histórico recente estável')
+
+      return {
+        id: `pred-${assignment.id}`,
+        shiftId: assignment.id,
+        professionalId: assignment.professionalId,
+        professionalName:
+          professionalsById.get(assignment.professionalId)?.name ?? assignment.professionalName,
+        specialty:
+          professionalsById.get(assignment.professionalId)?.specialty ?? assignment.specialty,
+        sectorName: assignment.sectorName,
+        shiftDate: assignment.date.slice(0, 10),
+        startTime: assignment.startTime,
+        endTime: assignment.endTime,
+        riskPercent,
+        riskBand: classifyPredictiveRiskBand(riskPercent),
+        factors: factors.slice(0, 4),
+      }
+    })
+    .sort((a, b) => b.riskPercent - a.riskPercent || a.shiftDate.localeCompare(b.shiftDate))
+
+  const predictiveByProfessionalMap = new Map<
+    string,
+    {
+      professionalId: string
+      professionalName: string
+      specialty?: string
+      upcomingShifts: number
+      riskSum: number
+      maxRiskPercent: number
+    }
+  >()
+
+  predictiveRows.forEach((row) => {
+    const current = predictiveByProfessionalMap.get(row.professionalId) ?? {
+      professionalId: row.professionalId,
+      professionalName: row.professionalName,
+      specialty: row.specialty,
+      upcomingShifts: 0,
+      riskSum: 0,
+      maxRiskPercent: 0,
+    }
+    current.upcomingShifts += 1
+    current.riskSum += row.riskPercent
+    current.maxRiskPercent = Math.max(current.maxRiskPercent, row.riskPercent)
+    predictiveByProfessionalMap.set(row.professionalId, current)
+  })
+
+  const predictiveByProfessional = Array.from(predictiveByProfessionalMap.values())
+    .map((row) => ({
+      professionalId: row.professionalId,
+      professionalName: row.professionalName,
+      specialty: row.specialty,
+      upcomingShifts: row.upcomingShifts,
+      avgRiskPercent: round1(row.riskSum / Math.max(1, row.upcomingShifts)),
+      maxRiskPercent: row.maxRiskPercent,
+    }))
+    .sort((a, b) => b.avgRiskPercent - a.avgRiskPercent || b.maxRiskPercent - a.maxRiskPercent)
 
   return {
     totals: {
       plannedRecords: records.length,
+      plannedCommitments,
       checkedInRecords: checkedIn.length,
       checkedOutRecords: checkedOut.length,
+      institutionCompletedShifts: institutionCompleted.length,
+      attendanceRate,
       checkInRate: records.length > 0 ? round1((checkedIn.length / records.length) * 100) : 0,
       checkoutRate: checkedIn.length > 0 ? round1((checkedOut.length / checkedIn.length) * 100) : 0,
       onTimeRate: checkedIn.length > 0 ? round1((onTime.length / checkedIn.length) * 100) : 0,
+      abandonmentCount: abandonmentRecords.length,
+      abandonmentRate,
+      lastMinuteCancellationCount: lastMinuteCancellations.length,
+      lastMinuteCancellationRate,
       avgLateMinutes,
       avgOvertimeMinutes,
       avgCheckInDistanceMeters,
@@ -1170,6 +1716,21 @@ export function buildAttendanceManagerAnalytics(
     stressTimeline,
     topTriggers,
     highRiskCheckouts,
+    institutionEvaluation: {
+      totalEvaluations: evaluations.length,
+      completionRate:
+        checkedOut.length > 0 ? round1((evaluations.length / checkedOut.length) * 100) : 0,
+      averages: institutionEvaluationAverages,
+      dimensionSeries: institutionEvaluationDimensionSeries,
+      recentNotes: institutionEvaluationRecentNotes,
+    },
+    predictiveFailureRisk: {
+      totalUpcomingShifts: predictiveRows.length,
+      avgRiskPercent: averageNumbers(predictiveRows.map((row) => row.riskPercent)),
+      highRiskCount: predictiveRows.filter((row) => ['ALTO', 'CRITICO'].includes(row.riskBand)).length,
+      byProfessional: predictiveByProfessional,
+      topUpcomingShifts: predictiveRows.slice(0, 10),
+    },
   }
 }
 
@@ -1177,6 +1738,38 @@ export const useShiftAttendanceStore = create<ShiftAttendanceState>()(
   persist(
     (set, get) => ({
       ...buildInitialState(),
+
+      setAutoCheckInConsent: (value) => set(() => ({ autoCheckInConsent: Boolean(value) })),
+
+      upsertGeofence: (input) => {
+        const normalized: ShiftGeofence = {
+          sectorId: input.sectorId,
+          sectorName: input.sectorName.trim() || 'Setor',
+          lat: Number(input.lat),
+          lng: Number(input.lng),
+          radiusMeters: clamp(Number(input.radiusMeters ?? DEFAULT_GEOFENCE_RADIUS_METERS), 30, 1000),
+          label: input.label?.trim() || input.sectorName.trim() || 'Geofence',
+          autoCheckInEnabled: input.autoCheckInEnabled ?? false,
+          configuredByManager: input.configuredByManager ?? true,
+          configuredAt: new Date().toISOString(),
+        }
+
+        if (!Number.isFinite(normalized.lat) || normalized.lat < -90 || normalized.lat > 90) {
+          throw new Error('Latitude da geofence inválida.')
+        }
+        if (!Number.isFinite(normalized.lng) || normalized.lng < -180 || normalized.lng > 180) {
+          throw new Error('Longitude da geofence inválida.')
+        }
+
+        set((state) => ({
+          geofences: {
+            ...state.geofences,
+            [normalized.sectorId]: normalized,
+          },
+        }))
+
+        return normalized
+      },
 
       getShiftAttendance: (shiftId, professionalUserId) => {
         const records = get().records
@@ -1307,6 +1900,7 @@ export const useShiftAttendanceStore = create<ShiftAttendanceState>()(
               triggers: Array.from(new Set(input.stress.triggers)).slice(0, 6),
               note: input.stress.note?.trim() || undefined,
             },
+            institutionEvaluation: normalizeInstitutionEvaluation(input.institutionEvaluation),
             updatedAt: geo.capturedAt,
           }
 
@@ -1334,6 +1928,10 @@ export const useShiftAttendanceStore = create<ShiftAttendanceState>()(
       partialize: (state) => ({
         geofences: state.geofences,
         records: state.records,
+        cancellationEvents: state.cancellationEvents,
+        autoCheckInConsent: state.autoCheckInConsent,
+        autoCheckInWindowStartMinutesBefore: state.autoCheckInWindowStartMinutesBefore,
+        autoCheckInWindowEndMinutesAfter: state.autoCheckInWindowEndMinutesAfter,
       }),
     },
   ),
@@ -1379,4 +1977,12 @@ export function formatStressDrivers(analytics?: StressAnalytics) {
     label: labels[driver.key],
     value: driver.value,
   }))
+}
+
+export function inferAttendanceSectorIdByName(name: string) {
+  return resolveSectorIdByName(name)
+}
+
+export function getInstitutionEvaluationDimensionLabels() {
+  return INSTITUTION_EVALUATION_DIMENSION_LABELS
 }

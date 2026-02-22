@@ -32,6 +32,7 @@ import { PageTransition } from '@/components/shared/page-transition'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DEMO_MANAGER_ASSIGNED_SHIFTS } from '@/lib/demo-data'
 import { useDoctorDemoStore } from '@/store/doctor-demo.store'
 import { useLocationsStore } from '@/store/locations.store'
 import { useProfessionalsStore } from '@/store/professionals.store'
@@ -190,6 +191,7 @@ export default function ReportsPage() {
   const swapRequests = useDoctorDemoStore((state) => state.swapRequests)
   const sectors = useDoctorDemoStore((state) => state.sectors)
   const attendanceRecords = useShiftAttendanceStore((state) => state.records)
+  const cancellationEvents = useShiftAttendanceStore((state) => state.cancellationEvents)
 
   const [reportWindow, setReportWindow] = useState<ReportWindow>('month')
   const [analysisPerspective, setAnalysisPerspective] = useState<AnalysisPerspective>('setores')
@@ -270,8 +272,23 @@ export default function ReportsPage() {
   )
 
   const attendanceAnalytics = useMemo(
-    () => buildAttendanceManagerAnalytics(attendanceRecordsInRange, professionals),
-    [attendanceRecordsInRange, professionals],
+    () =>
+      buildAttendanceManagerAnalytics(attendanceRecordsInRange, professionals, {
+        cancellationEvents: cancellationEvents.filter((event) =>
+          isDateInRange(event.shiftDate, dateRange.startKey, dateRange.endKey),
+        ),
+        upcomingAssignments: DEMO_MANAGER_ASSIGNED_SHIFTS.map((shift) => ({
+          id: shift.id,
+          professionalId: shift.professionalId,
+          professionalName: shift.professionalName,
+          specialty: shift.specialty,
+          sectorName: shift.sectorName,
+          date: shift.date,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+        })),
+      }),
+    [attendanceRecordsInRange, cancellationEvents, dateRange.endKey, dateRange.startKey, professionals],
   )
 
   const punctualityChartData = useMemo(
@@ -1188,15 +1205,17 @@ export default function ReportsPage() {
                 </Badge>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Check-in</p>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                    Comparecimento
+                  </p>
                   <p className="text-foreground mt-1 text-lg font-semibold">
-                    {attendanceAnalytics.totals.checkInRate}%
+                    {attendanceAnalytics.totals.attendanceRate}%
                   </p>
                   <p className="text-xs text-slate-600">
                     {attendanceAnalytics.totals.checkedInRecords}/
-                    {attendanceAnalytics.totals.plannedRecords} registros
+                    {attendanceAnalytics.totals.plannedCommitments} compromissos
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
@@ -1209,20 +1228,44 @@ export default function ReportsPage() {
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Checkout</p>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                    Plantões cumpridos
+                  </p>
                   <p className="text-foreground mt-1 text-lg font-semibold">
-                    {attendanceAnalytics.totals.checkoutRate}%
+                    {attendanceAnalytics.totals.institutionCompletedShifts}
                   </p>
                   <p className="text-xs text-slate-600">
-                    {attendanceAnalytics.totals.checkedOutRecords} finalizados
+                    checkout {attendanceAnalytics.totals.checkoutRate}% (base check-ins)
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Geo</p>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                    Abandono de plantão
+                  </p>
+                  <p className="text-foreground mt-1 text-lg font-semibold">
+                    {attendanceAnalytics.totals.abandonmentRate}%
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    {attendanceAnalytics.totals.abandonmentCount} ocorrência(s)
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                    Cancelamento em cima da hora
+                  </p>
+                  <p className="text-foreground mt-1 text-lg font-semibold">
+                    {attendanceAnalytics.totals.lastMinuteCancellationRate}%
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    {attendanceAnalytics.totals.lastMinuteCancellationCount} cancelamento(s)
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Geo check-in</p>
                   <p className="text-foreground mt-1 text-lg font-semibold">
                     {attendanceAnalytics.totals.avgCheckInDistanceMeters}m
                   </p>
-                  <p className="text-xs text-slate-600">distância média no check-in</p>
+                  <p className="text-xs text-slate-600">distância média da geofence</p>
                 </div>
               </div>
 
@@ -1561,6 +1604,184 @@ export default function ReportsPage() {
                     Nenhum checkout de risco alto/crítico encontrado no período.
                   </p>
                 )}
+              </div>
+            </article>
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-2">
+            <article className="card-base p-5">
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <h3 className="font-display text-foreground text-base font-semibold">
+                  Avaliação da instituição (médicos)
+                </h3>
+                <Badge variant="outline" className="text-[11px]">
+                  Bidirecional
+                </Badge>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                    Adesão ao feedback
+                  </p>
+                  <p className="text-foreground mt-1 text-lg font-semibold">
+                    {attendanceAnalytics.institutionEvaluation.completionRate}%
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    {attendanceAnalytics.institutionEvaluation.totalEvaluations} avaliação(ões)
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Média geral</p>
+                  <p className="text-foreground mt-1 text-lg font-semibold">
+                    {attendanceAnalytics.institutionEvaluation.averages.overall}/5
+                  </p>
+                  <p className="text-xs text-slate-600">percepção consolidada pós-plantão</p>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {attendanceAnalytics.institutionEvaluation.dimensionSeries.map((item) => (
+                  <div key={item.key} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-slate-700">{item.label}</span>
+                      <span className="font-semibold text-slate-900">{item.avg}/5</span>
+                    </div>
+                    <div className="mt-1 h-2 rounded-full bg-slate-100">
+                      <div
+                        className={cn(
+                          'h-2 rounded-full',
+                          item.avg >= 4
+                            ? 'bg-emerald-500'
+                            : item.avg >= 3
+                              ? 'bg-amber-500'
+                              : 'bg-red-500',
+                        )}
+                        style={{ width: `${Math.max(4, Math.min(100, (item.avg / 5) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 rounded-xl border border-slate-100 bg-background p-3">
+                <p className="text-xs font-medium text-foreground">Comentários recentes</p>
+                <div className="mt-2 space-y-2">
+                  {attendanceAnalytics.institutionEvaluation.recentNotes.length > 0 ? (
+                    attendanceAnalytics.institutionEvaluation.recentNotes.slice(0, 4).map((note) => (
+                      <div key={note.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-medium text-slate-900">{note.professionalName}</p>
+                          <Badge className="border-slate-300 bg-slate-100 text-slate-700">
+                            {note.overall}/5
+                          </Badge>
+                        </div>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {note.sectorName} · {formatDate(note.shiftDate)}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-700">{note.note}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Nenhum comentário opcional registrado no período.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </article>
+
+            <article className="card-base p-5">
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <h3 className="font-display text-foreground text-base font-semibold">
+                  Inteligência preditiva de falha de plantão
+                </h3>
+                <Badge variant="outline" className="text-[11px]">
+                  Predição
+                </Badge>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-3">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Próximos plantões</p>
+                  <p className="text-foreground mt-1 text-lg font-semibold">
+                    {attendanceAnalytics.predictiveFailureRisk.totalUpcomingShifts}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Risco médio</p>
+                  <p className="text-foreground mt-1 text-lg font-semibold">
+                    {attendanceAnalytics.predictiveFailureRisk.avgRiskPercent}%
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Alto/Crítico</p>
+                  <p className="text-foreground mt-1 text-lg font-semibold">
+                    {attendanceAnalytics.predictiveFailureRisk.highRiskCount}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {attendanceAnalytics.predictiveFailureRisk.topUpcomingShifts.length > 0 ? (
+                  attendanceAnalytics.predictiveFailureRisk.topUpcomingShifts.slice(0, 6).map((item) => (
+                    <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">
+                            {item.professionalName}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {item.sectorName} · {formatDate(item.shiftDate)} · {item.startTime} - {item.endTime}
+                          </p>
+                        </div>
+                        <Badge
+                          className={
+                            item.riskBand === 'CRITICO'
+                              ? 'border-red-200 bg-red-50 text-red-700'
+                              : item.riskBand === 'ALTO'
+                                ? 'border-orange-200 bg-orange-50 text-orange-700'
+                                : item.riskBand === 'MODERADO'
+                                  ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                  : 'border-green-200 bg-green-50 text-green-700'
+                          }
+                        >
+                          {item.riskPercent}%
+                        </Badge>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {item.factors.slice(0, 3).map((factor) => (
+                          <span
+                            key={`${item.id}-${factor}`}
+                            className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-700"
+                          >
+                            {factor}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="rounded-xl border border-dashed px-3 py-4 text-sm text-muted-foreground">
+                    Nenhum plantão futuro suficiente para rodar a predição nesta janela.
+                  </p>
+                )}
+              </div>
+
+              <div className="mt-4 rounded-xl border border-slate-100 bg-background p-3">
+                <p className="text-xs font-medium text-foreground">Risco médio por profissional</p>
+                <div className="mt-2 space-y-1.5">
+                  {attendanceAnalytics.predictiveFailureRisk.byProfessional.slice(0, 4).map((row) => (
+                    <div key={row.professionalId} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-slate-700 line-clamp-1">
+                        {row.professionalName} ({row.upcomingShifts})
+                      </span>
+                      <span className="font-semibold text-slate-900">
+                        {row.avgRiskPercent}% (max {row.maxRiskPercent}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </article>
           </section>
