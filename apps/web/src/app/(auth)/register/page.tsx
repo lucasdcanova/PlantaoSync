@@ -15,10 +15,12 @@ import { Label } from '@/components/ui/label'
 import { ProductLogo } from '@/components/brand/product-logo'
 import { API_BASE_URL } from '@/lib/env'
 import { useAuthStore } from '@/store/auth.store'
+import { useDoctorDemoStore } from '@/store/doctor-demo.store'
 import { useSchedulesStore } from '@/store/schedules.store'
 import { useProfessionalsStore } from '@/store/professionals.store'
 import { useInstitutionStore } from '@/store/institution.store'
 import { useLocationsStore } from '@/store/locations.store'
+import { useShiftAttendanceStore } from '@/store/shift-attendance.store'
 import { cn } from '@/lib/utils'
 import { BRAND_NAME } from '@/lib/brand'
 
@@ -107,10 +109,12 @@ export default function RegisterPage() {
 
       const { user, accessToken } = await res.json()
       // Clear any leftover demo data and initialize from the new user's org
+      useDoctorDemoStore.getState().resetDoctorDemoData()
       useSchedulesStore.getState().resetSchedules()
       useProfessionalsStore.getState().resetProfessionals()
       useLocationsStore.getState().resetLocations()
       useInstitutionStore.getState().initFromUser(user)
+      useShiftAttendanceStore.getState().resetAttendanceData()
       setUser(user, false)
       setAccessToken(accessToken)
       toast.success('Conta criada com sucesso')

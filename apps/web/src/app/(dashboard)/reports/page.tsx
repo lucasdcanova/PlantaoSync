@@ -33,6 +33,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DEMO_MANAGER_ASSIGNED_SHIFTS } from '@/lib/demo-data'
+import { useAuthStore } from '@/store/auth.store'
 import { useDoctorDemoStore } from '@/store/doctor-demo.store'
 import { useLocationsStore } from '@/store/locations.store'
 import { useProfessionalsStore } from '@/store/professionals.store'
@@ -182,6 +183,7 @@ function formatLastShift(lastShiftAt: string) {
 }
 
 export default function ReportsPage() {
+  const isDemoMode = useAuthStore((state) => state.isDemoMode)
   const schedules = useSchedulesStore((state) => state.schedules)
   const locations = useLocationsStore((state) => state.locations)
   const professionals = useProfessionalsStore((state) => state.professionals)
@@ -192,6 +194,12 @@ export default function ReportsPage() {
   const sectors = useDoctorDemoStore((state) => state.sectors)
   const attendanceRecords = useShiftAttendanceStore((state) => state.records)
   const cancellationEvents = useShiftAttendanceStore((state) => state.cancellationEvents)
+
+  const doctorMyShifts = isDemoMode ? myShifts : []
+  const doctorAvailableShifts = isDemoMode ? availableShifts : []
+  const doctorSwapRequests = isDemoMode ? swapRequests : []
+  const doctorSectors = isDemoMode ? sectors : []
+  const demoUpcomingAssignments = isDemoMode ? DEMO_MANAGER_ASSIGNED_SHIFTS : []
 
   const [reportWindow, setReportWindow] = useState<ReportWindow>('month')
   const [analysisPerspective, setAnalysisPerspective] = useState<AnalysisPerspective>('setores')
@@ -228,29 +236,29 @@ export default function ReportsPage() {
 
   const shiftsInRange = useMemo(
     () =>
-      myShifts.filter(
+      doctorMyShifts.filter(
         (shift) =>
           shift.status !== 'CANCELADO' &&
           isDateInRange(shift.date, dateRange.startKey, dateRange.endKey),
       ),
-    [dateRange.endKey, dateRange.startKey, myShifts],
+    [dateRange.endKey, dateRange.startKey, doctorMyShifts],
   )
 
   const opportunitiesInRange = useMemo(
     () =>
-      availableShifts.filter((shift) =>
+      doctorAvailableShifts.filter((shift) =>
         isDateInRange(shift.date, dateRange.startKey, dateRange.endKey),
       ),
-    [availableShifts, dateRange.endKey, dateRange.startKey],
+    [dateRange.endKey, dateRange.startKey, doctorAvailableShifts],
   )
 
   const swapRequestsInRange = useMemo(
     () =>
-      swapRequests.filter((request) => {
+      doctorSwapRequests.filter((request) => {
         const referenceDate = request.shiftDate?.slice(0, 10) || request.createdAt.slice(0, 10)
         return isDateInRange(referenceDate, dateRange.startKey, dateRange.endKey)
       }),
-    [dateRange.endKey, dateRange.startKey, swapRequests],
+    [dateRange.endKey, dateRange.startKey, doctorSwapRequests],
   )
 
   const schedulesInRange = useMemo(
@@ -277,7 +285,7 @@ export default function ReportsPage() {
         cancellationEvents: cancellationEvents.filter((event) =>
           isDateInRange(event.shiftDate, dateRange.startKey, dateRange.endKey),
         ),
-        upcomingAssignments: DEMO_MANAGER_ASSIGNED_SHIFTS.map((shift) => ({
+        upcomingAssignments: demoUpcomingAssignments.map((shift) => ({
           id: shift.id,
           professionalId: shift.professionalId,
           professionalName: shift.professionalName,
@@ -288,7 +296,14 @@ export default function ReportsPage() {
           endTime: shift.endTime,
         })),
       }),
-    [attendanceRecordsInRange, cancellationEvents, dateRange.endKey, dateRange.startKey, professionals],
+    [
+      attendanceRecordsInRange,
+      cancellationEvents,
+      dateRange.endKey,
+      dateRange.startKey,
+      demoUpcomingAssignments,
+      professionals,
+    ],
   )
 
   const punctualityChartData = useMemo(
@@ -628,14 +643,14 @@ export default function ReportsPage() {
         .sort((a, b) => b.pending - a.pending)
     }
 
-    return sectors.map((sector) => ({
+    return doctorSectors.map((sector) => ({
       name: sector.name,
       coverage: 0,
       pending: sector.openShifts,
       monthlyCost: 0,
       professionals: 0,
     }))
-  }, [locations, opportunitiesInRange, sectors])
+  }, [doctorSectors, locations, opportunitiesInRange])
 
   const specialtySeries = useMemo(() => {
     const grouped = new Map<

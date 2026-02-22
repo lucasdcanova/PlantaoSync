@@ -27,6 +27,7 @@ import { useSchedulesStore } from '@/store/schedules.store'
 import { useProfessionalsStore } from '@/store/professionals.store'
 import { useInstitutionStore } from '@/store/institution.store'
 import { useLocationsStore } from '@/store/locations.store'
+import { useShiftAttendanceStore } from '@/store/shift-attendance.store'
 import { cn } from '@/lib/utils'
 import { BRAND_NAME } from '@/lib/brand'
 
@@ -49,17 +50,21 @@ export default function LoginPage() {
 
   // Store actions accessed via getState() to avoid unnecessary re-renders
   const activateDemoMode = () => {
+    useDoctorDemoStore.getState().initDemoData()
     useSchedulesStore.getState().initDemoData()
     useProfessionalsStore.getState().initDemoData()
     useLocationsStore.getState().initDemoData()
     useInstitutionStore.getState().initDemoData()
+    useShiftAttendanceStore.getState().initDemoData()
   }
 
   const clearDemoData = (authUser: Parameters<typeof setUser>[0]) => {
+    useDoctorDemoStore.getState().resetDoctorDemoData()
     useSchedulesStore.getState().resetSchedules()
     useProfessionalsStore.getState().resetProfessionals()
     useLocationsStore.getState().resetLocations()
     useInstitutionStore.getState().initFromUser(authUser)
+    useShiftAttendanceStore.getState().resetAttendanceData()
   }
 
   // Auto-redirect if already authenticated
@@ -103,13 +108,14 @@ export default function LoginPage() {
     const invitedDoctor = validateRegisteredCredential(data.email, data.password)
     if (invitedDoctor) {
       const invitedUser = {
-        ...DEMO_DOCTOR_USER,
         id: invitedDoctor.id,
+        role: 'PROFESSIONAL',
         name: invitedDoctor.fullName,
         email: invitedDoctor.email,
+        organizationId: 'invite-local',
       }
-      activateDemoMode()
-      setUser(invitedUser, true)
+      clearDemoData(invitedUser)
+      setUser(invitedUser, false)
       setAccessToken(`${DEMO_DOCTOR_ACCESS_TOKEN}-${invitedDoctor.id}`)
       await runPremiumLoginTransition('/doctor')
       return

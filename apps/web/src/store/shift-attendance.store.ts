@@ -294,6 +294,7 @@ interface ShiftAttendanceState {
   autoCheckInConsent: boolean
   autoCheckInWindowStartMinutesBefore: number
   autoCheckInWindowEndMinutesAfter: number
+  initDemoData: () => void
   checkInShift: (input: CheckInShiftInput) => ShiftAttendanceRecord
   checkOutShift: (input: CheckOutShiftInput) => ShiftAttendanceRecord
   setAutoCheckInConsent: (value: boolean) => void
@@ -308,6 +309,7 @@ interface ShiftAttendanceState {
     configuredByManager?: boolean
   }) => ShiftGeofence
   getShiftAttendance: (shiftId: string, professionalUserId?: string) => ShiftAttendanceRecord | null
+  resetAttendanceData: () => void
   resetAttendanceDemoData: () => void
 }
 
@@ -1074,11 +1076,22 @@ function isInstitutionCompletedShift(record: ShiftAttendanceRecord) {
   return Boolean(record.checkOut) && !isShiftAbandonment(record)
 }
 
-function buildInitialState() {
+function buildDemoAttendanceState() {
   return {
     geofences: buildDefaultGeofences(),
     records: buildInitialRecords(),
     cancellationEvents: buildInitialCancellationEvents(),
+    autoCheckInConsent: false,
+    autoCheckInWindowStartMinutesBefore: 30,
+    autoCheckInWindowEndMinutesAfter: 90,
+  }
+}
+
+function buildEmptyAttendanceState() {
+  return {
+    geofences: {} as Record<string, ShiftGeofence>,
+    records: [] as ShiftAttendanceRecord[],
+    cancellationEvents: [] as ShiftCancellationEvent[],
     autoCheckInConsent: false,
     autoCheckInWindowStartMinutesBefore: 30,
     autoCheckInWindowEndMinutesAfter: 90,
@@ -1737,7 +1750,9 @@ export function buildAttendanceManagerAnalytics(
 export const useShiftAttendanceStore = create<ShiftAttendanceState>()(
   persist(
     (set, get) => ({
-      ...buildInitialState(),
+      ...buildEmptyAttendanceState(),
+
+      initDemoData: () => set(() => ({ ...buildDemoAttendanceState() })),
 
       setAutoCheckInConsent: (value) => set(() => ({ autoCheckInConsent: Boolean(value) })),
 
@@ -1920,7 +1935,8 @@ export const useShiftAttendanceStore = create<ShiftAttendanceState>()(
         return result
       },
 
-      resetAttendanceDemoData: () => set(() => ({ ...buildInitialState() })),
+      resetAttendanceData: () => set(() => ({ ...buildEmptyAttendanceState() })),
+      resetAttendanceDemoData: () => set(() => ({ ...buildEmptyAttendanceState() })),
     }),
     {
       name: 'confirma-plantao-shift-attendance',

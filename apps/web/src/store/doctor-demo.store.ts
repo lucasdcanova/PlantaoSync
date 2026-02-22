@@ -71,6 +71,7 @@ interface DoctorDemoState {
   swapRequests: DemoDoctorSwapRequest[]
   inviteCodes: DemoDoctorInviteCode[]
   registrations: DemoDoctorRegistration[]
+  initDemoData: () => void
   claimShift: (shiftId: string, valueOverride?: number) => void
   addPrivateShift: (payload: AddPrivateShiftPayload) => DemoDoctorPrivateShift
   requestSwap: (payload: RequestSwapPayload) => void
@@ -83,7 +84,7 @@ interface DoctorDemoState {
   resetDoctorDemoData: () => void
 }
 
-function buildInitialDoctorState() {
+function buildShowcaseDoctorState() {
   return {
     sectors: DEMO_DOCTOR_SECTORS.map((sector) => ({ ...sector })),
     availableShifts: DEMO_DOCTOR_AVAILABLE_SHIFTS.map((shift) => ({ ...shift })),
@@ -92,6 +93,20 @@ function buildInitialDoctorState() {
     swapRequests: DEMO_DOCTOR_SWAP_REQUESTS.map((swap) => ({ ...swap })),
     inviteCodes: DEMO_DOCTOR_INVITE_CODES.map((invite) => ({ ...invite })),
     registrations: [] as DemoDoctorRegistration[],
+  }
+}
+
+function buildEmptyDoctorState(registrations: DemoDoctorRegistration[] = []) {
+  return {
+    sectors: [] as DemoDoctorSector[],
+    availableShifts: [] as DemoDoctorShiftOpportunity[],
+    myShifts: [] as DemoDoctorMyShift[],
+    privateShifts: [] as DemoDoctorPrivateShift[],
+    swapRequests: [] as DemoDoctorSwapRequest[],
+    // Keep invite codes available for the invite flow (pre-login demo utility),
+    // but do not preload shift/attendance showcase data for non-demo users.
+    inviteCodes: DEMO_DOCTOR_INVITE_CODES.map((invite) => ({ ...invite })),
+    registrations: registrations.map((registration) => ({ ...registration })),
   }
 }
 
@@ -132,7 +147,14 @@ function validatePrivateShiftPayload(payload: AddPrivateShiftPayload) {
 export const useDoctorDemoStore = create<DoctorDemoState>()(
   persist(
     (set, get) => ({
-      ...buildInitialDoctorState(),
+      ...buildEmptyDoctorState(),
+
+      initDemoData: () =>
+        set((state) => ({
+          ...buildShowcaseDoctorState(),
+          // Preserve registrations created via invite, so the auth demo flow remains usable.
+          registrations: state.registrations.map((registration) => ({ ...registration })),
+        })),
 
       claimShift: (shiftId, valueOverride) =>
         set((state) => {
@@ -323,7 +345,10 @@ export const useDoctorDemoStore = create<DoctorDemoState>()(
         )
       },
 
-      resetDoctorDemoData: () => set(() => ({ ...buildInitialDoctorState() })),
+      resetDoctorDemoData: () =>
+        set((state) => ({
+          ...buildEmptyDoctorState(state.registrations),
+        })),
     }),
     {
       name: 'confirma-plantao-doctor-demo',
