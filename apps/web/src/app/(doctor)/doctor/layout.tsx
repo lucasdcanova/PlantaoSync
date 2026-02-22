@@ -8,19 +8,16 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { ProductLogo } from '@/components/brand/product-logo'
 import { BottomNav, type BottomNavItem } from '@/components/layout/bottom-nav'
+import {
+  DOCTOR_SIDEBAR_COLLAPSED_WIDTH,
+  DOCTOR_SIDEBAR_EXPANDED_WIDTH,
+  DoctorSidebar,
+} from '@/components/layout/doctor-sidebar'
 import { RouteTransition } from '@/components/layout/route-transition'
 import { StatusBarSync } from '@/components/layout/status-bar-sync'
-import { BRAND_SHORT_NAME } from '@/lib/brand'
 import { cn, getInitials } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth.store'
-
-const sidebarNavItems = [
-  { href: '/doctor', label: 'Resumo', icon: Activity },
-  { href: '/doctor/available', label: 'Disponíveis', icon: CalendarPlus2 },
-  { href: '/doctor/calendar', label: 'Calendário', icon: CalendarDays },
-  { href: '/doctor/history', label: 'Histórico', icon: Clock3 },
-  { href: '/doctor/swaps', label: 'Trocas', icon: Repeat2 },
-]
+import { useUIStore } from '@/store/ui.store'
 
 // Bottom nav shows max 5 items on mobile
 const mobileNavItems: BottomNavItem[] = [
@@ -35,6 +32,7 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname()
   const router = useRouter()
   const { isAuthenticated, user, logout } = useAuthStore()
+  const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed)
   const [logoAnimating, setLogoAnimating] = useState(false)
 
   useEffect(() => {
@@ -66,75 +64,19 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
   return (
     <div className="bg-background min-h-[100dvh]">
       <StatusBarSync color="#ffffff" />
-      <div className="flex min-h-[100dvh]">
-        {/* Desktop sidebar */}
-        <aside className="border-border bg-card hidden w-[240px] shrink-0 flex-col border-r lg:flex">
-          {/* Logo */}
-          <div className="flex h-16 items-center gap-2.5 px-5">
-            <div className="logo-container-light !shadow-subtle !rounded-lg !p-1.5">
-              <ProductLogo variant="mark" className="h-6 w-6" imageClassName="h-full w-full" />
-            </div>
-            <div>
-              <p className="text-foreground text-sm font-semibold tracking-tight">
-                {BRAND_SHORT_NAME}
-              </p>
-              <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Médico</p>
-            </div>
-          </div>
-
-          {/* Nav */}
-          <nav className="flex-1 space-y-0.5 px-3 py-3">
-            {sidebarNavItems.map((item) => {
-              const active = isActive(item.href)
-              const Icon = item.icon
-              return (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    'tap-feedback flex h-10 items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-all',
-                    active
-                      ? 'bg-brand-50 text-brand-800 dark:bg-brand-900/20 dark:text-brand-300'
-                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                  )}
-                >
-                  <Icon className={cn('h-4 w-4', active && 'text-brand-700 dark:text-brand-400')} />
-                  {item.label}
-                </a>
-              )
-            })}
-          </nav>
-
-          {/* User info */}
-          <div className="border-border border-t p-4">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={user.avatarUrl} />
-                <AvatarFallback className="bg-brand-50 text-brand-700 text-xs font-semibold">
-                  {getInitials(user.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <p className="text-foreground truncate text-sm font-medium">{user.name}</p>
-                <p className="text-muted-foreground truncate text-xs">
-                  {user.organization?.name ?? 'Hospital'}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground mt-3 w-full justify-start gap-2"
-              onClick={handleLogout}
-            >
-              <LogOut className="h-4 w-4" />
-              Sair
-            </Button>
-          </div>
-        </aside>
+      <div className="flex h-[100dvh] min-h-[100dvh] overflow-hidden">
+        <DoctorSidebar />
+        <motion.div
+          aria-hidden
+          className="hidden shrink-0 lg:block"
+          animate={{
+            width: sidebarCollapsed ? DOCTOR_SIDEBAR_COLLAPSED_WIDTH : DOCTOR_SIDEBAR_EXPANDED_WIDTH,
+          }}
+          transition={{ type: 'spring', stiffness: 320, damping: 34, mass: 0.9 }}
+        />
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto pb-24 lg:pb-0">
+        <main className="min-w-0 flex-1 overflow-y-auto pb-24 lg:pb-0">
           {/* Mobile header — SOLID background, centered logo */}
           <header className="mobile-header-solid">
             <div className="mobile-header-inner">

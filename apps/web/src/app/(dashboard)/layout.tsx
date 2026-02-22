@@ -4,7 +4,11 @@ import { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { Calendar, LayoutDashboard, MapPin, Users, BarChart3, LogOut } from 'lucide-react'
-import { Sidebar } from '@/components/layout/sidebar'
+import {
+  DASHBOARD_SIDEBAR_COLLAPSED_WIDTH,
+  DASHBOARD_SIDEBAR_EXPANDED_WIDTH,
+  Sidebar,
+} from '@/components/layout/sidebar'
 import { BottomNav, type BottomNavItem } from '@/components/layout/bottom-nav'
 import { StatusBarSync } from '@/components/layout/status-bar-sync'
 import { ProductLogo } from '@/components/brand/product-logo'
@@ -12,6 +16,7 @@ import { OrgAvatar } from '@/components/ui/org-avatar'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/auth.store'
 import { useInstitutionStore } from '@/store/institution.store'
+import { useUIStore } from '@/store/ui.store'
 import { cn } from '@/lib/utils'
 
 const mobileNavItems: BottomNavItem[] = [
@@ -26,6 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter()
   const { user, logout } = useAuthStore()
   const institution = useInstitutionStore()
+  const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed)
   const [logoAnimating, setLogoAnimating] = useState(false)
   const orgName = institution.name || user?.organization?.name || 'Hospital'
 
@@ -41,11 +47,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="bg-background flex min-h-[100dvh] overflow-hidden">
+    <div className="bg-background relative flex h-[100dvh] min-h-[100dvh] overflow-hidden">
       <StatusBarSync color="#ffffff" />
       <Sidebar />
+      <motion.div
+        aria-hidden
+        className="hidden shrink-0 lg:block"
+        animate={{
+          width: sidebarCollapsed ? DASHBOARD_SIDEBAR_COLLAPSED_WIDTH : DASHBOARD_SIDEBAR_EXPANDED_WIDTH,
+        }}
+        transition={{ type: 'spring', stiffness: 320, damping: 34, mass: 0.9 }}
+      />
 
-      <main className="flex-1 overflow-y-auto pb-24 lg:pb-0">
+      <main className="min-w-0 flex-1 overflow-y-auto pb-24 lg:pb-0">
         {/* Mobile header — SOLID background, centered logo */}
         <header className="mobile-header-solid">
           <div className="mobile-header-inner">
