@@ -49,3 +49,14 @@ coverage
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# Local AI tooling
+.agent/
+.augment/
+.claude/
+.cline/
+.codebuddy/
+.commandcode/
+.continue/
+.crush/
+.factory/
