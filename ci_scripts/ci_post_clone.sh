@@ -2,7 +2,7 @@
 set -euo pipefail
 
 log() {
-  echo "[ci_post_clone] $*"
+  echo "[ci_post_clone] $*" >&2
 }
 
 fail() {
