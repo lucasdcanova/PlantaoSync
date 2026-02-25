@@ -34,6 +34,49 @@ install! 'cocoapods',
 
 prepare_react_native_project!
 
+def patch_expo_device_simulator_check!(ios_dir)
+  replacement = <<~SWIFT
+      var isSimulator: Bool {
+    #if targetEnvironment(simulator)
+        return true
+    #else
+        return false
+    #endif
+      }
+  SWIFT
+
+  candidate_paths = [
+    File.expand_path('../node_modules/expo-device/ios/UIDevice.swift', ios_dir)
+  ]
+
+  candidate_paths.concat(
+    Dir.glob(File.expand_path('../../../node_modules/.pnpm/expo-device@*/node_modules/expo-device/ios/UIDevice.swift', ios_dir))
+  )
+
+  patched_any = false
+
+  candidate_paths.uniq.each do |swift_file|
+    next unless File.file?(swift_file)
+
+    contents = File.read(swift_file)
+    next unless contents.include?('TARGET_OS_SIMULATOR')
+
+    patched = contents.sub(
+      /(^\s*var isSimulator: Bool \{\n\s*return TARGET_OS_SIMULATOR != 0\n\s*\}\n)/m,
+      replacement
+    )
+    if patched != contents
+      File.write(swift_file, patched)
+      Pod::UI.puts("Patched expo-device UIDevice.swift for Xcode compatibility (#{swift_file})".green)
+      patched_any = true
+    end
+  end
+
+  unless patched_any
+    Pod::UI.puts('expo-device UIDevice.swift patch not needed or file not found'.yellow)
+  end
+end
+
 target 'CONFIRMAPLANTO' do
   use_expo_modules!
   config = use_native_modules!
@@ -50,6 +93,8 @@ target 'CONFIRMAPLANTO' do
   )
 
   post_install do |installer|
+    patch_expo_device_simulator_check!(__dir__)
+
     react_native_post_install(
       installer,
       config[:reactNativePath],
