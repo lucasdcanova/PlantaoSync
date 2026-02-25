@@ -50,6 +50,78 @@ run_pod_install_with_retries() {
   return 1
 }
 
+download_boost_tarball_if_needed() {
+  local boost_version="1.83.0"
+  local boost_file="boost_1_83_0.tar.bz2"
+  local boost_sha256="6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e"
+  local boost_url="https://archives.boost.io/release/${boost_version}/source/${boost_file}"
+  local fastly_ip="199.232.15.52"
+  local cache_dir="$REPO_ROOT/.xcode-cloud-cache"
+  local local_path="$cache_dir/$boost_file"
+  local tmp_path="$local_path.tmp"
+
+  mkdir -p "$cache_dir"
+
+  if [ -f "$local_path" ]; then
+    local current_sha
+    current_sha="$(shasum -a 256 "$local_path" | awk '{print $1}')"
+    if [ "$current_sha" = "$boost_sha256" ]; then
+      log "Using cached Boost archive: $local_path"
+      printf '%s\n' "$local_path"
+      return 0
+    fi
+    log "Cached Boost archive checksum mismatch, re-downloading"
+    rm -f "$local_path"
+  fi
+
+  log "Downloading Boost archive from default URL"
+  if curl -fL --retry 5 --retry-all-errors --connect-timeout 15 --max-time 900 \
+    -o "$tmp_path" "$boost_url"; then
+    :
+  else
+    log "Default Boost download failed; retrying with --resolve fallback (${fastly_ip})"
+    rm -f "$tmp_path"
+    curl -fL --retry 5 --retry-all-errors --connect-timeout 15 --max-time 900 \
+      --resolve "archives.boost.io:443:${fastly_ip}" \
+      -o "$tmp_path" "$boost_url"
+  fi
+
+  local downloaded_sha
+  downloaded_sha="$(shasum -a 256 "$tmp_path" | awk '{print $1}')"
+  [ "$downloaded_sha" = "$boost_sha256" ] || fail "Boost archive checksum mismatch: $downloaded_sha"
+
+  mv "$tmp_path" "$local_path"
+  log "Downloaded Boost archive to $local_path"
+  printf '%s\n' "$local_path"
+}
+
+patch_react_native_boost_podspec_to_local_file() {
+  local mobile_dir="$REPO_ROOT/apps/mobile"
+  local rn_package_json
+  local rn_dir
+  local boost_podspec
+  local boost_local_path
+  local escaped_local_url
+
+  rn_package_json="$(cd "$mobile_dir" && node --print "require.resolve('react-native/package.json')")"
+  rn_dir="$(dirname "$rn_package_json")"
+  boost_podspec="$rn_dir/third-party-podspecs/boost.podspec"
+  [ -f "$boost_podspec" ] || fail "React Native boost podspec not found: $boost_podspec"
+
+  boost_local_path="$(download_boost_tarball_if_needed)"
+  escaped_local_url="file://${boost_local_path}"
+
+  if grep -q "$escaped_local_url" "$boost_podspec"; then
+    log "Boost podspec already patched to local archive"
+    return 0
+  fi
+
+  perl -0pi -e "s#https://archives\\.boost\\.io/release/1\\.83\\.0/source/boost_1_83_0\\.tar\\.bz2#${escaped_local_url}#g" "$boost_podspec"
+
+  grep -q "$escaped_local_url" "$boost_podspec" || fail "Failed to patch boost podspec to local archive"
+  log "Patched React Native boost podspec to local archive (${boost_podspec})"
+}
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 IOS_DIR="$REPO_ROOT/apps/mobile/ios"
@@ -116,6 +188,8 @@ fi
 # Ensure Xcode build phases can find the same Node binary in CI.
 printf 'export NODE_BINARY="%s"\n' "$NODE_BIN" > .xcode.env.local
 log "Wrote ios/.xcode.env.local with NODE_BINARY=$NODE_BIN"
+
+patch_react_native_boost_podspec_to_local_file
 
 log "CocoaPods version: $(pod --version)"
 run_pod_install_with_retries || fail "pod install failed after multiple attempts"
