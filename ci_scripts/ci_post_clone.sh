@@ -29,6 +29,27 @@ find_brew() {
   return 1
 }
 
+run_pod_install_with_retries() {
+  local attempt=1
+  local max_attempts=3
+
+  while [ "$attempt" -le "$max_attempts" ]; do
+    log "Running pod install (attempt ${attempt}/${max_attempts}, no repo update)"
+    if pod install; then
+      return 0
+    fi
+
+    if [ "$attempt" -lt "$max_attempts" ]; then
+      log "pod install failed (attempt ${attempt}/${max_attempts}); retrying in 15s"
+      sleep 15
+    fi
+
+    attempt=$((attempt + 1))
+  done
+
+  return 1
+}
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 IOS_DIR="$REPO_ROOT/apps/mobile/ios"
@@ -44,6 +65,9 @@ if ! command -v node >/dev/null 2>&1; then
   BREW_BIN="$(find_brew || true)"
   [ -n "${BREW_BIN:-}" ] || fail "Node.js is not available and Homebrew was not found."
 
+  export HOMEBREW_NO_AUTO_UPDATE=1
+  export HOMEBREW_NO_INSTALL_CLEANUP=1
+  export HOMEBREW_NO_ENV_HINTS=1
   log "Node.js is not available. Installing node@20 with Homebrew ($BREW_BIN)"
   "$BREW_BIN" install node@20
 
@@ -94,8 +118,7 @@ printf 'export NODE_BINARY="%s"\n' "$NODE_BIN" > .xcode.env.local
 log "Wrote ios/.xcode.env.local with NODE_BINARY=$NODE_BIN"
 
 log "CocoaPods version: $(pod --version)"
-log "Running pod install"
-pod install --repo-update
+run_pod_install_with_retries || fail "pod install failed after multiple attempts"
 
 if [ ! -f "$PODS_XCCONFIG" ]; then
   fail "Expected CocoaPods xcconfig was not generated: $IOS_DIR/$PODS_XCCONFIG"
