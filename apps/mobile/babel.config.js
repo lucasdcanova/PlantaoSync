@@ -5,8 +5,16 @@ loadRootEnv(__dirname)
 module.exports = function (api) {
   api.cache(true)
   return {
-    presets: ['babel-preset-expo', 'nativewind/babel'],
+    presets: ['babel-preset-expo'],
     plugins: [
+      require.resolve('react-native-css-interop/dist/babel-plugin'),
+      [
+        '@babel/plugin-transform-react-jsx',
+        {
+          runtime: 'automatic',
+          importSource: 'react-native-css-interop',
+        },
+      ],
       [
         'module-resolver',
         {
