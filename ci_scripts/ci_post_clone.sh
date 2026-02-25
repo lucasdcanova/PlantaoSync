@@ -29,6 +29,59 @@ find_brew() {
   return 1
 }
 
+retry_command() {
+  local max_attempts="$1"
+  local sleep_seconds="$2"
+  shift 2
+
+  local attempt=1
+  while [ "$attempt" -le "$max_attempts" ]; do
+    if "$@"; then
+      return 0
+    fi
+
+    if [ "$attempt" -lt "$max_attempts" ]; then
+      log "Command failed (attempt ${attempt}/${max_attempts}); retrying in ${sleep_seconds}s: $*"
+      sleep "$sleep_seconds"
+    fi
+
+    attempt=$((attempt + 1))
+  done
+
+  return 1
+}
+
+ensure_pnpm_available() {
+  local requested_version="$1"
+  local npm_global_prefix
+
+  if command -v corepack >/dev/null 2>&1; then
+    corepack enable || true
+
+    if [ -n "$requested_version" ]; then
+      log "Activating pnpm@${requested_version} via corepack"
+      if ! retry_command 3 10 corepack prepare "pnpm@${requested_version}" --activate; then
+        log "Corepack prepare failed; falling back to npm global install for pnpm@${requested_version}"
+      fi
+    fi
+  fi
+
+  if ! command -v pnpm >/dev/null 2>&1; then
+    if [ -n "$requested_version" ]; then
+      retry_command 3 10 npm install -g "pnpm@${requested_version}" || fail "Failed to install pnpm@${requested_version} via npm fallback."
+    else
+      retry_command 3 10 npm install -g pnpm || fail "Failed to install pnpm via npm fallback."
+    fi
+
+    npm_global_prefix="$(npm prefix -g 2>/dev/null || true)"
+    if [ -n "$npm_global_prefix" ] && [ -d "$npm_global_prefix/bin" ]; then
+      export PATH="$npm_global_prefix/bin:$PATH"
+    fi
+  fi
+
+  command -v pnpm >/dev/null 2>&1 || fail "pnpm was not found after corepack/npm setup."
+}
+
 run_pod_install_with_retries() {
   local attempt=1
   local max_attempts=3
@@ -157,19 +210,8 @@ NODE_BIN="$(command -v node)"
 log "Node version: $(node -v)"
 log "Node binary: $NODE_BIN"
 
-if command -v corepack >/dev/null 2>&1; then
-  corepack enable || true
-  PNPM_VERSION="$(node -p "try { const pm = require('./package.json').packageManager || ''; const m = pm.match(/^pnpm@(.+)$/); m ? m[1] : ''; } catch (_) { '' }")"
-  if [ -n "$PNPM_VERSION" ]; then
-    log "Activating pnpm@$PNPM_VERSION via corepack"
-    corepack prepare "pnpm@$PNPM_VERSION" --activate
-  fi
-fi
-
-if ! command -v pnpm >/dev/null 2>&1; then
-  echo "[ci_post_clone] ERROR: pnpm was not found after corepack activation." >&2
-  exit 1
-fi
+PNPM_VERSION="$(node -p "try { const pm = require('./package.json').packageManager || ''; const m = pm.match(/^pnpm@(.+)$/); m ? m[1] : ''; } catch (_) { '' }")"
+ensure_pnpm_available "$PNPM_VERSION"
 
 log "pnpm version: $(pnpm --version)"
 log "Installing JavaScript dependencies (monorepo)"
