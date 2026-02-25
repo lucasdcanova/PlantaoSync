@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@agendaplantao/shared": "workspace:*",
+    "@babel/runtime": "^7.28.6",
     "@expo/vector-icons": "^14.0.4",
     "@gorhom/bottom-sheet": "^4.6.4",
     "@react-native-async-storage/async-storage": "1.23.1",
