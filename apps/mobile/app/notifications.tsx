@@ -35,7 +35,7 @@ export default function NotificationsScreen() {
         }}
       >
         <Pressable
-          onPress={() => router.replace('/(tabs)/index')}
+          onPress={() => router.replace('/')}
           style={({ pressed }) => ({
             width: 40,
             height: 40,

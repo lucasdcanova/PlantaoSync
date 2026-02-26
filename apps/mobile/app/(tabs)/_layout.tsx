@@ -1,7 +1,6 @@
-import { Tabs, router } from 'expo-router'
+import { Redirect, Tabs } from 'expo-router'
 import { View, Platform } from 'react-native'
 import { BlurView } from 'expo-blur'
-import { useEffect } from 'react'
 import { Home, Calendar, ClipboardList, Repeat, User } from 'lucide-react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useMobileAuthStore } from '../../store/auth-store'
@@ -78,13 +77,9 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets()
   const isAuthenticated = useMobileAuthStore((state) => state.isAuthenticated)
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.replace('/(auth)/login')
-    }
-  }, [isAuthenticated])
-
-  if (!isAuthenticated) return null
+  if (!isAuthenticated) {
+    return <Redirect href="/(auth)/login" />
+  }
 
   return (
     <Tabs
