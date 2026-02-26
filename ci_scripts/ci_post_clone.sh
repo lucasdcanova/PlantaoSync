@@ -51,6 +51,72 @@ retry_command() {
   return 1
 }
 
+install_node20_from_official_tarball() {
+  local node_version="${1:-20.19.6}"
+  local machine
+  local node_arch
+  local node_dist
+  local node_url
+  local cache_dir="$REPO_ROOT/.xcode-cloud-cache"
+  local install_dir="$cache_dir/node-v${node_version}"
+  local tarball="$cache_dir/node-v${node_version}.tar.gz"
+  local tmp_tarball="${tarball}.tmp"
+
+  machine="$(uname -m)"
+  case "$machine" in
+    x86_64) node_arch="x64" ;;
+    arm64) node_arch="arm64" ;;
+    *) fail "Unsupported machine architecture for Node fallback: ${machine}" ;;
+  esac
+
+  node_dist="node-v${node_version}-darwin-${node_arch}"
+  node_url="https://nodejs.org/dist/v${node_version}/${node_dist}.tar.gz"
+
+  mkdir -p "$cache_dir"
+
+  if [ ! -x "$install_dir/bin/node" ]; then
+    log "Downloading Node.js ${node_version} tarball from nodejs.org (${node_arch})"
+    retry_command 3 10 curl -fL --retry 5 --retry-all-errors --connect-timeout 15 --max-time 900 -o "$tmp_tarball" "$node_url" \
+      || fail "Failed to download Node.js fallback tarball (${node_url})"
+
+    rm -rf "$install_dir"
+    mkdir -p "$install_dir"
+    tar -xzf "$tmp_tarball" -C "$install_dir" --strip-components=1 || fail "Failed to extract Node.js fallback tarball"
+    mv "$tmp_tarball" "$tarball" || true
+  fi
+
+  export PATH="$install_dir/bin:$PATH"
+  log "Using Node.js fallback from ${install_dir}/bin/node"
+}
+
+ensure_node_available() {
+  if command -v node >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local brew_bin
+  brew_bin="$(find_brew || true)"
+  [ -n "${brew_bin:-}" ] || fail "Node.js is not available and Homebrew was not found."
+
+  export HOMEBREW_NO_AUTO_UPDATE=1
+  export HOMEBREW_NO_INSTALL_CLEANUP=1
+  export HOMEBREW_NO_ENV_HINTS=1
+
+  log "Node.js is not available. Installing node@20 with Homebrew (${brew_bin})"
+  if ! retry_command 3 10 "$brew_bin" install node@20; then
+    log "Homebrew node@20 install failed; falling back to official Node.js tarball"
+    install_node20_from_official_tarball "20.19.6"
+  else
+    local node20_prefix
+    node20_prefix="$("$brew_bin" --prefix node@20 2>/dev/null || true)"
+    if [ -n "$node20_prefix" ] && [ -d "$node20_prefix/bin" ]; then
+      export PATH="$node20_prefix/bin:$PATH"
+    fi
+  fi
+
+  command -v node >/dev/null 2>&1 || fail "Node.js is still unavailable after installation attempts."
+}
+
 ensure_pnpm_available() {
   local requested_version="$1"
   local npm_global_prefix
@@ -186,25 +252,7 @@ export LC_ALL=en_US.UTF-8
 log "Repository root: $REPO_ROOT"
 cd "$REPO_ROOT"
 
-if ! command -v node >/dev/null 2>&1; then
-  BREW_BIN="$(find_brew || true)"
-  [ -n "${BREW_BIN:-}" ] || fail "Node.js is not available and Homebrew was not found."
-
-  export HOMEBREW_NO_AUTO_UPDATE=1
-  export HOMEBREW_NO_INSTALL_CLEANUP=1
-  export HOMEBREW_NO_ENV_HINTS=1
-  log "Node.js is not available. Installing node@20 with Homebrew ($BREW_BIN)"
-  "$BREW_BIN" install node@20
-
-  NODE20_PREFIX="$("$BREW_BIN" --prefix node@20 2>/dev/null || true)"
-  if [ -n "$NODE20_PREFIX" ] && [ -d "$NODE20_PREFIX/bin" ]; then
-    export PATH="$NODE20_PREFIX/bin:$PATH"
-  fi
-
-  if ! command -v node >/dev/null 2>&1; then
-    fail "Node.js is still unavailable after Homebrew install."
-  fi
-fi
+ensure_node_available
 
 NODE_BIN="$(command -v node)"
 log "Node version: $(node -v)"
