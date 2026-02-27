@@ -7,10 +7,10 @@ const baseUrl = getSiteUrl()
 
 export const metadata: Metadata = {
   title: {
-    absolute: 'Software de Escalas Médicas em Tempo Real | Confirma Plantão',
+    absolute: 'Plataforma de Gestão de Escalas Médicas para Hospitais | Confirma Plantão',
   },
   description:
-    'Gestão de escalas e plantões sem planilhas: confirmação em 1 toque, cobertura em tempo real e financeiro integrado para hospitais, UPAs e clínicas.',
+    'Plataforma institucional para gestão de escalas médicas, confirmação de cobertura, substituições e consolidação financeira em hospitais, UPAs e clínicas.',
   keywords: [
     'software de escalas médicas',
     'gestão de plantões hospitalares',
@@ -34,9 +34,9 @@ export const metadata: Metadata = {
     follow: true,
   },
   openGraph: {
-    title: 'Gestão de Escalas Médicas com Confirmação em Tempo Real',
+    title: 'Governança de Escalas Médicas para Instituições de Saúde',
     description:
-      'Da planilha para o controle total em 24 horas. Confirme plantões, gerencie trocas e feche o mês com relatórios prontos.',
+      'Padronize publicação, confirmação e substituição de plantões com rastreabilidade operacional e visão consolidada de cobertura.',
     url: baseUrl,
     siteName: BRAND_NAME,
     locale: 'pt_BR',
@@ -52,9 +52,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${BRAND_NAME} | Escala médica sem planilha`,
+    title: `${BRAND_NAME} | Governança de escalas médicas`,
     description:
-      'Confirmação de plantão em 1 toque. Dashboard de cobertura em tempo real. Financeiro integrado. Para hospitais, UPAs e clínicas.',
+      'Plataforma para instituições de saúde com cobertura em tempo real, trilha de auditoria e consolidação financeira por unidade.',
     images: [`${baseUrl}/twitter-image`],
   },
 }
@@ -94,15 +94,15 @@ const softwareSchema = {
     audienceType: 'Hospitais, UPAs e clínicas médicas',
   },
   description:
-    'Plataforma SaaS de gestão de escalas e confirmação de plantões médicos com cobertura em tempo real, financeiro integrado e conformidade LGPD.',
+    'Plataforma SaaS para governança de escalas médicas com confirmação de cobertura, substituições formalizadas, consolidação financeira e conformidade LGPD.',
   featureList: [
-    'Confirmação de plantão em 1 toque via push notification',
-    'Dashboard de cobertura em tempo real por setor e especialidade',
-    'Gestão de trocas com rastreabilidade completa',
-    'Controle financeiro integrado por plantão e profissional',
+    'Confirmação de plantão com registro de data e hora',
+    'Painel de cobertura em tempo real por setor e especialidade',
+    'Gestão de trocas com trilha de auditoria completa',
+    'Consolidação financeira por plantão, profissional e unidade',
     'Relatórios exportáveis em PDF e Excel',
-    'Auditoria completa para ANVISA e CFM',
-    'Conforme LGPD e normas de segurança da informação',
+    'Registros para auditoria institucional',
+    'Conformidade com LGPD e boas práticas de segurança da informação',
   ],
 }
 
@@ -115,7 +115,7 @@ const faqSchema = {
       name: 'Quanto tempo leva para colocar a primeira escala no ar?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'A maioria das equipes coloca a primeira escala no ar em menos de 24 horas. O cadastro inicial leva cerca de 30 minutos para configurar unidades, setores e profissionais.',
+        text: 'O prazo depende da estrutura da instituição e do escopo inicial. Em operações padrão, a configuração de uma unidade piloto é concluída em curto prazo com acompanhamento da implantação.',
       },
     },
     {
@@ -131,7 +131,7 @@ const faqSchema = {
       name: 'Como funciona a migração das planilhas atuais?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Oferecemos importação em lote via Excel para profissionais, setores e escalas históricas. O time de suporte acompanha o processo nos planos Premium e Enterprise.',
+        text: 'A migração pode ser realizada por importação em lote via planilha para profissionais, setores e histórico de escalas. O processo é acompanhado pela equipe de implantação conforme o plano contratado.',
       },
     },
     {
