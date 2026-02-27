@@ -65,6 +65,7 @@
       "typedRoutes": true
     },
     "extra": {
+      "pwaUrl": "https://confirmaplantao.com.br",
       "eas": {
         "projectId": "your-eas-project-id"
       }
