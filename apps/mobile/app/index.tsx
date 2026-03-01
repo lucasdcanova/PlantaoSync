@@ -5,10 +5,12 @@ import Constants from 'expo-constants'
 import { WebView } from 'react-native-webview'
 import type {
   ShouldStartLoadRequest,
+  WebViewErrorEvent,
+  WebViewHttpErrorEvent,
   WebViewNavigation,
 } from 'react-native-webview/lib/WebViewTypes'
 
-const DEFAULT_PWA_URL = 'https://confirmaplantao.com.br'
+const DEFAULT_PWA_URL = 'https://plantaosync.onrender.com'
 const BRAND = '#4ECDC4'
 
 function normalizeUrl(raw?: string) {
@@ -25,6 +27,8 @@ export default function RootPwaScreen() {
   const webviewRef = useRef<WebView>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
+  const [errorDetails, setErrorDetails] = useState<string | null>(null)
+  const [currentUrl, setCurrentUrl] = useState<string | null>(null)
 
   const pwaUrl = useMemo(() => {
     const fromEnv = process.env.EXPO_PUBLIC_PWA_URL
@@ -46,7 +50,27 @@ export default function RootPwaScreen() {
   }
 
   const handleNavigationStateChange = (_event: WebViewNavigation) => {
-    // Kept for future native integrations that may depend on route tracking.
+    setCurrentUrl(_event.url)
+  }
+
+  const handleWebViewError = (event: WebViewErrorEvent) => {
+    const { code, description, domain, url } = event.nativeEvent
+    const details = `Erro de rede (code=${code}${domain ? `, domain=${domain}` : ''}) em ${url}: ${description}`
+
+    console.error('[WebView:onError]', { code, description, domain, url })
+    setIsLoading(false)
+    setHasError(true)
+    setErrorDetails(details)
+  }
+
+  const handleWebViewHttpError = (event: WebViewHttpErrorEvent) => {
+    const { statusCode, description, url } = event.nativeEvent
+    const details = `HTTP ${statusCode} em ${url}: ${description}`
+
+    console.error('[WebView:onHttpError]', { statusCode, description, url })
+    setIsLoading(false)
+    setHasError(true)
+    setErrorDetails(details)
   }
 
   return (
@@ -69,12 +93,11 @@ export default function RootPwaScreen() {
         onLoadStart={() => {
           setIsLoading(true)
           setHasError(false)
+          setErrorDetails(null)
         }}
         onLoadEnd={() => setIsLoading(false)}
-        onError={() => {
-          setIsLoading(false)
-          setHasError(true)
-        }}
+        onError={handleWebViewError}
+        onHttpError={handleWebViewHttpError}
       />
 
       {isLoading && !hasError && (
@@ -116,11 +139,22 @@ export default function RootPwaScreen() {
           <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'center', lineHeight: 20 }}>
             Verifique sua conexao e tente novamente.
           </Text>
+          {!!errorDetails && (
+            <Text style={{ fontSize: 12, color: '#475569', textAlign: 'center', lineHeight: 18 }}>
+              {errorDetails}
+            </Text>
+          )}
+          {!!currentUrl && (
+            <Text style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', lineHeight: 16 }}>
+              URL atual: {currentUrl}
+            </Text>
+          )}
 
           <Pressable
             onPress={() => {
               setHasError(false)
               setIsLoading(true)
+              setErrorDetails(null)
               webviewRef.current?.reload()
             }}
             style={({ pressed }) => ({
