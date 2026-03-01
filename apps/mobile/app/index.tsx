@@ -11,6 +11,7 @@ import type {
 } from 'react-native-webview/lib/WebViewTypes'
 
 const DEFAULT_PWA_URL = 'https://plantaosync.onrender.com'
+const LEGACY_PWA_HOSTS = new Set(['confirmaplantao.com.br', 'www.confirmaplantao.com.br'])
 const BRAND = '#4ECDC4'
 
 function normalizeUrl(raw?: string) {
@@ -18,9 +19,19 @@ function normalizeUrl(raw?: string) {
   const trimmed = raw.trim()
 
   if (trimmed === '') return DEFAULT_PWA_URL
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed
 
-  return `https://${trimmed}`
+  const withProtocol =
+    trimmed.startsWith('http://') || trimmed.startsWith('https://')
+      ? trimmed
+      : `https://${trimmed}`
+
+  try {
+    const parsed = new URL(withProtocol)
+    if (LEGACY_PWA_HOSTS.has(parsed.hostname.toLowerCase())) return DEFAULT_PWA_URL
+    return parsed.toString()
+  } catch {
+    return DEFAULT_PWA_URL
+  }
 }
 
 export default function RootPwaScreen() {
