@@ -12,6 +12,19 @@ import type {
 
 const DEFAULT_PWA_URL = 'https://plantaosync.onrender.com'
 const LEGACY_PWA_HOSTS = new Set(['confirmaplantao.com.br', 'www.confirmaplantao.com.br'])
+const WEBVIEW_VIEWPORT_LOCK_SCRIPT = `
+  (function () {
+    const content = 'width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover';
+    let meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'viewport');
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute('content', content);
+  })();
+  true;
+`
 const BRAND = '#4ECDC4'
 
 function normalizeUrl(raw?: string) {
@@ -34,6 +47,16 @@ function normalizeUrl(raw?: string) {
   }
 }
 
+function ensureLoginEntry(urlString: string) {
+  try {
+    const parsed = new URL(urlString)
+    if (parsed.pathname === '/' || parsed.pathname === '') parsed.pathname = '/login'
+    return parsed.toString()
+  } catch {
+    return `${DEFAULT_PWA_URL}/login`
+  }
+}
+
 export default function RootPwaScreen() {
   const webviewRef = useRef<WebView>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -45,7 +68,7 @@ export default function RootPwaScreen() {
     const fromEnv = process.env.EXPO_PUBLIC_PWA_URL
     const fromExpoExtra = Constants.expoConfig?.extra?.pwaUrl as string | undefined
 
-    return normalizeUrl(fromEnv ?? fromExpoExtra ?? DEFAULT_PWA_URL)
+    return ensureLoginEntry(normalizeUrl(fromEnv ?? fromExpoExtra ?? DEFAULT_PWA_URL))
   }, [])
 
   const handleShouldStartLoadWithRequest = (request: ShouldStartLoadRequest) => {
@@ -95,10 +118,15 @@ export default function RootPwaScreen() {
         startInLoadingState
         javaScriptEnabled
         domStorageEnabled
+        scalesPageToFit={false}
+        textZoom={100}
+        setBuiltInZoomControls={false}
+        setDisplayZoomControls={false}
         sharedCookiesEnabled
         thirdPartyCookiesEnabled
         allowsBackForwardNavigationGestures
         setSupportMultipleWindows={false}
+        injectedJavaScriptBeforeContentLoaded={WEBVIEW_VIEWPORT_LOCK_SCRIPT}
         onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
         onNavigationStateChange={handleNavigationStateChange}
         onLoadStart={() => {

@@ -173,6 +173,15 @@
       transform var(--transition-fast);
     transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   }
+
+  /* Prevent iOS auto-zoom when focusing form controls */
+  @media (max-width: 1024px) and (hover: none) and (pointer: coarse) {
+    input,
+    textarea,
+    select {
+      font-size: 16px;
+    }
+  }
 }
 
 @layer components {

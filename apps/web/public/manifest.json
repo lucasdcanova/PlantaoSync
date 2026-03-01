@@ -2,7 +2,7 @@
   "name": "CONFIRMA PLANTÃO",
   "short_name": "CONFIRMA",
   "description": "Gestão inteligente de escalas e confirmações de plantão médico",
-  "start_url": "/",
+  "start_url": "/login",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "portrait-primary",
