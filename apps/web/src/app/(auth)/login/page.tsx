@@ -76,6 +76,18 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, user, router])
 
+  // Lock viewport scrolling on mobile PWA login for iOS/Android.
+  useEffect(() => {
+    const lockClass = 'login-scroll-lock'
+    document.documentElement.classList.add(lockClass)
+    document.body.classList.add(lockClass)
+
+    return () => {
+      document.documentElement.classList.remove(lockClass)
+      document.body.classList.remove(lockClass)
+    }
+  }, [])
+
   const {
     register,
     handleSubmit,
@@ -145,7 +157,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-[100dvh] overflow-hidden bg-[linear-gradient(155deg,#f6fbfb_0%,#f8faff_42%,#ecf6f5_100%)] px-4 py-8">
+    <div className="relative h-[100dvh] overflow-hidden bg-[linear-gradient(155deg,#f6fbfb_0%,#f8faff_42%,#ecf6f5_100%)] px-4">
       <div className="pointer-events-none absolute inset-0">
         <motion.div
           className="bg-brand-300/30 absolute -left-24 top-16 h-64 w-64 rounded-full blur-3xl"
@@ -159,7 +171,7 @@ export default function LoginPage() {
         />
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-6xl items-center">
+      <div className="relative z-10 mx-auto flex h-full w-full max-w-6xl items-center">
         <div className="grid w-full items-center gap-8 lg:grid-cols-[1.06fr_0.94fr]">
           <motion.section
             initial={{ opacity: 0, x: -24 }}

@@ -134,6 +134,21 @@
     background-color: var(--color-bg);
   }
 
+  html.login-scroll-lock,
+  body.login-scroll-lock {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: auto;
+  }
+
+  body.login-scroll-lock {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    touch-action: manipulation;
+  }
+
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
