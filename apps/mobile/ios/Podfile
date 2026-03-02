@@ -78,6 +78,7 @@ def patch_expo_device_simulator_check!(ios_dir)
 end
 
 target 'CONFIRMAPLANTO' do
+  inhibit_all_warnings!
   use_expo_modules!
   config = use_native_modules!
 
