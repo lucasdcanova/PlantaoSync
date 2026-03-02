@@ -269,9 +269,21 @@ export function LandingPage() {
         <main>
           <section className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden bg-white px-4 text-center">
             <div className="pointer-events-none absolute inset-0">
-              <div className="absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-[#f1f4f5] to-transparent" />
-              <div className="absolute -left-20 top-24 h-72 w-72 rounded-full bg-[#deebea]/75 blur-3xl" />
-              <div className="absolute -right-24 bottom-14 h-80 w-80 rounded-full bg-[#edf1f2]/90 blur-3xl" />
+              <video
+                className="absolute inset-0 h-full w-full scale-110 object-cover blur-[10px]"
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="auto"
+                aria-hidden="true"
+              >
+                <source src="/videos/hero-bg-crop10.mp4" type="video/mp4" />
+              </video>
+              <div className="absolute inset-0 bg-white/58" />
+              <div className="absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-[#f7fafb]/85 to-transparent" />
+              <div className="absolute -left-20 top-24 h-72 w-72 rounded-full bg-[#deebea]/55 blur-3xl" />
+              <div className="absolute -right-24 bottom-14 h-80 w-80 rounded-full bg-[#edf1f2]/70 blur-3xl" />
             </div>
 
             <motion.div
