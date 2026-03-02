@@ -13,15 +13,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ProductLogo } from '@/components/brand/product-logo'
 import { API_BASE_URL } from '@/lib/env'
-import {
-  DEMO_DOCTOR_ACCESS_TOKEN,
-  DEMO_DOCTOR_USER,
-  DEMO_MANAGER_ACCESS_TOKEN,
-  DEMO_MANAGER_USER,
-  isDoctorDemoCredential,
-  isManagerDemoCredential,
-} from '@/lib/demo-data'
-import { useDoctorDemoStore } from '@/store/doctor-demo.store'
 import { useAuthStore } from '@/store/auth.store'
 import { useSchedulesStore } from '@/store/schedules.store'
 import { useProfessionalsStore } from '@/store/professionals.store'
@@ -45,18 +36,7 @@ export default function LoginPage() {
   const router = useRouter()
   const { setUser, setAccessToken, isAuthenticated, user } = useAuthStore()
 
-  // Store actions accessed via getState() to avoid unnecessary re-renders
-  const activateDemoMode = () => {
-    useDoctorDemoStore.getState().initDemoData()
-    useSchedulesStore.getState().initDemoData()
-    useProfessionalsStore.getState().initDemoData()
-    useLocationsStore.getState().initDemoData()
-    useInstitutionStore.getState().initDemoData()
-    useShiftAttendanceStore.getState().initDemoData()
-  }
-
-  const clearDemoData = (authUser: Parameters<typeof setUser>[0]) => {
-    useDoctorDemoStore.getState().resetDoctorDemoData()
+  const clearSessionCaches = (authUser: Parameters<typeof setUser>[0]) => {
     useSchedulesStore.getState().resetSchedules()
     useProfessionalsStore.getState().resetProfessionals()
     useLocationsStore.getState().resetLocations()
@@ -98,22 +78,6 @@ export default function LoginPage() {
   }
 
   const onSubmit = async (data: LoginForm) => {
-    if (isManagerDemoCredential(data.email, data.password)) {
-      activateDemoMode()
-      setUser(DEMO_MANAGER_USER, true)
-      setAccessToken(DEMO_MANAGER_ACCESS_TOKEN)
-      await runPremiumLoginTransition('/overview')
-      return
-    }
-
-    if (isDoctorDemoCredential(data.email, data.password)) {
-      activateDemoMode()
-      setUser(DEMO_DOCTOR_USER, true)
-      setAccessToken(DEMO_DOCTOR_ACCESS_TOKEN)
-      await runPremiumLoginTransition('/doctor')
-      return
-    }
-
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
         method: 'POST',
@@ -128,8 +92,8 @@ export default function LoginPage() {
       }
 
       const { user: authUser, accessToken } = await res.json()
-      clearDemoData(authUser)
-      setUser(authUser, false)
+      clearSessionCaches(authUser)
+      setUser(authUser)
       setAccessToken(accessToken)
       await runPremiumLoginTransition(authUser.role === 'PROFESSIONAL' ? '/doctor' : '/overview')
     } catch (err) {

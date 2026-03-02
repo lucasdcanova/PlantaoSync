@@ -1,13 +1,37 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import {
-  DEMO_DOCTOR_MY_SHIFTS,
-  DEMO_DOCTOR_SECTORS,
-  DEMO_MANAGER_ASSIGNED_SHIFTS,
-  DEMO_PROFESSIONALS,
-} from '@/lib/demo-data'
 
-export type GeoCaptureSource = 'browser' | 'demo-simulado'
+type LegacySector = { id: string; name: string }
+type LegacyProfessional = { id: string; userId: string; name: string; specialty?: string }
+type LegacyAssignedShift = {
+  id: string
+  professionalId: string
+  professionalName: string
+  sectorName: string
+  date: string
+  startTime: string
+  endTime: string
+}
+type LegacyDoctorShift = {
+  id: string
+  professionalId: string
+  professionalUserId: string
+  sectorId: string
+  sectorName: string
+  date: string
+  startTime: string
+  endTime: string
+  status: string
+  patientLoad?: ShiftAttendanceRecord['patientLoad']
+  notes?: string
+}
+
+const LEGACY_SECTORS: LegacySector[] = []
+const LEGACY_PROFESSIONALS: LegacyProfessional[] = []
+const LEGACY_ASSIGNED_SHIFTS: LegacyAssignedShift[] = []
+const LEGACY_CONFIRMED_SHIFTS: LegacyDoctorShift[] = []
+
+export type GeoCaptureSource = 'browser' | 'simulado'
 export type AttendanceStatus = 'PENDENTE' | 'CHECKED_IN' | 'CHECKED_OUT'
 export type StressRiskLevel = 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRITICO'
 export type StressTriggerCode =
@@ -294,7 +318,6 @@ interface ShiftAttendanceState {
   autoCheckInConsent: boolean
   autoCheckInWindowStartMinutesBefore: number
   autoCheckInWindowEndMinutesAfter: number
-  initDemoData: () => void
   checkInShift: (input: CheckInShiftInput) => ShiftAttendanceRecord
   checkOutShift: (input: CheckOutShiftInput) => ShiftAttendanceRecord
   setAutoCheckInConsent: (value: boolean) => void
@@ -310,17 +333,9 @@ interface ShiftAttendanceState {
   }) => ShiftGeofence
   getShiftAttendance: (shiftId: string, professionalUserId?: string) => ShiftAttendanceRecord | null
   resetAttendanceData: () => void
-  resetAttendanceDemoData: () => void
 }
 
-type DemoProfessionalLike = {
-  id: string
-  userId: string
-  name: string
-  specialty?: string
-}
-
-const DEMO_REFERENCE_TODAY = '2026-02-22'
+const LEGACY_REFERENCE_TODAY = '1970-01-01'
 
 export const STRESS_TRIGGER_LABELS: Record<StressTriggerCode, string> = {
   LOTACAO: 'Lotação acima do esperado',
@@ -469,7 +484,7 @@ function stableNoise(seed: number) {
 
 function resolveSectorIdByName(sectorName: string) {
   const normalized = normalizeSectorName(sectorName)
-  const match = DEMO_DOCTOR_SECTORS.find((sector) => normalizeSectorName(sector.name) === normalized)
+  const match = LEGACY_SECTORS.find((sector) => normalizeSectorName(sector.name) === normalized)
   return match?.id
 }
 
@@ -774,7 +789,7 @@ function sortAttendanceRecords(records: ShiftAttendanceRecord[]) {
 function buildInitialRecords() {
   const geofences = buildDefaultGeofences()
   const professionalsById = new Map(
-    DEMO_PROFESSIONALS.map((professional) => [professional.id, professional] as const),
+    LEGACY_PROFESSIONALS.map((professional) => [professional.id, professional] as const),
   )
 
   const records: ShiftAttendanceRecord[] = []
@@ -789,8 +804,8 @@ function buildInitialRecords() {
     return { lat, lng }
   }
 
-  DEMO_MANAGER_ASSIGNED_SHIFTS.forEach((assignment, index) => {
-    if (assignment.date > DEMO_REFERENCE_TODAY) return
+  LEGACY_ASSIGNED_SHIFTS.forEach((assignment, index) => {
+    if (assignment.date > LEGACY_REFERENCE_TODAY) return
 
     const professional = professionalsById.get(assignment.professionalId)
     const sectorId = resolveSectorIdByName(assignment.sectorName) ?? `sector-${index}`
@@ -831,11 +846,11 @@ function buildInitialRecords() {
     const checkInSnapshot = buildGeoSnapshot(geofence, {
       ...checkInPos,
       accuracyMeters: clamp(Math.round(12 + stableNoise(index + 23) * 35), 8, 60),
-      source: 'demo-simulado',
+      source: 'simulado',
       capturedAt: checkInAt.toISOString(),
     })
 
-    const shouldKeepOpen = assignment.date === DEMO_REFERENCE_TODAY && index % 5 === 0
+    const shouldKeepOpen = assignment.date === LEGACY_REFERENCE_TODAY && index % 5 === 0
 
     let record: ShiftAttendanceRecord = {
       ...base,
@@ -850,7 +865,7 @@ function buildInitialRecords() {
       const checkOutSnapshot = buildGeoSnapshot(geofence, {
         ...checkOutPos,
         accuracyMeters: clamp(Math.round(10 + stableNoise(index + 31) * 30), 8, 55),
-        source: 'demo-simulado',
+        source: 'simulado',
         capturedAt: checkOutAt.toISOString(),
       })
 
@@ -912,7 +927,7 @@ function buildInitialRecords() {
     records.push(record)
   })
 
-  DEMO_DOCTOR_MY_SHIFTS.forEach((shift, index) => {
+  LEGACY_CONFIRMED_SHIFTS.forEach((shift, index) => {
     if (shift.status !== 'CONCLUIDO') return
     if (records.some((record) => record.shiftId === shift.id && record.professionalUserId === shift.professionalUserId)) {
       return
@@ -928,7 +943,7 @@ function buildInitialRecords() {
       shiftId: shift.id,
       professionalId: shift.professionalId,
       professionalUserId: shift.professionalUserId,
-      professionalName: professional?.name ?? 'Médico demo',
+      professionalName: professional?.name ?? 'Médico',
       sectorId: shift.sectorId,
       sectorName: shift.sectorName,
       shiftDate: shift.date,
@@ -946,7 +961,7 @@ function buildInitialRecords() {
       lat: geofence.lat + 0.00018,
       lng: geofence.lng - 0.00005,
       accuracyMeters: 14,
-      source: 'demo-simulado',
+      source: 'simulado',
       capturedAt: checkInAt.toISOString(),
     })
 
@@ -954,7 +969,7 @@ function buildInitialRecords() {
       lat: geofence.lat - 0.0001,
       lng: geofence.lng + 0.00006,
       accuracyMeters: 12,
-      source: 'demo-simulado',
+      source: 'simulado',
       capturedAt: checkOutAt.toISOString(),
     })
 
@@ -1006,12 +1021,12 @@ function buildInitialRecords() {
 
 function buildInitialCancellationEvents() {
   const professionalsById = new Map(
-    DEMO_PROFESSIONALS.map((professional) => [professional.id, professional] as const),
+    LEGACY_PROFESSIONALS.map((professional) => [professional.id, professional] as const),
   )
 
-  const cancellationCandidates = DEMO_MANAGER_ASSIGNED_SHIFTS.filter((assignment, index) => {
+  const cancellationCandidates = LEGACY_ASSIGNED_SHIFTS.filter((assignment, index) => {
     const seed = stableNoise(index + 61)
-    return assignment.date <= DEMO_REFERENCE_TODAY && seed > 0.62
+    return assignment.date <= LEGACY_REFERENCE_TODAY && seed > 0.62
   }).slice(0, 8)
 
   return cancellationCandidates.map((assignment, index) => {
@@ -1076,7 +1091,7 @@ function isInstitutionCompletedShift(record: ShiftAttendanceRecord) {
   return Boolean(record.checkOut) && !isShiftAbandonment(record)
 }
 
-function buildDemoAttendanceState() {
+function buildSeedAttendanceState() {
   return {
     geofences: buildDefaultGeofences(),
     records: buildInitialRecords(),
@@ -1752,8 +1767,6 @@ export const useShiftAttendanceStore = create<ShiftAttendanceState>()(
     (set, get) => ({
       ...buildEmptyAttendanceState(),
 
-      initDemoData: () => set(() => ({ ...buildDemoAttendanceState() })),
-
       setAutoCheckInConsent: (value) => set(() => ({ autoCheckInConsent: Boolean(value) })),
 
       upsertGeofence: (input) => {
@@ -1936,7 +1949,6 @@ export const useShiftAttendanceStore = create<ShiftAttendanceState>()(
       },
 
       resetAttendanceData: () => set(() => ({ ...buildEmptyAttendanceState() })),
-      resetAttendanceDemoData: () => set(() => ({ ...buildEmptyAttendanceState() })),
     }),
     {
       name: 'confirma-plantao-shift-attendance',
@@ -1953,9 +1965,9 @@ export const useShiftAttendanceStore = create<ShiftAttendanceState>()(
   ),
 )
 
-export function buildDemoGeoPositionFromGeofence(
+export function buildGeoPositionFromGeofence(
   geofence: ShiftGeofence,
-  source: GeoCaptureSource = 'demo-simulado',
+  source: GeoCaptureSource = 'simulado',
 ) {
   const lat = geofence.lat + 0.00009
   const lng = geofence.lng - 0.00004

@@ -127,7 +127,7 @@ export default function InviteRegisterPage() {
             completo no ambiente médico.
           </p>
           <div className="rounded-xl border border-white/20 bg-white/10 p-4 text-sm">
-            Exemplo de convite demo: <span className="font-semibold">SG-UTI-2026-ALFA</span>
+            Exemplo de formato: <span className="font-semibold">HOSP-UTI-2026-ALFA</span>
           </div>
         </div>
 

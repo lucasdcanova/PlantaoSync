@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { DEMO_LOCATIONS } from '@/lib/demo-data'
 
 export type LocationCriticality = 'Alta' | 'Média' | 'Baixa'
 
@@ -34,7 +33,6 @@ interface LocationsState {
   toggleLocationActive: (id: string) => void
   setLocations: (locations: ManagerLocation[]) => void
   resetLocations: () => void
-  initDemoData: () => void
 }
 
 function nowIso() {
@@ -79,21 +77,10 @@ function sortLocations(locations: ManagerLocation[]) {
   })
 }
 
-function buildDemoLocations(): ManagerLocation[] {
-  const now = nowIso()
-
-  return DEMO_LOCATIONS.map((location) => ({
-    ...location,
-    isActive: true,
-    createdAt: now,
-    updatedAt: now,
-  }))
-}
-
 export const useLocationsStore = create<LocationsState>()(
   persist(
     (set, get) => ({
-      // Start EMPTY — populated via initDemoData() on demo login
+      // Start empty and hydrate from backend.
       locations: [],
 
       addLocation: (input) => {
@@ -159,8 +146,6 @@ export const useLocationsStore = create<LocationsState>()(
         }),
 
       resetLocations: () => set({ locations: [] }),
-
-      initDemoData: () => set({ locations: buildDemoLocations() }),
     }),
     {
       name: 'confirma-plantao-locations',

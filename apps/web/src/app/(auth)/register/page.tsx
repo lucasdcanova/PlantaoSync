@@ -15,7 +15,6 @@ import { Label } from '@/components/ui/label'
 import { ProductLogo } from '@/components/brand/product-logo'
 import { API_BASE_URL } from '@/lib/env'
 import { useAuthStore } from '@/store/auth.store'
-import { useDoctorDemoStore } from '@/store/doctor-demo.store'
 import { useSchedulesStore } from '@/store/schedules.store'
 import { useProfessionalsStore } from '@/store/professionals.store'
 import { useInstitutionStore } from '@/store/institution.store'
@@ -113,14 +112,13 @@ export default function RegisterPage() {
       }
 
       const { user, accessToken } = await res.json()
-      // Clear any leftover demo data and initialize from the new user's org
-      useDoctorDemoStore.getState().resetDoctorDemoData()
+      // Clear cached session data and initialize from the new user's org.
       useSchedulesStore.getState().resetSchedules()
       useProfessionalsStore.getState().resetProfessionals()
       useLocationsStore.getState().resetLocations()
       useInstitutionStore.getState().initFromUser(user)
       useShiftAttendanceStore.getState().resetAttendanceData()
-      setUser(user, false)
+      setUser(user)
       setAccessToken(accessToken)
       toast.success('Conta criada com sucesso')
       router.push('/overview')

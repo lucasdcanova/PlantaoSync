@@ -1078,7 +1078,7 @@ export function LandingPage() {
                   </div>
 
                   <Button asChild className="mt-6 w-full bg-[#4ecdc4] text-[#0f1c20] hover:bg-[#5fd8cf]">
-                    <Link href="/register">Solicitar demonstração guiada</Link>
+                    <Link href="/register">Conhecer plataforma</Link>
                   </Button>
                 </motion.aside>
               </div>

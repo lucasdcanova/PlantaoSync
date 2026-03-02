@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Schedule, ScheduleCoverageMode, ScheduleStatus } from '@agendaplantao/shared'
-import { DEMO_LOCATIONS, DEMO_SCHEDULES } from '@/lib/demo-data'
 
 export interface ScheduleExtraShift {
   id: string
@@ -67,73 +66,10 @@ interface SchedulesState {
   addExtraShift: (scheduleId: string, input: ScheduleExtraShiftInput) => ScheduleExtraShift
   removeExtraShift: (scheduleId: string, extraShiftId: string) => void
   resetSchedules: () => void
-  initDemoData: () => void
 }
 
-const DEMO_ORGANIZATION_ID = 'org-demo'
+const LOCAL_ORGANIZATION_ID = 'org-local'
 const DEFAULT_SHIFT_VALUE = 140_000
-const DEMO_SHIFT_VALUE_BY_LOCATION: Record<string, number> = {
-  'loc-uti': 145_000,
-  'loc-ps': 135_000,
-  'loc-clinica': 95_000,
-  'loc-centro-cir': 120_000,
-}
-
-const DEMO_GEOFENCE_BY_LOCATION: Record<string, ScheduleGeofenceConfig> = {
-  'loc-uti': {
-    lat: -23.561414,
-    lng: -46.655881,
-    radiusMeters: 170,
-    autoCheckInEnabled: true,
-    label: 'UTI Adulto · Bloco A',
-  },
-  'loc-ps': {
-    lat: -23.562004,
-    lng: -46.656491,
-    radiusMeters: 220,
-    autoCheckInEnabled: true,
-    label: 'Pronto-Socorro · Entrada principal',
-  },
-  'loc-clinica': {
-    lat: -23.561895,
-    lng: -46.654934,
-    radiusMeters: 180,
-    autoCheckInEnabled: true,
-    label: 'Clínica Médica · Bloco C',
-  },
-  'loc-centro-cir': {
-    lat: -23.561188,
-    lng: -46.65441,
-    radiusMeters: 160,
-    autoCheckInEnabled: false,
-    label: 'Centro Cirúrgico · Bloco D',
-  },
-}
-
-const DEMO_EXTRA_SHIFTS_BY_SCHEDULE: Record<string, ScheduleExtraShift[]> = {
-  '1': [
-    {
-      id: 'extra-1-1',
-      date: '2026-02-17',
-      startTime: '08:00',
-      endTime: '14:00',
-      requiredCount: 1,
-      notes: 'Cobertura especial de Carnaval para reforço de UTI.',
-      locationId: 'loc-uti',
-    },
-  ],
-  '2': [
-    {
-      id: 'extra-2-1',
-      date: '2026-02-22',
-      startTime: '10:00',
-      endTime: '16:00',
-      requiredCount: 2,
-      notes: 'Mutirão de pós-feriado no Pronto-Socorro.',
-      locationId: 'loc-ps',
-    },
-  ],
-}
 
 function todayDate() {
   return new Date().toISOString().slice(0, 10)
@@ -203,19 +139,14 @@ function normalizeShiftValue(value?: number, locationId?: string) {
     return Math.round(Number(value))
   }
 
-  if (locationId && Number.isFinite(DEMO_SHIFT_VALUE_BY_LOCATION[locationId])) {
-    return DEMO_SHIFT_VALUE_BY_LOCATION[locationId]
-  }
-
   return DEFAULT_SHIFT_VALUE
 }
 
 function normalizeGeofence(
   geofence: Partial<ScheduleGeofenceConfig> | undefined,
-  locationId?: string,
+  _locationId?: string,
 ): ScheduleGeofenceConfig | undefined {
-  const fallback = (locationId && DEMO_GEOFENCE_BY_LOCATION[locationId]) || undefined
-  const source = geofence ?? fallback
+  const source = geofence
   if (!source) return undefined
 
   const lat = Number(source.lat)
@@ -228,21 +159,16 @@ function normalizeGeofence(
     radiusMeters:
       Number.isFinite(source.radiusMeters) && Number(source.radiusMeters) > 0
         ? Math.round(Number(source.radiusMeters))
-        : fallback?.radiusMeters ?? 180,
+        : 180,
     autoCheckInEnabled:
       typeof source.autoCheckInEnabled === 'boolean'
         ? source.autoCheckInEnabled
-        : (fallback?.autoCheckInEnabled ?? false),
-    label: source.label?.trim() || fallback?.label,
+        : false,
+    label: source.label?.trim() || undefined,
   }
 }
 
 function buildLocation(locationId: string, fallbackName?: string) {
-  const location = DEMO_LOCATIONS.find((item) => item.id === locationId)
-  if (location) {
-    return { id: location.id, name: location.name }
-  }
-
   return {
     id: locationId,
     name: fallbackName?.trim() || 'Não informado',
@@ -264,7 +190,7 @@ function normalizeExtraShift(extraShift: Partial<ScheduleExtraShift>, fallbackLo
 }
 
 function normalizeSchedule(schedule: Partial<ManagerSchedule>) {
-  const locationId = schedule.locationId ?? DEMO_LOCATIONS[0]?.id ?? 'loc-unknown'
+  const locationId = schedule.locationId ?? 'loc-unknown'
   const coverageMode = normalizeCoverageMode(schedule.coverageMode)
 
   const extraShifts = (schedule.extraShifts ?? []).map((extraShift) =>
@@ -274,7 +200,7 @@ function normalizeSchedule(schedule: Partial<ManagerSchedule>) {
   return {
     ...(schedule as Schedule),
     id: schedule.id ?? `schedule-${Date.now().toString(36)}`,
-    organizationId: schedule.organizationId ?? DEMO_ORGANIZATION_ID,
+    organizationId: schedule.organizationId ?? LOCAL_ORGANIZATION_ID,
     locationId,
     title: schedule.title ?? 'Escala sem título',
     description: schedule.description ?? undefined,
@@ -300,18 +226,6 @@ function normalizeSchedule(schedule: Partial<ManagerSchedule>) {
 
 function withSortedSchedules(schedules: ManagerSchedule[]) {
   return [...schedules].sort((a, b) => b.startDate.localeCompare(a.startDate))
-}
-
-function buildInitialSchedules() {
-  return withSortedSchedules(
-    DEMO_SCHEDULES.map((schedule) =>
-      normalizeSchedule({
-        ...schedule,
-        extraShifts: DEMO_EXTRA_SHIFTS_BY_SCHEDULE[schedule.id] ?? [],
-        requireSwapApproval: schedule.status !== 'ARCHIVED',
-      }),
-    ),
-  )
 }
 
 function validateInput(input: ScheduleEditorInput) {
@@ -469,7 +383,7 @@ function buildScheduleRecord(
 export const useSchedulesStore = create<SchedulesState>()(
   persist(
     (set, get) => ({
-      // Start EMPTY — populated via initDemoData() on demo login
+      // Start empty and hydrate from backend.
       schedules: [],
 
       createSchedule: (input) => {
@@ -477,7 +391,7 @@ export const useSchedulesStore = create<SchedulesState>()(
 
         const newSchedule = buildScheduleRecord(input, {
           id: `schedule-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-          organizationId: DEMO_ORGANIZATION_ID,
+          organizationId: LOCAL_ORGANIZATION_ID,
           createdAt: todayDate(),
           updatedAt: todayDate(),
           extraShifts: [],
@@ -601,10 +515,7 @@ export const useSchedulesStore = create<SchedulesState>()(
           ),
         })),
 
-      // Reset to empty (real users) — does NOT restore demo data
       resetSchedules: () => set({ schedules: [] }),
-      // Populate with demo data (call on demo login only)
-      initDemoData: () => set({ schedules: buildInitialSchedules() }),
     }),
     {
       name: 'confirma-plantao-schedules',

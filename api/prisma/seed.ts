@@ -79,7 +79,7 @@ async function main() {
     data: {
       organizationId: org1.id,
       name: 'Dr. João Silva',
-      email: 'gestor@demo.com',
+      email: 'gestor@hospitalsaogabriel.com.br',
       passwordHash,
       role: 'ADMIN',
       emailVerified: true,
@@ -92,7 +92,7 @@ async function main() {
       data: {
         organizationId: org1.id,
         name: 'Dra. Ana Costa',
-        email: 'ana.costa@demo.com',
+        email: 'ana.costa@hospitalsaogabriel.com.br',
         passwordHash,
         role: 'PROFESSIONAL',
         crm: 'CRM/SP 123456',
@@ -104,7 +104,7 @@ async function main() {
       data: {
         organizationId: org1.id,
         name: 'Dr. Carlos Mendes',
-        email: 'carlos.mendes@demo.com',
+        email: 'carlos.mendes@hospitalsaogabriel.com.br',
         passwordHash,
         role: 'PROFESSIONAL',
         crm: 'CRM/SP 654321',
@@ -116,7 +116,7 @@ async function main() {
       data: {
         organizationId: org1.id,
         name: 'Enf. Maria Santos',
-        email: 'maria.santos@demo.com',
+        email: 'maria.santos@hospitalsaogabriel.com.br',
         passwordHash,
         role: 'PROFESSIONAL',
         specialty: 'Enfermagem UTI',
@@ -127,7 +127,7 @@ async function main() {
       data: {
         organizationId: org1.id,
         name: 'Dr. Pedro Oliveira',
-        email: 'pedro.oliveira@demo.com',
+        email: 'pedro.oliveira@hospitalsaogabriel.com.br',
         passwordHash,
         role: 'PROFESSIONAL',
         crm: 'CRM/SP 789012',
@@ -228,9 +228,9 @@ async function main() {
   console.log('✅ Seed concluído!')
   console.log('')
   console.log('📋 Dados de acesso:')
-  console.log('  Gestor:       gestor@demo.com      / Senha@123')
-  console.log('  Profissional: ana.costa@demo.com   / Senha@123')
-  console.log('  Profissional: carlos.mendes@demo.com / Senha@123')
+  console.log('  Gestor:       gestor@hospitalsaogabriel.com.br      / Senha@123')
+  console.log('  Profissional: ana.costa@hospitalsaogabriel.com.br   / Senha@123')
+  console.log('  Profissional: carlos.mendes@hospitalsaogabriel.com.br / Senha@123')
   console.log('')
   console.log(`  Organização:  ${org1.name} (${org1.slug})`)
   console.log(`  Locais:       ${loc1.name}, ${loc2.name}`)

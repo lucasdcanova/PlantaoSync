@@ -239,16 +239,12 @@ export default function ScheduleDetailsPage() {
   const isCreateMode = scheduleId === 'new'
 
   const schedules = useSchedulesStore((state) => state.schedules)
-  const createSchedule = useSchedulesStore((state) => state.createSchedule)
-  const updateSchedule = useSchedulesStore((state) => state.updateSchedule)
-  const deleteSchedule = useSchedulesStore((state) => state.deleteSchedule)
   const upsertSchedule = useSchedulesStore((state) => state.upsertSchedule)
   const removeSchedule = useSchedulesStore((state) => state.removeSchedule)
   const addExtraShift = useSchedulesStore((state) => state.addExtraShift)
   const removeExtraShift = useSchedulesStore((state) => state.removeExtraShift)
   const locations = useLocationsStore((state) => state.locations)
   const setLocations = useLocationsStore((state) => state.setLocations)
-  const isDemoMode = useAuthStore((state) => state.isDemoMode)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const upsertAttendanceGeofence = useShiftAttendanceStore((state) => state.upsertGeofence)
 
@@ -265,7 +261,7 @@ export default function ScheduleDetailsPage() {
   )
 
   useEffect(() => {
-    if (isDemoMode || !isAuthenticated || isCreateMode || !scheduleId || schedule) return
+    if (!isAuthenticated || isCreateMode || !scheduleId || schedule) return
     let cancelled = false
 
     const loadSchedule = async () => {
@@ -285,7 +281,7 @@ export default function ScheduleDetailsPage() {
     return () => {
       cancelled = true
     }
-  }, [isAuthenticated, isCreateMode, isDemoMode, schedule, scheduleId, upsertSchedule])
+  }, [isAuthenticated, isCreateMode, schedule, scheduleId, upsertSchedule])
 
   const [form, setForm] = useState<ScheduleFormValues>(() => buildDefaultForm(defaultLocationId))
   const [extraShiftForm, setExtraShiftForm] =
@@ -306,7 +302,7 @@ export default function ScheduleDetailsPage() {
   }, [defaultLocationId, isCreateMode, schedule])
 
   useEffect(() => {
-    if (isDemoMode || !isAuthenticated) return
+    if (!isAuthenticated) return
     let cancelled = false
 
     const loadLocations = async () => {
@@ -327,7 +323,7 @@ export default function ScheduleDetailsPage() {
     return () => {
       cancelled = true
     }
-  }, [isAuthenticated, isDemoMode, setLocations])
+  }, [isAuthenticated, setLocations])
 
   const statusConfig = SHIFT_STATUS_CONFIG[form.status]
   const selectedLocation = locations.find((location) => location.id === form.locationId)
@@ -520,57 +516,34 @@ export default function ScheduleDetailsPage() {
     }
 
     try {
-      if (!isDemoMode) {
-        const api = getApiClient()
-        const apiPayload = {
-          title: payload.title,
-          description: payload.description,
-          locationId: payload.locationId,
-          startDate: payload.startDate,
-          endDate: payload.endDate,
-          coverageMode: payload.coverageMode,
-          coverageStartTime: payload.coverageStartTime,
-          coverageEndTime: payload.coverageEndTime,
-          shiftDurationHours: payload.shiftDurationHours,
-          professionalsPerShift: payload.professionalsPerShift,
-          shiftValue: payload.shiftValue,
-          requireSwapApproval: payload.requireSwapApproval,
-          geofenceLat: payload.geofence?.lat,
-          geofenceLng: payload.geofence?.lng,
-          geofenceRadiusMeters: payload.geofence?.radiusMeters,
-          geofenceAutoCheckInEnabled: payload.geofence?.autoCheckInEnabled,
-          geofenceLabel: payload.geofence?.label,
-        }
-
-        if (isCreateMode) {
-          const createdResponse = await api.post('schedules', { json: apiPayload }).json()
-          const created = upsertSchedule(
-            mapApiScheduleToManager(
-              createdResponse as Parameters<typeof mapApiScheduleToManager>[0],
-            ),
-          )
-          setSuccessMessage('Escala criada com sucesso.')
-          router.replace(`/schedules/${created.id}`)
-          return
-        }
-
-        if (!scheduleId) {
-          setErrorMessage('ID da escala inválido.')
-          return
-        }
-
-        const updatedResponse = await api.patch(`schedules/${scheduleId}`, { json: apiPayload }).json()
-        upsertSchedule(
-          mapApiScheduleToManager(
-            updatedResponse as Parameters<typeof mapApiScheduleToManager>[0],
-          ),
-        )
-        setSuccessMessage('Escala atualizada com sucesso.')
-        return
+      const api = getApiClient()
+      const apiPayload = {
+        title: payload.title,
+        description: payload.description,
+        locationId: payload.locationId,
+        startDate: payload.startDate,
+        endDate: payload.endDate,
+        coverageMode: payload.coverageMode,
+        coverageStartTime: payload.coverageStartTime,
+        coverageEndTime: payload.coverageEndTime,
+        shiftDurationHours: payload.shiftDurationHours,
+        professionalsPerShift: payload.professionalsPerShift,
+        shiftValue: payload.shiftValue,
+        requireSwapApproval: payload.requireSwapApproval,
+        geofenceLat: payload.geofence?.lat,
+        geofenceLng: payload.geofence?.lng,
+        geofenceRadiusMeters: payload.geofence?.radiusMeters,
+        geofenceAutoCheckInEnabled: payload.geofence?.autoCheckInEnabled,
+        geofenceLabel: payload.geofence?.label,
       }
 
       if (isCreateMode) {
-        const created = createSchedule(payload)
+        const createdResponse = await api.post('schedules', { json: apiPayload }).json()
+        const created = upsertSchedule(
+          mapApiScheduleToManager(
+            createdResponse as Parameters<typeof mapApiScheduleToManager>[0],
+          ),
+        )
         if (created.geofence && selectedLocation?.name) {
           const sectorId = inferAttendanceSectorIdByName(selectedLocation.name) ?? selectedLocation.id
           upsertAttendanceGeofence({
@@ -594,7 +567,12 @@ export default function ScheduleDetailsPage() {
         return
       }
 
-      const updated = updateSchedule(scheduleId, payload)
+      const updatedResponse = await api.patch(`schedules/${scheduleId}`, { json: apiPayload }).json()
+      const updated = upsertSchedule(
+        mapApiScheduleToManager(
+          updatedResponse as Parameters<typeof mapApiScheduleToManager>[0],
+        ),
+      )
       if (updated.geofence && selectedLocation?.name) {
         const sectorId = inferAttendanceSectorIdByName(selectedLocation.name) ?? selectedLocation.id
         upsertAttendanceGeofence({
@@ -680,13 +658,9 @@ export default function ScheduleDetailsPage() {
     if (!confirmed) return
 
     try {
-      if (!isDemoMode) {
-        const api = getApiClient()
-        await api.delete(`schedules/${scheduleId}`)
-        removeSchedule(scheduleId)
-      } else {
-        deleteSchedule(scheduleId)
-      }
+      const api = getApiClient()
+      await api.delete(`schedules/${scheduleId}`)
+      removeSchedule(scheduleId)
       router.push('/schedules')
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Falha ao excluir a escala.')

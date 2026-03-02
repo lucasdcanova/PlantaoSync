@@ -23,7 +23,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useInstitutionStore, type DemoManager } from '@/store/institution.store'
+import { useInstitutionStore, type InstitutionManager } from '@/store/institution.store'
 import { useAuthStore } from '@/store/auth.store'
 import { cn } from '@/lib/utils'
 
@@ -106,7 +106,7 @@ export default function InstitutionPage() {
     setShowAddManager(false)
   }
 
-  const canRemoveManager = (manager: DemoManager) => {
+  const canRemoveManager = (manager: InstitutionManager) => {
     // Can't remove yourself if you're the only ADMIN
     if (manager.email === user?.email) return false
     const adminCount = store.managers.filter((m) => m.role === 'ADMIN').length

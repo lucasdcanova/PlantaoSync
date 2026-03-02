@@ -39,7 +39,7 @@ export function MarketingShell({ title, description, children }: MarketingShellP
               <Link href="/login">Entrar</Link>
             </Button>
             <Button size="sm" className="bg-brand-700 text-white hover:bg-brand-800" asChild>
-              <Link href="/register">Solicitar demonstração</Link>
+              <Link href="/register">Conhecer plataforma</Link>
             </Button>
           </div>
         </div>

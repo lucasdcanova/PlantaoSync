@@ -22,15 +22,18 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useProfessionalsStore } from '@/store/professionals.store'
-import { useDoctorDemoStore } from '@/store/doctor-demo.store'
-import { useAuthStore } from '@/store/auth.store'
+import {
+  useProfessionalsStore,
+  type ProfessionalProfile,
+} from '@/store/professionals.store'
 import { getApiClient } from '@/lib/api'
-import { mapApiProfessionalToDemo, type ApiInviteCode } from '@/lib/backend-mappers'
+import {
+  mapApiProfessionalToProfessional,
+  type ApiInviteCode,
+} from '@/lib/backend-mappers'
 import { cn, getInitials } from '@/lib/utils'
-import type { DemoProfessional } from '@/lib/demo-data'
 
-const statusConfig: Record<DemoProfessional['status'], { color: string; dot: string }> = {
+const statusConfig: Record<ProfessionalProfile['status'], { color: string; dot: string }> = {
   'Em cobertura': {
     color: 'border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-300',
     dot: 'bg-cyan-500',
@@ -171,7 +174,7 @@ function ProfessionalCard({
   onRestore,
   canRestore = true,
 }: {
-  professional: DemoProfessional
+  professional: ProfessionalProfile
   onRemove: () => void
   onRestore: () => void
   canRestore?: boolean
@@ -273,19 +276,7 @@ function ProfessionalCard({
 }
 
 export default function ProfessionalsPage() {
-  const isDemoMode = useAuthStore((s) => s.isDemoMode)
-  const user = useAuthStore((s) => s.user)
-  const {
-    professionals: demoProfessionals,
-    addProfessional: addDemoProfessional,
-    removeProfessional: removeDemoProfessional,
-    restoreProfessional: restoreDemoProfessional,
-    setProfessionals,
-  } = useProfessionalsStore()
-  const demoInviteCodes = useDoctorDemoStore((state) => state.inviteCodes)
-  const generateDemoInviteCode = useDoctorDemoStore((state) => state.generateInviteCode)
-
-  const [apiProfessionals, setApiProfessionals] = useState<DemoProfessional[]>([])
+  const { professionals, setProfessionals } = useProfessionalsStore()
   const [apiInviteCodes, setApiInviteCodes] = useState<ApiInviteCode[]>([])
   const [isLoadingRemote, setIsLoadingRemote] = useState(false)
   const [search, setSearch] = useState('')
@@ -294,10 +285,7 @@ export default function ProfessionalsPage() {
   const [inviteSectorName, setInviteSectorName] = useState('')
   const [latestInviteCode, setLatestInviteCode] = useState('')
 
-  const professionals = isDemoMode ? demoProfessionals : apiProfessionals
   const inviteCodes = useMemo(() => {
-    if (isDemoMode) return demoInviteCodes
-
     return apiInviteCodes.map((invite) => ({
       id: invite.id,
       code: invite.code,
@@ -306,11 +294,9 @@ export default function ProfessionalsPage() {
       expiresAt: invite.expiresAt.slice(0, 10),
       status: invite.status === 'ACTIVE' ? 'ATIVO' : invite.status === 'USED' ? 'UTILIZADO' : 'EXPIRADO',
     }))
-  }, [apiInviteCodes, demoInviteCodes, isDemoMode])
+  }, [apiInviteCodes])
 
   const loadRemoteData = useCallback(async () => {
-    if (isDemoMode) return
-
     setIsLoadingRemote(true)
     try {
       const api = getApiClient()
@@ -322,9 +308,8 @@ export default function ProfessionalsPage() {
       ])
 
       const mappedProfessionals = usersResponse.data.map((professional) =>
-        mapApiProfessionalToDemo(professional),
+        mapApiProfessionalToProfessional(professional),
       )
-      setApiProfessionals(mappedProfessionals)
       setProfessionals(mappedProfessionals)
       setApiInviteCodes(invitesResponse)
     } catch (error) {
@@ -332,18 +317,13 @@ export default function ProfessionalsPage() {
     } finally {
       setIsLoadingRemote(false)
     }
-  }, [isDemoMode, setProfessionals])
+  }, [setProfessionals])
 
   useEffect(() => {
     void loadRemoteData()
   }, [loadRemoteData])
 
   const handleAddProfessional = async (input: AddProfessionalInput) => {
-    if (isDemoMode) {
-      addDemoProfessional(input)
-      return
-    }
-
     const api = getApiClient()
     await api.post('users/invite', {
       json: {
@@ -359,11 +339,6 @@ export default function ProfessionalsPage() {
   }
 
   const handleRemoveProfessional = async (professionalId: string) => {
-    if (isDemoMode) {
-      removeDemoProfessional(professionalId)
-      return
-    }
-
     try {
       const api = getApiClient()
       await api.delete(`users/${professionalId}`)
@@ -374,11 +349,6 @@ export default function ProfessionalsPage() {
   }
 
   const handleRestoreProfessional = async (professionalId: string) => {
-    if (isDemoMode) {
-      restoreDemoProfessional(professionalId)
-      return
-    }
-
     try {
       const api = getApiClient()
       await api.post(`users/${professionalId}/reactivate`)
@@ -414,46 +384,28 @@ export default function ProfessionalsPage() {
   )
 
   const handleGenerateInviteCode = () => {
-    if (!isDemoMode) {
-      const createRemoteInvite = async () => {
-        try {
-          const fallbackSectorName =
-            inviteSectorName.trim() || inviteSectorSuggestions[0] || 'Equipe Geral'
-          const api = getApiClient()
-          const invite = await api
-            .post('users/invite-codes', {
-              json: {
-                sectorName: fallbackSectorName,
-                expirationDays: 14,
-              },
-            })
-            .json<ApiInviteCode>()
+    const createRemoteInvite = async () => {
+      try {
+        const fallbackSectorName = inviteSectorName.trim() || inviteSectorSuggestions[0] || 'Equipe Geral'
+        const api = getApiClient()
+        const invite = await api
+          .post('users/invite-codes', {
+            json: {
+              sectorName: fallbackSectorName,
+              expirationDays: 14,
+            },
+          })
+          .json<ApiInviteCode>()
 
-          setLatestInviteCode(invite.code)
-          setInviteSectorName('')
-          await loadRemoteData()
-        } catch (error) {
-          toast.error(error instanceof Error ? error.message : 'Falha ao gerar código de convite.')
-        }
+        setLatestInviteCode(invite.code)
+        setInviteSectorName('')
+        await loadRemoteData()
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Falha ao gerar código de convite.')
       }
-
-      void createRemoteInvite()
-      return
     }
 
-    const fallbackSectorName =
-      inviteSectorName.trim() ||
-      inviteSectorSuggestions[0] ||
-      'Equipe Geral'
-
-    const newInvite = generateDemoInviteCode({
-      sectorName: fallbackSectorName,
-      issuedBy: user?.name ?? 'Gestor',
-      expirationDays: 14,
-    })
-
-    setLatestInviteCode(newInvite.code)
-    setInviteSectorName('')
+    void createRemoteInvite()
   }
 
   return (
@@ -518,7 +470,7 @@ export default function ProfessionalsPage() {
           )}
         </AnimatePresence>
 
-        {isLoadingRemote && !isDemoMode ? (
+        {isLoadingRemote ? (
           <div className="card-base p-4 text-sm text-muted-foreground">Sincronizando equipe...</div>
         ) : null}
 
@@ -531,7 +483,7 @@ export default function ProfessionalsPage() {
                 professional={p}
                 onRemove={() => void handleRemoveProfessional(p.id)}
                 onRestore={() => void handleRestoreProfessional(p.id)}
-                canRestore={isDemoMode}
+                canRestore
               />
             ))}
           </AnimatePresence>

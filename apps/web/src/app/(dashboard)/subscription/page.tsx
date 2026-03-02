@@ -7,7 +7,6 @@ import { toast } from 'sonner'
 import { Header } from '@/components/layout/header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { DEMO_SUBSCRIPTION } from '@/lib/demo-data'
 import { useAuthStore } from '@/store/auth.store'
 import { useInstitutionStore } from '@/store/institution.store'
 import { useLocationsStore } from '@/store/locations.store'
@@ -135,7 +134,6 @@ type CheckoutResponse = {
 
 export default function SubscriptionPage() {
   const router = useRouter()
-  const isDemoMode = useAuthStore((state) => state.isDemoMode)
   const user = useAuthStore((state) => state.user)
   const institutionName = useInstitutionStore((state) => state.name)
   const managers = useInstitutionStore((state) => state.managers)
@@ -150,11 +148,10 @@ export default function SubscriptionPage() {
     [user?.organization?.subscription?.plan],
   )
 
-  const currentStatus =
-    user?.organization?.subscription?.status ?? (isDemoMode ? 'ACTIVE' : 'TRIAL')
+  const currentStatus = user?.organization?.subscription?.status ?? 'TRIAL'
   const trialEndsAt = user?.organization?.subscription?.trialEndsAt
-  const limits = isDemoMode ? DEMO_SUBSCRIPTION.limits : PLAN_LIMITS[currentPlan]
-  const supportText = isDemoMode ? DEMO_SUBSCRIPTION.support : PLAN_SUPPORT[currentPlan]
+  const limits = PLAN_LIMITS[currentPlan]
+  const supportText = PLAN_SUPPORT[currentPlan]
   const professionals = useMemo(
     () => allProfessionals.filter((professional) => professional.hospitalStatus === 'ATIVO'),
     [allProfessionals],
@@ -164,29 +161,11 @@ export default function SubscriptionPage() {
     [allLocations],
   )
 
-  const usageItems = isDemoMode
-    ? [
-        {
-          label: 'Profissionais',
-          used: DEMO_SUBSCRIPTION.usage.professionals,
-          limit: DEMO_SUBSCRIPTION.limits.professionals,
-        },
-        {
-          label: 'Locais',
-          used: DEMO_SUBSCRIPTION.usage.locations,
-          limit: DEMO_SUBSCRIPTION.limits.locations,
-        },
-        {
-          label: 'Gestores',
-          used: DEMO_SUBSCRIPTION.usage.managers,
-          limit: DEMO_SUBSCRIPTION.limits.managers,
-        },
-      ]
-    : [
-        { label: 'Profissionais', used: professionals.length, limit: limits.professionals },
-        { label: 'Locais', used: locations.length, limit: limits.locations },
-        { label: 'Gestores', used: managers.length, limit: limits.managers },
-      ]
+  const usageItems = [
+    { label: 'Profissionais', used: professionals.length, limit: limits.professionals },
+    { label: 'Locais', used: locations.length, limit: limits.locations },
+    { label: 'Gestores', used: managers.length, limit: limits.managers },
+  ]
 
   useEffect(() => {
     if (handledCheckoutReturn.current) return
@@ -210,11 +189,6 @@ export default function SubscriptionPage() {
   }, [router])
 
   const handleStartCheckout = async (plan: PlanKey) => {
-    if (isDemoMode) {
-      toast.info('Checkout indisponível no modo demo.')
-      return
-    }
-
     const payload: CheckoutPayload = {
       plan,
       billingCycle: 'MONTHLY',

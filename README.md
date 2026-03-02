@@ -24,7 +24,6 @@ Principais capacidades implementadas:
 - Notificacoes in-app e push (fila com BullMQ + Redis + Firebase)
 - Uploads para S3 com URLs assinadas e operacoes LGPD
 - PWA com service worker (`next-pwa`) e manifest
-- Modos demo (gestor e medico) com datasets locais ricos
 
 ## Arquitetura do repositorio
 
@@ -64,7 +63,7 @@ Rotas principais:
 
 Observacoes:
 - O frontend usa `NEXT_PUBLIC_API_URL` para chamadas HTTP.
-- O estado local possui modo demo para simular operacao completa sem backend.
+- O frontend usa dados reais via API e persiste sessoes com JWT/refresh token.
 
 ### 2) Mobile (`apps/mobile`)
 
@@ -76,9 +75,7 @@ Stack:
 Estado atual de produto:
 - A rota raiz (`apps/mobile/app/index.tsx`) abre o PWA em WebView para manter paridade de UI/UX com a versao web.
 - URL do PWA configuravel por `EXPO_PUBLIC_PWA_URL` (fallback: `https://plantaosync.onrender.com`).
-
-Observacao importante:
-- Existem telas nativas legadas em `apps/mobile/app/(auth)`, `apps/mobile/app/(tabs)` e outras. Elas permanecem no repositorio, mas a experiencia principal atual usa o shell WebView.
+- O app nativo mobile foi consolidado para shell WebView, sem fluxos nativos paralelos.
 
 ### 3) API (`api`)
 
@@ -315,10 +312,9 @@ Workflows em `.github/workflows`:
 - `docs/confirma-plantao-design-system.md` -> diretrizes de UI
 - `docs/publicacao-app-store-connect-confirma-plantao.md` -> guia de publicacao iOS/TestFlight
 
-## Credenciais demo (web)
+## Credenciais de acesso
 
-- Gestor: `gestor@demo.com` / `Senha@123`
-- Medico: `medico@demo.com` / `Senha@123`
+- As contas devem ser criadas via fluxo de cadastro e convites da organizacao.
 
 ## Notas operacionais
 

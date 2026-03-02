@@ -24,9 +24,7 @@ interface AuthState {
   user: AuthUser | null
   accessToken: string | null
   isAuthenticated: boolean
-  /** true only when logged in with demo credentials (gestor@demo.com / medico@demo.com) */
-  isDemoMode: boolean
-  setUser: (user: AuthUser, isDemoMode?: boolean) => void
+  setUser: (user: AuthUser) => void
   setAccessToken: (token: string) => void
   logout: () => void
 }
@@ -37,10 +35,8 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       accessToken: null,
       isAuthenticated: false,
-      isDemoMode: false,
 
-      setUser: (user, isDemoMode = false) =>
-        set({ user, isAuthenticated: true, isDemoMode }),
+      setUser: (user) => set({ user, isAuthenticated: true }),
 
       setAccessToken: (token) => set({ accessToken: token }),
 
@@ -49,7 +45,6 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           accessToken: null,
           isAuthenticated: false,
-          isDemoMode: false,
         }),
     }),
     {
@@ -58,7 +53,6 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         accessToken: state.accessToken,
         isAuthenticated: state.isAuthenticated,
-        isDemoMode: state.isDemoMode,
       }),
     },
   ),

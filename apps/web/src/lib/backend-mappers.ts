@@ -1,6 +1,6 @@
 import type { ScheduleCoverageMode, ScheduleStatus } from '@agendaplantao/shared'
-import type { DemoProfessional } from '@/lib/demo-data'
 import type { ManagerLocation } from '@/store/locations.store'
+import type { ProfessionalProfile } from '@/store/professionals.store'
 import type { ManagerSchedule, ScheduleGeofenceConfig } from '@/store/schedules.store'
 
 type ApiLocation = {
@@ -127,7 +127,7 @@ export function mapApiScheduleToManager(schedule: ApiSchedule): ManagerSchedule 
   }
 }
 
-export function mapApiProfessionalToDemo(user: ApiUser): DemoProfessional {
+export function mapApiProfessionalToProfessional(user: ApiUser): ProfessionalProfile {
   return {
     id: user.id,
     userId: user.id,

@@ -1,6 +1,24 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { DEMO_PROFESSIONALS, type DemoProfessional } from '@/lib/demo-data'
+
+export type ProfessionalStatus = 'Em cobertura' | 'Ativo' | 'Indisponível'
+export type ProfessionalHospitalStatus = 'ATIVO' | 'REMOVIDO'
+
+export interface ProfessionalProfile {
+  id: string
+  userId: string
+  name: string
+  email: string
+  crm: string
+  specialty: string
+  phone?: string
+  status: ProfessionalStatus
+  hospitalStatus: ProfessionalHospitalStatus
+  acceptanceRate: number
+  completedShifts: number
+  nextAvailability: string
+  locations: string[]
+}
 
 interface AddProfessionalInput {
   name: string
@@ -11,23 +29,22 @@ interface AddProfessionalInput {
 }
 
 interface ProfessionalsState {
-  professionals: DemoProfessional[]
-  addProfessional: (input: AddProfessionalInput) => DemoProfessional
-  setProfessionals: (professionals: DemoProfessional[]) => void
+  professionals: ProfessionalProfile[]
+  addProfessional: (input: AddProfessionalInput) => ProfessionalProfile
+  setProfessionals: (professionals: ProfessionalProfile[]) => void
   removeProfessional: (professionalId: string) => void
   restoreProfessional: (professionalId: string) => void
   resetProfessionals: () => void
-  initDemoData: () => void
 }
 
 export const useProfessionalsStore = create<ProfessionalsState>()(
   persist(
     (set) => ({
-      // Start EMPTY — populated via initDemoData() on demo login
+      // Start empty and hydrate from backend when available.
       professionals: [],
 
       addProfessional: (input) => {
-        const newPro: DemoProfessional = {
+        const newPro: ProfessionalProfile = {
           id: `pro-${Date.now()}`,
           userId: `user-${Date.now()}`,
           name: input.name.trim(),
@@ -67,9 +84,6 @@ export const useProfessionalsStore = create<ProfessionalsState>()(
 
       // Reset to empty (real users)
       resetProfessionals: () => set({ professionals: [] }),
-
-      // Populate with demo data (call on demo login only)
-      initDemoData: () => set({ professionals: DEMO_PROFESSIONALS }),
     }),
     {
       name: 'confirma-plantao-professionals',
