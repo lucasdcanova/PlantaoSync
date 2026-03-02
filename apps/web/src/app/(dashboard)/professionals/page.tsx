@@ -22,8 +22,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useProfessionalsStore } from '@/store/professionals.store'
+import { useDoctorDemoStore } from '@/store/doctor-demo.store'
 import { useAuthStore } from '@/store/auth.store'
-import { DEMO_DOCTOR_INVITE_CODES } from '@/lib/demo-data'
 import { cn, getInitials } from '@/lib/utils'
 import type { DemoProfessional } from '@/lib/demo-data'
 
@@ -241,12 +241,15 @@ function ProfessionalCard({
 }
 
 export default function ProfessionalsPage() {
-  const isDemoMode = useAuthStore((s) => s.isDemoMode)
+  const user = useAuthStore((s) => s.user)
   const { professionals, removeProfessional, restoreProfessional } = useProfessionalsStore()
-  const inviteCodes = isDemoMode ? DEMO_DOCTOR_INVITE_CODES : []
+  const inviteCodes = useDoctorDemoStore((state) => state.inviteCodes)
+  const generateInviteCode = useDoctorDemoStore((state) => state.generateInviteCode)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'ativos' | 'todos' | 'removidos'>('ativos')
   const [showAddForm, setShowAddForm] = useState(false)
+  const [inviteSectorName, setInviteSectorName] = useState('')
+  const [latestInviteCode, setLatestInviteCode] = useState('')
 
   const filtered = professionals.filter((p) => {
     const q = search.toLowerCase()
@@ -262,6 +265,32 @@ export default function ProfessionalsPage() {
     ? Math.round(professionals.filter((p) => p.hospitalStatus === 'ATIVO').reduce((s, p) => s + p.acceptanceRate, 0) / activeCount)
     : 0
   const removedCount = professionals.filter((p) => p.hospitalStatus === 'REMOVIDO').length
+  const inviteSectorSuggestions = Array.from(
+    new Set(
+      [
+        ...inviteCodes.map((invite) => invite.sectorName),
+        ...professionals
+          .map((professional) => professional.specialty.trim())
+          .filter((specialty) => specialty.length > 0),
+      ].filter((name) => name.trim().length > 0),
+    ),
+  )
+
+  const handleGenerateInviteCode = () => {
+    const fallbackSectorName =
+      inviteSectorName.trim() ||
+      inviteSectorSuggestions[0] ||
+      'Equipe Geral'
+
+    const newInvite = generateInviteCode({
+      sectorName: fallbackSectorName,
+      issuedBy: user?.name ?? 'Gestor',
+      expirationDays: 14,
+    })
+
+    setLatestInviteCode(newInvite.code)
+    setInviteSectorName('')
+  }
 
   return (
     <>
@@ -341,10 +370,45 @@ export default function ProfessionalsPage() {
 
         {/* Invite codes */}
         <section className="card-base p-6">
-          <h2 className="font-display text-base font-semibold text-foreground">Convites para cadastro médico</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Compartilhe os códigos com médicos para auto-cadastro via <code className="text-xs bg-muted px-1 py-0.5 rounded">/invite</code>.
-          </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="font-display text-base font-semibold text-foreground">Convites para cadastro médico</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Compartilhe os códigos com médicos para auto-cadastro via <code className="text-xs bg-muted px-1 py-0.5 rounded">/invite</code>.
+              </p>
+            </div>
+            <div className="w-full max-w-md space-y-2">
+              <div className="space-y-1">
+                <Label htmlFor="inviteSectorName" className="text-xs text-muted-foreground">
+                  Setor / especialidade do convite
+                </Label>
+                <Input
+                  id="inviteSectorName"
+                  value={inviteSectorName}
+                  onChange={(event) => setInviteSectorName(event.target.value)}
+                  placeholder="Ex.: UTI Adulto"
+                  list="invite-sector-suggestions"
+                  className="h-9"
+                />
+                {inviteSectorSuggestions.length > 0 ? (
+                  <datalist id="invite-sector-suggestions">
+                    {inviteSectorSuggestions.map((sector) => (
+                      <option key={sector} value={sector} />
+                    ))}
+                  </datalist>
+                ) : null}
+              </div>
+              <Button size="sm" className="gap-1.5" onClick={handleGenerateInviteCode}>
+                <Plus className="h-3.5 w-3.5" />
+                Gerar código de convite
+              </Button>
+            </div>
+          </div>
+          {latestInviteCode ? (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Último código gerado: <code className="bg-muted px-1 py-0.5 rounded font-mono">{latestInviteCode}</code>
+            </p>
+          ) : null}
           {inviteCodes.length === 0 ? (
             <p className="mt-4 text-sm text-muted-foreground">Nenhum código de convite gerado ainda.</p>
           ) : (

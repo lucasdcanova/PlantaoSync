@@ -52,6 +52,12 @@ interface RequestSwapPayload {
   reason: string
 }
 
+interface GenerateInviteCodePayload {
+  sectorName: string
+  issuedBy?: string
+  expirationDays?: number
+}
+
 interface AddPrivateShiftPayload {
   date: string
   startTime: string
@@ -72,6 +78,7 @@ interface DoctorDemoState {
   inviteCodes: DemoDoctorInviteCode[]
   registrations: DemoDoctorRegistration[]
   initDemoData: () => void
+  generateInviteCode: (payload: GenerateInviteCodePayload) => DemoDoctorInviteCode
   claimShift: (shiftId: string, valueOverride?: number) => void
   addPrivateShift: (payload: AddPrivateShiftPayload) => DemoDoctorPrivateShift
   requestSwap: (payload: RequestSwapPayload) => void
@@ -112,6 +119,47 @@ function buildEmptyDoctorState(registrations: DemoDoctorRegistration[] = []) {
 
 function normalizeDate(value: string) {
   return value.slice(0, 10)
+}
+
+function toDateOnly(value: Date) {
+  return value.toISOString().slice(0, 10)
+}
+
+function normalizeInviteSectorToken(sectorName: string) {
+  const token = sectorName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 18)
+
+  return token || 'GERAL'
+}
+
+function randomInviteToken(length = 4) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let result = ''
+
+  for (let i = 0; i < length; i += 1) {
+    result += chars[Math.floor(Math.random() * chars.length)]
+  }
+
+  return result
+}
+
+function buildInviteCode(sectorName: string, existingCodes: Set<string>) {
+  const year = new Date().getFullYear()
+  const sectorToken = normalizeInviteSectorToken(sectorName)
+
+  for (let attempts = 0; attempts < 20; attempts += 1) {
+    const candidate = `SG-${sectorToken}-${year}-${randomInviteToken(4)}`
+    if (!existingCodes.has(candidate)) {
+      return candidate
+    }
+  }
+
+  return `SG-${sectorToken}-${year}-${Date.now().toString(36).toUpperCase().slice(-5)}`
 }
 
 function validatePrivateShiftPayload(payload: AddPrivateShiftPayload) {
@@ -155,6 +203,44 @@ export const useDoctorDemoStore = create<DoctorDemoState>()(
           // Preserve registrations created via invite, so the auth demo flow remains usable.
           registrations: state.registrations.map((registration) => ({ ...registration })),
         })),
+
+      generateInviteCode: ({ sectorName, issuedBy, expirationDays }) => {
+        const normalizedSectorName = sectorName.trim() || 'Equipe Geral'
+        const normalizedIssuer = issuedBy?.trim() || 'Gestor'
+        const clampedDays = Number.isFinite(expirationDays)
+          ? Math.min(90, Math.max(1, Math.round(Number(expirationDays))))
+          : 14
+
+        let createdInvite: DemoDoctorInviteCode = {
+          id: '',
+          code: '',
+          sectorName: normalizedSectorName,
+          expiresAt: '',
+          issuedBy: normalizedIssuer,
+          status: 'ATIVO',
+        }
+
+        set((state) => {
+          const existingCodes = new Set(state.inviteCodes.map((invite) => invite.code))
+          const expiresAt = new Date()
+          expiresAt.setDate(expiresAt.getDate() + clampedDays)
+
+          createdInvite = {
+            id: `inv-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+            code: buildInviteCode(normalizedSectorName, existingCodes),
+            sectorName: normalizedSectorName,
+            expiresAt: toDateOnly(expiresAt),
+            issuedBy: normalizedIssuer,
+            status: 'ATIVO',
+          }
+
+          return {
+            inviteCodes: [createdInvite, ...state.inviteCodes],
+          }
+        })
+
+        return createdInvite
+      },
 
       claimShift: (shiftId, valueOverride) =>
         set((state) => {
