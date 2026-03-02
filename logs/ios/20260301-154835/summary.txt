@@ -1,0 +1,10 @@
+Resumo da captura
+=================
+Pasta: logs/ios/20260301-154835
+Device: Lucas DC (00008130-0009252A26C2001C)
+Bundle: com.confirmaplantao.app
+Duracao: 6s
+Launch exit code: 0
+
+Linhas criticas (mais recentes):
+--------------------------------

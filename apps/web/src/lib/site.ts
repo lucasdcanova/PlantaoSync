@@ -1,4 +1,4 @@
-const PROD_URL = 'https://confirmaplantao.com.br'
+const PROD_URL = 'https://plantaosync.onrender.com'
 
 export function getSiteUrl() {
   const rawUrl = process.env.NEXT_PUBLIC_APP_URL

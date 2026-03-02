@@ -1,0 +1,8 @@
+timestamp=20260301-155048
+bundle_id=com.confirmaplantao.app
+duration_sec=3
+device_udid=00008130-0009252A26C2001C
+device_name=Lucas DC
+device_model=iPhone 15 Pro Max
+device_interface=usb
+filter_regex=com\.confirmaplantao\.app|CONFIRMAPLANTO|sandbox|SecTask|WebContent|WebKit|watchdog|EXC_|SIGABRT|SIGSEGV|Terminated|fatal|exception|deny\(

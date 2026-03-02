@@ -27,6 +27,7 @@ import {
   Sparkles,
   Users,
   Wallet,
+  Zap,
 } from 'lucide-react'
 import { ProductLogo } from '@/components/brand/product-logo'
 import { Button } from '@/components/ui/button'
@@ -47,59 +48,59 @@ const revealUp = {
 }
 
 const heroStats = [
-  { value: 'Multiunidade', label: 'cobertura integrada por hospital, UPA e clínica', icon: Building2 },
-  { value: 'Tempo real', label: 'status de confirmação por turno e especialidade', icon: Clock },
-  { value: 'Rastreável', label: 'histórico de decisões para auditoria operacional', icon: ShieldCheck },
-  { value: 'LGPD', label: 'controles de acesso e governança de dados assistenciais', icon: Lock },
+  { value: '30 min', label: 'tempo médio semanal da coordenação para fechar escala', icon: Clock },
+  { value: '< 2 min', label: 'confirmação de plantão pelo profissional', icon: Zap },
+  { value: '100%', label: 'das decisões registradas com rastreabilidade', icon: ShieldCheck },
+  { value: '24h', label: 'para colocar a primeira unidade no ar', icon: Calendar },
 ]
 
 const pillarFeatures = [
   {
     icon: BellRing,
-    title: 'Convocação estruturada',
+    title: 'Convocação instantânea',
     description:
-      'Publicação de plantões com regras por especialidade, setor e prioridade operacional.',
-    items: ['Notificação multicanal', 'Confirmação com data e hora', 'Lembretes programados'],
+      'Publicou a escala, notificou o profissional, recebeu confirmação em tempo real. Sem cobrança manual.',
+    items: ['Push, e-mail e in-app', 'Confirmação com timestamp', 'Lembretes automáticos'],
   },
   {
     icon: ArrowLeftRight,
-    title: 'Substituições com governança',
+    title: 'Trocas sob controle',
     description:
-      'Trocas de plantão com fluxo formal de solicitação, aprovação e trilha de responsabilização.',
-    items: ['Fluxo por alçada', 'Histórico auditável', 'Alertas para turnos críticos'],
+      'Toda troca passa por solicitação, aprovação e histórico. Nada fica informal ou fora do sistema.',
+    items: ['Fluxo aprovado por gestor', 'Histórico auditável', 'Alertas para turnos críticos'],
   },
   {
     icon: BarChart3,
-    title: 'Visão executiva da cobertura',
+    title: 'Cobertura em tempo real',
     description:
-      'Monitoramento de risco assistencial por unidade, setor e janela de plantão.',
-    items: ['Painel consolidado', 'Visão por unidade', 'Indicadores operacionais'],
+      'Acompanhe risco de lacuna por setor e especialidade com visual claro para ação rápida da coordenação.',
+    items: ['Status por cor', 'Visão por unidade', 'Indicadores semanais'],
   },
   {
     icon: Wallet,
     title: 'Financeiro integrado',
     description:
-      'Consolidação financeira por profissional e unidade com base nas confirmações efetivas.',
-    items: ['Custo por plantão', 'Fechamento mensal', 'Exportação para conferência'],
+      'Fechamento por profissional e por unidade sem planilha paralela. Exportação pronta para pagamento.',
+    items: ['Custo por plantão', 'Fechamento mensal', 'Exportação Excel/PDF'],
   },
 ]
 
 const testimonials = [
   {
     quote:
-      'Padronizamos o processo de confirmação e reduzimos o tempo de alinhamento entre coordenação e corpo clínico.',
+      'Antes, passávamos a noite caçando confirmação no WhatsApp. Hoje, a cobertura aparece em tempo real no painel.',
     name: 'Dra. Mariana Castro',
     role: 'Coordenadora médica · Hospital regional',
   },
   {
     quote:
-      'A operação ganhou previsibilidade semanal com visibilidade centralizada de pendências e cobertura.',
+      'O tempo que a equipe perdeu por anos em planilha virou hora de gestão clínica de verdade. Foi uma virada operacional.',
     name: 'Carlos Henrique M.',
     role: 'Gerente de operações · Rede de clínicas',
   },
   {
     quote:
-      'A rastreabilidade de trocas e confirmações trouxe segurança para auditorias e para o fechamento mensal.',
+      'A rastreabilidade das trocas e confirmações trouxe segurança para auditoria e eliminou discussão no fechamento.',
     name: 'Fernanda Ribeiro',
     role: 'Diretora administrativa · UPA metropolitana',
   },
@@ -109,7 +110,7 @@ const pricingPlans = [
   {
     name: 'Básico',
     price: 'R$ 297',
-    subtitle: 'Adequado para operações em fase inicial de padronização.',
+    subtitle: 'Para clínicas e equipes em início de digitalização.',
     highlights: ['15 profissionais', '1 unidade', '2 gestores'],
     features: [
       'Publicação e confirmação de escalas',
@@ -123,7 +124,7 @@ const pricingPlans = [
   {
     name: 'Premium',
     price: 'R$ 597',
-    subtitle: 'Adequado para hospitais com múltiplos setores e cobertura contínua.',
+    subtitle: 'Para hospitais e operações com múltiplos setores críticos.',
     highlights: ['30 profissionais', '2 unidades', '3 gestores'],
     features: [
       'Tudo do plano Básico',
@@ -137,7 +138,7 @@ const pricingPlans = [
   {
     name: 'Enterprise',
     price: 'R$ 1.197',
-    subtitle: 'Adequado para redes hospitalares com alta complexidade operacional.',
+    subtitle: 'Para redes hospitalares com alta complexidade operacional.',
     highlights: ['100 profissionais', '8 unidades', '10 gestores'],
     features: [
       'Tudo do plano Premium',
@@ -154,7 +155,7 @@ const faqItems = [
   {
     question: 'Quanto tempo leva para colocar a primeira escala no ar?',
     answer:
-      'O cronograma depende da estrutura da instituição. Em operações padrão, a configuração inicial costuma ser concluída em curto prazo com apoio do onboarding.',
+      'A maioria das equipes publica a primeira escala em menos de 24 horas. O setup inicial costuma levar cerca de 30 minutos por unidade.',
   },
   {
     question: 'Os profissionais precisam instalar aplicativo?',
@@ -164,7 +165,7 @@ const faqItems = [
   {
     question: 'Como funciona a migração das planilhas atuais?',
     answer:
-      'É possível importar profissionais, setores e histórico por planilha. O processo pode ser acompanhado pela equipe de implantação conforme o plano contratado.',
+      'Você pode importar profissionais, setores e histórico via planilha. Nos planos Premium e Enterprise o time acompanha a migração.',
   },
   {
     question: 'Tem integração com sistemas hospitalares?',
@@ -295,19 +296,19 @@ export function LandingPage() {
               </div>
 
               <h1 className="text-4xl font-bold tracking-tight text-[#111318] sm:text-5xl md:text-6xl lg:text-7xl">
-                Governança de escalas médicas
-                <span className="mt-1 block text-[#5f7f7c]">para instituições de saúde.</span>
+                Escala médica sem caos.
+                <span className="mt-1 block text-[#5f7f7c]">Cobertura previsível todos os dias.</span>
               </h1>
 
               <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-[#5e6a7b] sm:text-lg">
-                O {BRAND_NAME} centraliza publicação, confirmação, substituições e fechamento financeiro
-                em um fluxo único, rastreável e orientado à continuidade assistencial.
+                O Agenda Plantão transforma publicação, confirmação, troca e fechamento financeiro em
+                um fluxo único. Menos planilha, menos ligação, mais previsibilidade assistencial.
               </p>
 
               <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
                 <Button asChild size="lg" className="w-full bg-[#111318] text-white hover:bg-[#1f2937] sm:w-auto">
                   <Link href="/register">
-                    Solicitar apresentação institucional <ArrowRight className="ml-2 h-4 w-4" />
+                    Testar 7 dias grátis <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
                 <Button
@@ -316,12 +317,12 @@ export function LandingPage() {
                   variant="outline"
                   className="w-full border-[#bcc9d5] bg-white/80 text-[#111318] hover:bg-white sm:w-auto"
                 >
-                  <Link href="/login">Acesso da equipe</Link>
+                  <Link href="/login">Já tenho conta</Link>
                 </Button>
               </div>
 
               <div className="mt-9 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-[#516073]">
-                {['Implantação assistida', 'Trilha de auditoria', 'Conformidade LGPD'].map((chip) => (
+                {['Sem cartão de crédito', 'Onboarding em 24h', 'Conforme LGPD'].map((chip) => (
                   <span key={chip} className="inline-flex items-center gap-1 rounded-full border border-[#d7e2eb] bg-white px-3 py-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-[#2bb5ab]" />
                     {chip}
@@ -339,7 +340,7 @@ export function LandingPage() {
               className="absolute bottom-8 left-1/2 z-10 -translate-x-1/2 text-[#6a7586] transition-colors hover:text-[#2bb5ab]"
               aria-label="Descer para a próxima seção"
             >
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.2em]">Visão geral</span>
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.2em]">Descubra</span>
               <motion.span
                 className="mt-1 block"
                 animate={{ y: [0, 6, 0] }}
@@ -357,7 +358,7 @@ export function LandingPage() {
                 transition={{ duration: 0.45, ease: landingEase }}
                 className="mb-8 text-center text-xs font-semibold uppercase tracking-[0.14em] text-[#68788e]"
               >
-                Estrutura operacional para governança de escalas em hospitais, UPAs e clínicas
+                Estrutura completa para gestão de plantões em hospitais, UPAs e clínicas
               </motion.p>
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -383,10 +384,10 @@ export function LandingPage() {
                 title={
                   <>
                     Cobertura em tempo real
-                    <span className="block text-[#8de0da]">com leitura executiva para tomada de decisão</span>
+                    <span className="block text-[#8de0da]">com leitura clara para agir rápido</span>
                   </>
                 }
-                subtitle="Visualize turnos confirmados, pendências e risco assistencial em um único painel institucional."
+                subtitle="Visualize turnos confirmados, pendências e risco assistencial em um único painel. Sem depender de planilha paralela."
                 light={false}
               />
 
@@ -464,7 +465,7 @@ export function LandingPage() {
                   </div>
 
                   <Button className="mt-5 w-full bg-[#4ecdc4] font-semibold text-[#0f1a1f] hover:bg-[#5fd8cf]">
-                    Visualizar painel institucional
+                    Abrir painel completo
                   </Button>
                 </motion.div>
               </div>
@@ -477,19 +478,19 @@ export function LandingPage() {
                 <motion.div {...revealUp} transition={{ duration: 0.5, ease: landingEase }}>
                   <SectionBadge>Convocação inteligente</SectionBadge>
                   <h3 className="mt-4 text-3xl font-bold tracking-tight text-[#111318] sm:text-4xl">
-                    Publicação centralizada,
-                    <span className="block text-[#2bb5ab]">confirmação rastreável por evento.</span>
+                    Publicou a escala,
+                    <span className="block text-[#2bb5ab]">a confirmação já começa a acontecer.</span>
                   </h3>
                   <p className="mt-4 text-base leading-relaxed text-[#5a6778]">
-                    O profissional recebe o plantão com regras definidas pela instituição, e a resposta
-                    retorna ao painel com status e trilha de auditoria para coordenação e gestão.
+                    O profissional recebe o plantão com setor, horário e valor. A resposta volta para o painel
+                    com timestamp e status atualizado para toda a coordenação.
                   </p>
                   <ul className="mt-6 space-y-3">
                     {[
                       'Notificação push com ação direta',
-                      'Escalada automática para lista de backup',
-                      'Registro de confirmação, recusa e ausência de resposta',
-                      'Histórico para auditoria e governança assistencial',
+                      'Escalada automática para backup quando não há resposta',
+                      'Registro de quem confirmou, recusou ou ignorou',
+                      'Histórico para auditoria e governança operacional',
                     ].map((item) => (
                       <li key={item} className="flex items-start gap-2.5 text-sm text-[#516073]">
                         <CheckCircle2 className="mt-0.5 h-4 w-4 text-[#2bb5ab]" />
@@ -559,18 +560,18 @@ export function LandingPage() {
                 {[
                   {
                     icon: Sparkles,
-                    title: 'Priorização por critérios',
-                    text: 'Sugere profissionais elegíveis com base em disponibilidade, perfil e histórico operacional.',
+                    title: 'Prioridade por aderência',
+                    text: 'Ordena profissionais pelo histórico de confirmação para aquele tipo de turno.',
                   },
                   {
                     icon: RefreshCw,
-                    title: 'Reconvocação parametrizada',
-                    text: 'Na ausência de resposta dentro do prazo, o fluxo aciona automaticamente a lista de backup.',
+                    title: 'Reconvocação automática',
+                    text: 'Se não houver resposta no prazo, reabre lista de backup sem ação manual da coordenação.',
                   },
                   {
                     icon: MessageSquareOff,
-                    title: 'Comunicação centralizada',
-                    text: 'As decisões ficam registradas no sistema, reduzindo dependência de canais paralelos.',
+                    title: 'Menos ruído operacional',
+                    text: 'Centraliza resposta no sistema e evita decisões espalhadas em grupos de mensagem.',
                   },
                 ].map((card, index) => (
                   <motion.div
@@ -629,17 +630,17 @@ export function LandingPage() {
                 <motion.div {...revealUp} transition={{ duration: 0.5, ease: landingEase }}>
                   <SectionBadge>Financeiro integrado</SectionBadge>
                   <h3 className="mt-4 text-3xl font-bold tracking-tight text-[#111318] sm:text-4xl">
-                    Escala e custo na mesma governança.
-                    <span className="block text-[#2bb5ab]">Conciliação com base em eventos confirmados.</span>
+                    Escala e custo no mesmo fluxo.
+                    <span className="block text-[#2bb5ab]">Sem retrabalho no fechamento.</span>
                   </h3>
                   <p className="mt-4 text-base leading-relaxed text-[#5a6778]">
-                    O sistema consolida valores por plantão confirmado, profissional e unidade.
-                    O fechamento mensal passa a seguir um processo padronizado e verificável.
+                    O sistema acumula valor por plantão confirmado, por profissional e por unidade.
+                    Você fecha o mês com previsibilidade e exporta em poucos cliques.
                   </p>
                   <ul className="mt-6 space-y-3">
                     {[
                       'Parametrização por especialidade e turno',
-                      'Conciliação automática com confirmações efetivas',
+                      'Conciliação automática com confirmações reais',
                       'Relatório por unidade, setor e profissional',
                       'Exportação para financeiro e contabilidade',
                     ].map((item) => (
@@ -661,33 +662,33 @@ export function LandingPage() {
                 title={
                   <>
                     Processo contínuo de publicação,
-                    <span className="block text-[#8de0da]">confirmação e substituição de plantões</span>
+                    <span className="block text-[#8de0da]">confirmação e substituição</span>
                   </>
                 }
-                subtitle="Mesmo em escalas dinâmicas, a instituição mantém previsibilidade operacional e rastreabilidade ponta a ponta."
+                subtitle="Mesmo em escala dinâmica, sua operação mantém previsibilidade e rastreabilidade ponta a ponta."
                 light={false}
               />
 
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {[
                   {
-                    title: '1. Estruturar escala',
-                    text: 'Defina turnos, especialidades e regras por unidade assistencial.',
+                    title: '1. Publicar escala',
+                    text: 'Defina turnos, especialidade e valores por unidade em poucos cliques.',
                     icon: Calendar,
                   },
                   {
-                    title: '2. Confirmar cobertura',
-                    text: 'As respostas dos profissionais atualizam o painel institucional em tempo real.',
+                    title: '2. Confirmar plantões',
+                    text: 'Profissionais respondem em 1 toque com atualização automática no painel.',
                     icon: BellRing,
                   },
                   {
-                    title: '3. Gerir substituições',
-                    text: 'Trocas de plantão seguem fluxo formal de aprovação e registro.',
+                    title: '3. Resolver trocas',
+                    text: 'Trocas passam por aprovação formal com histórico de cada decisão.',
                     icon: ArrowLeftRight,
                   },
                   {
-                    title: '4. Consolidar resultados',
-                    text: 'Cobertura e financeiro ficam disponíveis para conferência e prestação de contas.',
+                    title: '4. Fechar operação',
+                    text: 'Consolide cobertura e financeiro com relatório pronto para gestão.',
                     icon: BarChart3,
                   },
                 ].map((step, index) => (
@@ -716,11 +717,11 @@ export function LandingPage() {
                 badge="Pilares da plataforma"
                 title={
                   <>
-                    Arquitetura operacional única
-                    <span className="block text-[#2bb5ab]">para reduzir dispersão de processo</span>
+                    Design operacional direto,
+                    <span className="block text-[#2bb5ab]">para reduzir esforço de coordenação</span>
                   </>
                 }
-                subtitle="Um mesmo padrão de trabalho em toda a jornada: identificar risco, decidir e registrar."
+                subtitle="A mesma lógica visual em toda a jornada: identificar risco, agir rápido e registrar tudo."
               />
 
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -758,11 +759,11 @@ export function LandingPage() {
                 badge="Para quem é"
                 title={
                   <>
-                    Áreas assistenciais e administrativas
-                    <span className="block text-[#2bb5ab]">na mesma base operacional</span>
+                    Três perspectivas,
+                    <span className="block text-[#2bb5ab]">uma operação sincronizada</span>
                   </>
                 }
-                subtitle="Direção, coordenação e profissionais atuam sobre a mesma fonte de dados."
+                subtitle="Direção, coordenação e profissionais trabalham na mesma fonte de verdade."
               />
 
               <div className="grid gap-5 md:grid-cols-3">
@@ -883,14 +884,14 @@ export function LandingPage() {
           <section id="planos" className="px-4 py-20 sm:px-6 md:py-24">
             <div className="mx-auto max-w-6xl">
               <SectionIntro
-                badge="Modelos de contratação"
+                badge="Planos"
                 title={
                   <>
-                    Estrutura contratual por
-                    <span className="block text-[#2bb5ab]">porte operacional da instituição</span>
+                    Estrutura clara para crescer
+                    <span className="block text-[#2bb5ab]">da clínica à rede hospitalar</span>
                   </>
                 }
-                subtitle="Modelos com escopo progressivo para clínicas, hospitais e redes multiunidade."
+                subtitle="Todos os planos incluem onboarding e período de teste para validar o fluxo com sua equipe real."
               />
 
               <div className="grid gap-6 lg:grid-cols-3">
@@ -910,7 +911,7 @@ export function LandingPage() {
                   >
                     {plan.featured && (
                       <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#4ecdc4] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#0f1c20]">
-                        Referência hospitalar
+                        Mais escolhido
                       </span>
                     )}
 
@@ -951,7 +952,7 @@ export function LandingPage() {
                           : 'bg-[#111318] text-white hover:bg-[#1f2937]',
                       )}
                     >
-                      <Link href="/register">Solicitar proposta</Link>
+                      <Link href="/register">Começar com este plano</Link>
                     </Button>
                   </motion.div>
                 ))}
@@ -965,11 +966,11 @@ export function LandingPage() {
                 badge="Depoimentos"
                 title={
                   <>
-                    Experiência de instituições
-                    <span className="block text-[#8de0da]">em operação com fluxo padronizado</span>
+                    Quem saiu da planilha
+                    <span className="block text-[#8de0da]">não volta para o antigo fluxo</span>
                   </>
                 }
-                subtitle="Relatos de lideranças assistenciais e administrativas sobre padronização operacional."
+                subtitle="Relatos de gestores e coordenações que reduziram esforço operacional e ganharam previsibilidade de cobertura."
                 light={false}
               />
 
@@ -1001,10 +1002,10 @@ export function LandingPage() {
                 title={
                   <>
                     Perguntas frequentes
-                    <span className="block text-[#8de0da]">sobre implantação e governança</span>
+                    <span className="block text-[#8de0da]">sobre implementação e operação</span>
                   </>
                 }
-                subtitle="Pontos recorrentes no planejamento de adoção institucional da plataforma."
+                subtitle="Tudo o que normalmente é discutido antes da virada da gestão de escalas para um fluxo estruturado."
                 light={false}
               />
 
@@ -1065,10 +1066,10 @@ export function LandingPage() {
                   transition={{ duration: 0.45, delay: 0.12, ease: landingEase }}
                   className="rounded-2xl border border-white/15 bg-white/10 p-6 backdrop-blur-sm lg:col-span-5 lg:sticky lg:top-24"
                 >
-                  <h3 className="text-xl font-bold">Atendimento institucional</h3>
+                  <h3 className="text-xl font-bold">Suporte para implementação</h3>
                   <p className="mt-3 text-sm leading-relaxed text-[#c2d3df]">
-                    Nossa equipe apoia o desenho inicial de unidades, setores, profissionais e regras de confirmação
-                    conforme a rotina operacional da instituição.
+                    Se você quiser validar no seu cenário real, nosso time ajuda no desenho inicial de unidades,
+                    setores, profissionais e fluxo de confirmação.
                   </p>
 
                   <div className="mt-6 space-y-3">
@@ -1080,18 +1081,18 @@ export function LandingPage() {
                     </a>
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div className="rounded-xl border border-white/12 bg-white/5 p-3 text-center">
-                        <p className="font-semibold text-white">Retorno inicial</p>
-                        <p className="mt-1 text-[#a9becc]">em dias úteis</p>
+                        <p className="font-semibold text-white">Resposta rápida</p>
+                        <p className="mt-1 text-[#a9becc]">dias úteis</p>
                       </div>
                       <div className="rounded-xl border border-white/12 bg-white/5 p-3 text-center">
                         <p className="font-semibold text-white">Acompanhamento</p>
-                        <p className="mt-1 text-[#a9becc]">durante implantação</p>
+                        <p className="mt-1 text-[#a9becc]">durante onboarding</p>
                       </div>
                     </div>
                   </div>
 
                   <Button asChild className="mt-6 w-full bg-[#4ecdc4] text-[#0f1c20] hover:bg-[#5fd8cf]">
-                    <Link href="/register">Solicitar reunião técnica</Link>
+                    <Link href="/register">Solicitar demonstração guiada</Link>
                   </Button>
                 </motion.aside>
               </div>
@@ -1105,24 +1106,24 @@ export function LandingPage() {
                 transition={{ duration: 0.46, ease: landingEase }}
                 className="rounded-3xl border border-[#d6e1e8] bg-white px-6 py-10 text-center text-[#111318] shadow-[0_16px_44px_-30px_rgba(15,23,42,0.45)] sm:px-12"
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.17em] text-[#516073]">Planejamento de implantação</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.17em] text-[#516073]">Teste gratuito</p>
                 <h3 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-                  Estruture a governança de escalas
-                  <span className="block">da sua instituição.</span>
+                  Leve sua operação de escala
+                  <span className="block">do improviso para o controle.</span>
                 </h3>
                 <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-[#5b6a7d] sm:text-base">
-                  Agende uma apresentação institucional, avalie aderência ao seu cenário operacional e
-                  defina um plano de implantação por unidade.
+                  Você pode começar agora, validar o fluxo em uma unidade piloto e expandir para toda a
+                  instituição com o mesmo padrão de execução.
                 </p>
 
                 <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
                   <Button asChild className="w-full bg-[#0f1c20] text-white hover:bg-[#1b2d34] sm:w-auto">
                     <Link href="/register">
-                      Agendar apresentação institucional <ArrowRight className="ml-2 h-4 w-4" />
+                      Começar gratuitamente <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
                   <Button asChild variant="outline" className="w-full border-[#c8d4de] bg-white text-[#111318] hover:bg-[#f4f8fb] sm:w-auto">
-                    <Link href="/faq">Consultar perguntas frequentes</Link>
+                    <Link href="/faq">Ver perguntas frequentes</Link>
                   </Button>
                 </div>
               </motion.div>
@@ -1141,7 +1142,7 @@ export function LandingPage() {
                   <p className="text-base font-bold text-white">{BRAND_NAME}</p>
                 </div>
                 <p className="mt-3 max-w-xs text-sm leading-relaxed text-[#a8bac6]">
-                  Plataforma para governança de escalas médicas, confirmação de cobertura e rastreabilidade operacional.
+                  Gestão de escalas médicas com confirmação em tempo real para hospitais, UPAs e clínicas.
                 </p>
               </div>
 
@@ -1188,9 +1189,9 @@ export function LandingPage() {
                 <p className="mb-3 text-sm font-semibold text-white">Acesso</p>
                 <ul className="space-y-2 text-sm">
                   {[
-                    { label: 'Solicitar acesso', href: '/register' },
-                    { label: 'Acesso da equipe', href: '/login' },
-                    { label: 'Suporte de acesso', href: '/forgot-password' },
+                    { label: 'Criar conta', href: '/register' },
+                    { label: 'Entrar', href: '/login' },
+                    { label: 'Recuperar senha', href: '/forgot-password' },
                   ].map((item) => (
                     <li key={item.label}>
                       <Link href={item.href} className="transition-colors hover:text-white">
@@ -1204,7 +1205,7 @@ export function LandingPage() {
 
             <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-xs sm:flex-row">
               <p>© 2026 {BRAND_NAME}. Todos os direitos reservados.</p>
-              <p>Desenvolvido para operações assistenciais com exigência de governança.</p>
+              <p>Feito para quem cuida de quem cuida.</p>
             </div>
           </div>
         </footer>
