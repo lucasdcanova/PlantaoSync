@@ -27,6 +27,7 @@ import {
   type ProfessionalProfile,
 } from '@/store/professionals.store'
 import { getApiClient } from '@/lib/api'
+import { useAuthStore } from '@/store/auth.store'
 import {
   mapApiProfessionalToProfessional,
   type ApiInviteCode,
@@ -277,6 +278,8 @@ function ProfessionalCard({
 
 export default function ProfessionalsPage() {
   const { professionals, setProfessionals } = useProfessionalsStore()
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const accessToken = useAuthStore((state) => state.accessToken)
   const [apiInviteCodes, setApiInviteCodes] = useState<ApiInviteCode[]>([])
   const [isLoadingRemote, setIsLoadingRemote] = useState(false)
   const [search, setSearch] = useState('')
@@ -297,12 +300,13 @@ export default function ProfessionalsPage() {
   }, [apiInviteCodes])
 
   const loadRemoteData = useCallback(async () => {
+    if (!isAuthenticated || !accessToken) return
     setIsLoadingRemote(true)
     try {
       const api = getApiClient()
       const [usersResponse, invitesResponse] = await Promise.all([
         api
-          .get('users', { searchParams: { role: 'PROFESSIONAL', limit: 200 } })
+          .get('users', { searchParams: { role: 'PROFESSIONAL', limit: 100 } })
           .json<{ data: Array<{ id: string; name: string; email: string; crm?: string | null; specialty?: string | null; phone?: string | null; isActive?: boolean }> }>(),
         api.get('users/invite-codes').json<ApiInviteCode[]>(),
       ])
@@ -317,7 +321,7 @@ export default function ProfessionalsPage() {
     } finally {
       setIsLoadingRemote(false)
     }
-  }, [setProfessionals])
+  }, [accessToken, isAuthenticated, setProfessionals])
 
   useEffect(() => {
     void loadRemoteData()

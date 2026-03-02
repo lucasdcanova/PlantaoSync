@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import {
@@ -38,11 +38,20 @@ const mobileNavItems: BottomNavItem[] = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const { user, logout } = useAuthStore()
+  const { user, accessToken, isAuthenticated, hasHydrated, logout } = useAuthStore()
   const institution = useInstitutionStore()
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed)
   const [logoAnimating, setLogoAnimating] = useState(false)
   const orgName = institution.name || user?.organization?.name || 'Hospital'
+  const canAccessDashboard =
+    isAuthenticated && Boolean(accessToken) && Boolean(user) && (user?.role === 'ADMIN' || user?.role === 'MANAGER')
+
+  useEffect(() => {
+    if (!hasHydrated) return
+    if (!canAccessDashboard) {
+      router.replace('/login')
+    }
+  }, [canAccessDashboard, hasHydrated, router])
 
   const handleLogoTap = useCallback(() => {
     if (logoAnimating) return
@@ -57,6 +66,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const handleOpenInstitution = () => {
     router.push('/institution')
+  }
+
+  if (!hasHydrated || !canAccessDashboard) {
+    return null
   }
 
   return (

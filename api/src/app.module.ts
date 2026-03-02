@@ -19,9 +19,6 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
 import { StorageModule } from './modules/storage/storage.module'
 import { UploadsModule } from './modules/uploads/uploads.module'
 
-const shouldEnableNotifications =
-  Boolean(process.env.REDIS_URL?.trim()) || Boolean(process.env.REDIS_HOST?.trim())
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -45,7 +42,7 @@ const shouldEnableNotifications =
     SchedulesModule,
     ShiftsModule,
     ConfirmationsModule,
-    ...(shouldEnableNotifications ? [NotificationsModule] : []),
+    NotificationsModule,
     ReportsModule,
     FinancesModule,
     SubscriptionsModule,

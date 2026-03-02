@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   Logger,
+  Optional,
 } from '@nestjs/common'
 import { InjectQueue } from '@nestjs/bullmq'
 import { Queue } from 'bullmq'
@@ -26,7 +27,7 @@ export class NotificationsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    @InjectQueue('notifications') private readonly notificationsQueue: Queue,
+    @Optional() @InjectQueue('notifications') private readonly notificationsQueue?: Queue,
   ) {}
 
   async findAll(userId: string, filters: NotificationFilters = {}) {
@@ -90,6 +91,11 @@ export class NotificationsService {
   }
 
   async sendPush(userId: string, payload: PushPayload) {
+    if (!this.notificationsQueue) {
+      this.logger.warn('Fila de notificações indisponível (Redis não configurado). Push não enfileirado.')
+      return
+    }
+
     await this.notificationsQueue.add('send-push', { userId, payload }, {
       attempts: 3,
       backoff: { type: 'exponential', delay: 2000 },
@@ -97,6 +103,11 @@ export class NotificationsService {
   }
 
   async sendBulkPush(userIds: string[], payload: PushPayload) {
+    if (!this.notificationsQueue) {
+      this.logger.warn('Fila de notificações indisponível (Redis não configurado). Push em lote não enfileirado.')
+      return
+    }
+
     await this.notificationsQueue.add(
       'batch-notify',
       { userIds, payload },

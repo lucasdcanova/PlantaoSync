@@ -5,6 +5,7 @@ import { Bell, Shield } from 'lucide-react'
 import { Header } from '@/components/layout/header'
 import { Badge } from '@/components/ui/badge'
 import { getApiClient } from '@/lib/api'
+import { useAuthStore } from '@/store/auth.store'
 
 type UserRow = {
   id: string
@@ -24,11 +25,15 @@ function EmptySection({ icon: Icon, message }: { icon: React.ElementType; messag
 }
 
 export default function SettingsPage() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const accessToken = useAuthStore((state) => state.accessToken)
+
   const { data: users } = useQuery({
     queryKey: ['settings-users'],
+    enabled: isAuthenticated && Boolean(accessToken),
     queryFn: async () => {
       const api = getApiClient()
-      const response = await api.get('users', { searchParams: { limit: 300 } }).json<{ data: UserRow[] }>()
+      const response = await api.get('users', { searchParams: { limit: 100 } }).json<{ data: UserRow[] }>()
       return response.data
     },
   })

@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { HTTPError } from 'ky'
 import { Activity, AlertTriangle, CalendarCheck2, MapPin, ShieldCheck, Users } from 'lucide-react'
 import { Header } from '@/components/layout/header'
 import { KpiCard } from '@/components/dashboard/kpi-card'
@@ -9,6 +10,7 @@ import { PageTransition } from '@/components/shared/page-transition'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getApiClient } from '@/lib/api'
+import { useAuthStore } from '@/store/auth.store'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 type TenantStatsResponse = {
@@ -34,9 +36,10 @@ type NotificationItem = {
   readAt?: string | null
 }
 
-function useOverviewStats() {
+function useOverviewStats(enabled: boolean) {
   return useQuery({
     queryKey: ['overview-stats'],
+    enabled,
     queryFn: async () => {
       const api = getApiClient()
       const [tenantStats, occupancy] = await Promise.all([
@@ -55,22 +58,36 @@ function useOverviewStats() {
   })
 }
 
-function useRecentNotifications() {
+function useRecentNotifications(enabled: boolean) {
   return useQuery({
     queryKey: ['overview-notifications'],
+    enabled,
     queryFn: async () => {
       const api = getApiClient()
-      const response = await api
-        .get('notifications', { searchParams: { limit: 8 } })
-        .json<{ data: NotificationItem[] }>()
-      return response.data
+      try {
+        const response = await api
+          .get('notifications', { searchParams: { limit: 8 } })
+          .json<{ data: NotificationItem[] }>()
+        return response.data
+      } catch (error) {
+        if (error instanceof HTTPError && error.response.status === 404) {
+          return []
+        }
+        throw error
+      }
     },
   })
 }
 
 export default function OverviewPage() {
-  const { data: stats, isLoading: statsLoading } = useOverviewStats()
-  const { data: notifications, isLoading: notificationsLoading } = useRecentNotifications()
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const accessToken = useAuthStore((state) => state.accessToken)
+  const userRole = useAuthStore((state) => state.user?.role)
+  const canLoadData =
+    isAuthenticated && Boolean(accessToken) && (userRole === 'ADMIN' || userRole === 'MANAGER')
+
+  const { data: stats, isLoading: statsLoading } = useOverviewStats(canLoadData)
+  const { data: notifications, isLoading: notificationsLoading } = useRecentNotifications(canLoadData)
 
   const alerts = useMemo(() => {
     if (!stats) return []

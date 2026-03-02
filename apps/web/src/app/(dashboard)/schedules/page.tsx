@@ -19,6 +19,7 @@ import { useSchedulesStore } from '@/store/schedules.store'
 
 export default function SchedulesPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const accessToken = useAuthStore((state) => state.accessToken)
   const schedules = useSchedulesStore((state) => state.schedules)
   const setSchedules = useSchedulesStore((state) => state.setSchedules)
   const locations = useLocationsStore((state) => state.locations)
@@ -26,7 +27,7 @@ export default function SchedulesPage() {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated || !accessToken) return
 
     let cancelled = false
 
@@ -34,7 +35,7 @@ export default function SchedulesPage() {
       try {
         const api = getApiClient()
         const response = await api
-          .get('schedules', { searchParams: { limit: 200 } })
+          .get('schedules', { searchParams: { limit: 100 } })
           .json<{ data: unknown[] }>()
 
         if (cancelled) return
@@ -56,7 +57,7 @@ export default function SchedulesPage() {
     return () => {
       cancelled = true
     }
-  }, [isAuthenticated, setSchedules])
+  }, [accessToken, isAuthenticated, setSchedules])
 
   const locationNameById = useMemo(
     () => new Map(locations.map((location) => [location.id, location.name])),

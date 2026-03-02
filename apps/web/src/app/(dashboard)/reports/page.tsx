@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getApiClient } from '@/lib/api'
+import { useAuthStore } from '@/store/auth.store'
 import { formatCurrency } from '@/lib/utils'
 
 type OccupancyResponse = {
@@ -62,9 +63,15 @@ function buildCsv(rows: HoursRow[]) {
 
 export default function ReportsPage() {
   const [search, setSearch] = useState('')
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const accessToken = useAuthStore((state) => state.accessToken)
+  const userRole = useAuthStore((state) => state.user?.role)
+  const canLoadReports =
+    isAuthenticated && Boolean(accessToken) && (userRole === 'ADMIN' || userRole === 'MANAGER')
 
   const { data: occupancy, isLoading: occupancyLoading } = useQuery({
     queryKey: ['reports-occupancy'],
+    enabled: canLoadReports,
     queryFn: async () => {
       const api = getApiClient()
       return api.get('reports/occupancy').json<OccupancyResponse>()
@@ -73,6 +80,7 @@ export default function ReportsPage() {
 
   const { data: hours, isLoading: hoursLoading } = useQuery({
     queryKey: ['reports-hours'],
+    enabled: canLoadReports,
     queryFn: async () => {
       const api = getApiClient()
       return api.get('reports/hours').json<HoursResponse>()
@@ -81,6 +89,7 @@ export default function ReportsPage() {
 
   const { data: costs, isLoading: costsLoading } = useQuery({
     queryKey: ['reports-costs'],
+    enabled: canLoadReports,
     queryFn: async () => {
       const api = getApiClient()
       return api.get('reports/costs').json<CostsResponse>()
