@@ -4,12 +4,72 @@ import {
   BadRequestException,
 } from '@nestjs/common'
 import { EventEmitter2 } from '@nestjs/event-emitter'
+import { ScheduleCoverageMode } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { CreateScheduleDto } from './dto/create-schedule.dto'
 import { UpdateScheduleDto } from './dto/update-schedule.dto'
 import { ScheduleFiltersDto } from './dto/schedule-filters.dto'
 
 const OPEN_ENDED_SCHEDULE_END_DATE = '9999-12-31'
+const DEFAULT_SHIFT_VALUE = 140_000
+
+function parseTimeToMinutes(value: string) {
+  const [hourPart, minutePart] = value.split(':')
+  const hours = Number(hourPart)
+  const minutes = Number(minutePart)
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return Number.NaN
+  return hours * 60 + minutes
+}
+
+function getCoverageDurationHours(
+  coverageMode: ScheduleCoverageMode,
+  coverageStartTime?: string | null,
+  coverageEndTime?: string | null,
+) {
+  if (coverageMode === ScheduleCoverageMode.FULL_DAY) return 24
+  if (!coverageStartTime || !coverageEndTime) return Number.NaN
+
+  const startMinutes = parseTimeToMinutes(coverageStartTime)
+  const endMinutes = parseTimeToMinutes(coverageEndTime)
+  if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes)) return Number.NaN
+  if (startMinutes === endMinutes) return Number.NaN
+
+  let durationMinutes = endMinutes - startMinutes
+  if (durationMinutes < 0) durationMinutes += 24 * 60
+  return durationMinutes / 60
+}
+
+function validateCoverageRules(input: {
+  coverageMode: ScheduleCoverageMode
+  coverageStartTime?: string | null
+  coverageEndTime?: string | null
+  shiftDurationHours?: number | null
+}) {
+  const coverageDurationHours = getCoverageDurationHours(
+    input.coverageMode,
+    input.coverageStartTime,
+    input.coverageEndTime,
+  )
+
+  if (!Number.isFinite(coverageDurationHours) || coverageDurationHours <= 0) {
+    throw new BadRequestException('Período de cobertura inválido.')
+  }
+
+  if (input.shiftDurationHours === null || input.shiftDurationHours === undefined) return
+
+  if (input.shiftDurationHours > coverageDurationHours) {
+    throw new BadRequestException(
+      'A duração do plantão não pode ser maior que a janela de cobertura.',
+    )
+  }
+
+  const shiftsPerPeriod = coverageDurationHours / input.shiftDurationHours
+  if (!Number.isInteger(shiftsPerPeriod)) {
+    throw new BadRequestException(
+      'A duração do plantão deve dividir exatamente a cobertura da escala.',
+    )
+  }
+}
 
 @Injectable()
 export class SchedulesService {
@@ -91,6 +151,19 @@ export class SchedulesService {
       throw new BadRequestException('Data de início não pode ser posterior à data de fim')
     }
 
+    const coverageMode = dto.coverageMode ?? ScheduleCoverageMode.FULL_DAY
+    const coverageStartTime =
+      coverageMode === ScheduleCoverageMode.CUSTOM_WINDOW ? dto.coverageStartTime : null
+    const coverageEndTime =
+      coverageMode === ScheduleCoverageMode.CUSTOM_WINDOW ? dto.coverageEndTime : null
+
+    validateCoverageRules({
+      coverageMode,
+      coverageStartTime,
+      coverageEndTime,
+      shiftDurationHours: dto.shiftDurationHours ?? null,
+    })
+
     return this.prisma.schedule.create({
       data: {
         organizationId,
@@ -99,6 +172,18 @@ export class SchedulesService {
         description: dto.description,
         startDate: new Date(dto.startDate),
         endDate: new Date(endDate),
+        coverageMode,
+        coverageStartTime,
+        coverageEndTime,
+        shiftDurationHours: dto.shiftDurationHours,
+        professionalsPerShift: dto.professionalsPerShift,
+        shiftValue: dto.shiftValue ?? DEFAULT_SHIFT_VALUE,
+        requireSwapApproval: dto.requireSwapApproval ?? true,
+        geofenceLat: dto.geofenceLat,
+        geofenceLng: dto.geofenceLng,
+        geofenceRadiusMeters: dto.geofenceRadiusMeters,
+        geofenceAutoCheckInEnabled: dto.geofenceAutoCheckInEnabled ?? false,
+        geofenceLabel: dto.geofenceLabel,
         status: 'DRAFT',
       },
       include: { location: true },
@@ -119,9 +204,29 @@ export class SchedulesService {
       if (!location) throw new NotFoundException('Local não encontrado ou inativo')
     }
 
-    if (dto.startDate && dto.endDate && new Date(dto.startDate) > new Date(dto.endDate)) {
+    const nextStartDate = dto.startDate ?? schedule.startDate.toISOString().slice(0, 10)
+    const nextEndDate = dto.endDate ?? schedule.endDate.toISOString().slice(0, 10)
+    if (new Date(nextStartDate) > new Date(nextEndDate)) {
       throw new BadRequestException('Data de início não pode ser posterior à data de fim')
     }
+
+    const nextCoverageMode = dto.coverageMode ?? schedule.coverageMode
+    const nextCoverageStartTime =
+      (dto.coverageMode ?? schedule.coverageMode) === ScheduleCoverageMode.CUSTOM_WINDOW
+        ? (dto.coverageStartTime ?? schedule.coverageStartTime)
+        : null
+    const nextCoverageEndTime =
+      (dto.coverageMode ?? schedule.coverageMode) === ScheduleCoverageMode.CUSTOM_WINDOW
+        ? (dto.coverageEndTime ?? schedule.coverageEndTime)
+        : null
+    const nextShiftDurationHours = dto.shiftDurationHours ?? schedule.shiftDurationHours
+
+    validateCoverageRules({
+      coverageMode: nextCoverageMode,
+      coverageStartTime: nextCoverageStartTime,
+      coverageEndTime: nextCoverageEndTime,
+      shiftDurationHours: nextShiftDurationHours,
+    })
 
     const updated = await this.prisma.schedule.update({
       where: { id },
@@ -131,6 +236,28 @@ export class SchedulesService {
         ...(dto.description !== undefined && { description: dto.description }),
         ...(dto.startDate !== undefined && { startDate: new Date(dto.startDate) }),
         ...(dto.endDate !== undefined && { endDate: new Date(dto.endDate) }),
+        ...(dto.coverageMode !== undefined && { coverageMode: dto.coverageMode }),
+        ...(dto.coverageMode === ScheduleCoverageMode.FULL_DAY && {
+          coverageStartTime: null,
+          coverageEndTime: null,
+        }),
+        ...(dto.coverageStartTime !== undefined && { coverageStartTime: dto.coverageStartTime }),
+        ...(dto.coverageEndTime !== undefined && { coverageEndTime: dto.coverageEndTime }),
+        ...(dto.shiftDurationHours !== undefined && { shiftDurationHours: dto.shiftDurationHours }),
+        ...(dto.professionalsPerShift !== undefined && {
+          professionalsPerShift: dto.professionalsPerShift,
+        }),
+        ...(dto.shiftValue !== undefined && { shiftValue: dto.shiftValue }),
+        ...(dto.requireSwapApproval !== undefined && { requireSwapApproval: dto.requireSwapApproval }),
+        ...(dto.geofenceLat !== undefined && { geofenceLat: dto.geofenceLat }),
+        ...(dto.geofenceLng !== undefined && { geofenceLng: dto.geofenceLng }),
+        ...(dto.geofenceRadiusMeters !== undefined && {
+          geofenceRadiusMeters: dto.geofenceRadiusMeters,
+        }),
+        ...(dto.geofenceAutoCheckInEnabled !== undefined && {
+          geofenceAutoCheckInEnabled: dto.geofenceAutoCheckInEnabled,
+        }),
+        ...(dto.geofenceLabel !== undefined && { geofenceLabel: dto.geofenceLabel }),
       },
       include: { location: true },
     })
@@ -220,6 +347,18 @@ export class SchedulesService {
           description: original.description,
           startDate: original.startDate,
           endDate: original.endDate,
+          coverageMode: original.coverageMode,
+          coverageStartTime: original.coverageStartTime,
+          coverageEndTime: original.coverageEndTime,
+          shiftDurationHours: original.shiftDurationHours,
+          professionalsPerShift: original.professionalsPerShift,
+          shiftValue: original.shiftValue,
+          requireSwapApproval: original.requireSwapApproval,
+          geofenceLat: original.geofenceLat,
+          geofenceLng: original.geofenceLng,
+          geofenceRadiusMeters: original.geofenceRadiusMeters,
+          geofenceAutoCheckInEnabled: original.geofenceAutoCheckInEnabled,
+          geofenceLabel: original.geofenceLabel,
           status: 'DRAFT',
         },
       })

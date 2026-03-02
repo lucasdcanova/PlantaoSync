@@ -44,9 +44,6 @@ export default function LoginPage() {
   const didInitialRedirect = useRef(false)
   const router = useRouter()
   const { setUser, setAccessToken, isAuthenticated, user } = useAuthStore()
-  const validateRegisteredCredential = useDoctorDemoStore(
-    (state) => state.validateRegisteredCredential,
-  )
 
   // Store actions accessed via getState() to avoid unnecessary re-renders
   const activateDemoMode = () => {
@@ -113,22 +110,6 @@ export default function LoginPage() {
       activateDemoMode()
       setUser(DEMO_DOCTOR_USER, true)
       setAccessToken(DEMO_DOCTOR_ACCESS_TOKEN)
-      await runPremiumLoginTransition('/doctor')
-      return
-    }
-
-    const invitedDoctor = validateRegisteredCredential(data.email, data.password)
-    if (invitedDoctor) {
-      const invitedUser = {
-        id: invitedDoctor.id,
-        role: 'PROFESSIONAL',
-        name: invitedDoctor.fullName,
-        email: invitedDoctor.email,
-        organizationId: 'invite-local',
-      }
-      clearDemoData(invitedUser)
-      setUser(invitedUser, false)
-      setAccessToken(`${DEMO_DOCTOR_ACCESS_TOKEN}-${invitedDoctor.id}`)
       await runPremiumLoginTransition('/doctor')
       return
     }

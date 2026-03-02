@@ -13,6 +13,7 @@ interface AddProfessionalInput {
 interface ProfessionalsState {
   professionals: DemoProfessional[]
   addProfessional: (input: AddProfessionalInput) => DemoProfessional
+  setProfessionals: (professionals: DemoProfessional[]) => void
   removeProfessional: (professionalId: string) => void
   restoreProfessional: (professionalId: string) => void
   resetProfessionals: () => void
@@ -44,6 +45,11 @@ export const useProfessionalsStore = create<ProfessionalsState>()(
         set((state) => ({ professionals: [...state.professionals, newPro] }))
         return newPro
       },
+
+      setProfessionals: (professionals) =>
+        set({
+          professionals: professionals.map((professional) => ({ ...professional })),
+        }),
 
       removeProfessional: (professionalId) =>
         set((state) => ({

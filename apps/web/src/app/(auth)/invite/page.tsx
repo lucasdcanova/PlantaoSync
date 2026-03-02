@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ProductLogo } from '@/components/brand/product-logo'
-import { useDoctorDemoStore } from '@/store/doctor-demo.store'
+import { API_BASE_URL } from '@/lib/env'
 import { cn } from '@/lib/utils'
 
 interface InviteFormState {
@@ -37,7 +37,6 @@ const initialFormState: InviteFormState = {
 
 export default function InviteRegisterPage() {
   const router = useRouter()
-  const registerDoctorByInvite = useDoctorDemoStore((state) => state.registerDoctorByInvite)
   const [form, setForm] = useState<InviteFormState>(initialFormState)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -67,25 +66,44 @@ export default function InviteRegisterPage() {
     }
 
     setIsSubmitting(true)
-    const result = registerDoctorByInvite({
-      inviteCode: form.inviteCode,
-      fullName: form.fullName,
-      email: form.email,
-      phone: form.phone,
-      password: form.password,
-      crm: form.crm,
-      specialty: form.specialty,
-    })
-    setIsSubmitting(false)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/register-by-invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          inviteCode: form.inviteCode,
+          fullName: form.fullName,
+          email: form.email,
+          phone: form.phone,
+          password: form.password,
+          crm: form.crm,
+          specialty: form.specialty,
+        }),
+      })
 
-    if (!result.ok) {
-      setError(result.message)
-      toast.error(result.message)
-      return
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        const message = Array.isArray(payload?.message)
+          ? payload.message.join(', ')
+          : (payload?.message ?? 'Não foi possível concluir o cadastro por convite.')
+        throw new Error(message)
+      }
+
+      toast.success(
+        payload?.message ?? 'Cadastro realizado com sucesso. Faça login para acessar o app.',
+      )
+      router.push('/login')
+    } catch (submitError) {
+      const message =
+        submitError instanceof Error
+          ? submitError.message
+          : 'Não foi possível concluir o cadastro por convite.'
+      setError(message)
+      toast.error(message)
+    } finally {
+      setIsSubmitting(false)
     }
-
-    toast.success(result.message)
-    router.push('/login')
   }
 
   return (

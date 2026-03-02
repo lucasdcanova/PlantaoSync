@@ -28,6 +28,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SHIFT_STATUS_CONFIG, formatCurrency, formatDate } from '@/lib/utils'
 import { OPEN_ENDED_SCHEDULE_END_DATE, isOpenEndedSchedule } from '@/lib/schedule-range'
+import { getApiClient } from '@/lib/api'
+import { mapApiLocationToManager, mapApiScheduleToManager } from '@/lib/backend-mappers'
 import {
   inferAttendanceSectorIdByName,
   useShiftAttendanceStore,
@@ -38,6 +40,7 @@ import {
   type ScheduleExtraShiftInput,
 } from '@/store/schedules.store'
 import { useLocationsStore } from '@/store/locations.store'
+import { useAuthStore } from '@/store/auth.store'
 
 const GeofencePickerMap = dynamic(
   () => import('@/components/maps/geofence-picker-map').then((mod) => mod.GeofencePickerMap),
@@ -239,9 +242,14 @@ export default function ScheduleDetailsPage() {
   const createSchedule = useSchedulesStore((state) => state.createSchedule)
   const updateSchedule = useSchedulesStore((state) => state.updateSchedule)
   const deleteSchedule = useSchedulesStore((state) => state.deleteSchedule)
+  const upsertSchedule = useSchedulesStore((state) => state.upsertSchedule)
+  const removeSchedule = useSchedulesStore((state) => state.removeSchedule)
   const addExtraShift = useSchedulesStore((state) => state.addExtraShift)
   const removeExtraShift = useSchedulesStore((state) => state.removeExtraShift)
   const locations = useLocationsStore((state) => state.locations)
+  const setLocations = useLocationsStore((state) => state.setLocations)
+  const isDemoMode = useAuthStore((state) => state.isDemoMode)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const upsertAttendanceGeofence = useShiftAttendanceStore((state) => state.upsertGeofence)
 
   const defaultLocationId =
@@ -255,6 +263,29 @@ export default function ScheduleDetailsPage() {
     () => (isCreateMode ? null : (schedules.find((item) => item.id === scheduleId) ?? null)),
     [isCreateMode, scheduleId, schedules],
   )
+
+  useEffect(() => {
+    if (isDemoMode || !isAuthenticated || isCreateMode || !scheduleId || schedule) return
+    let cancelled = false
+
+    const loadSchedule = async () => {
+      try {
+        const api = getApiClient()
+        const response = await api.get(`schedules/${scheduleId}`).json()
+        if (cancelled) return
+        upsertSchedule(
+          mapApiScheduleToManager(response as Parameters<typeof mapApiScheduleToManager>[0]),
+        )
+      } catch {
+        // mantém fallback da tela de "não encontrada"
+      }
+    }
+
+    void loadSchedule()
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthenticated, isCreateMode, isDemoMode, schedule, scheduleId, upsertSchedule])
 
   const [form, setForm] = useState<ScheduleFormValues>(() => buildDefaultForm(defaultLocationId))
   const [extraShiftForm, setExtraShiftForm] =
@@ -273,6 +304,30 @@ export default function ScheduleDetailsPage() {
       setForm(toFormValues(schedule))
     }
   }, [defaultLocationId, isCreateMode, schedule])
+
+  useEffect(() => {
+    if (isDemoMode || !isAuthenticated) return
+    let cancelled = false
+
+    const loadLocations = async () => {
+      try {
+        const api = getApiClient()
+        const response = await api
+          .get('locations')
+          .json<Array<{ id: string; name: string; isActive?: boolean; createdAt?: string; updatedAt?: string }>>()
+
+        if (cancelled) return
+        setLocations(response.map((location) => mapApiLocationToManager(location)))
+      } catch {
+        // mantém UI funcional com dados já em memória/local
+      }
+    }
+
+    void loadLocations()
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthenticated, isDemoMode, setLocations])
 
   const statusConfig = SHIFT_STATUS_CONFIG[form.status]
   const selectedLocation = locations.find((location) => location.id === form.locationId)
@@ -417,7 +472,7 @@ export default function ScheduleDetailsPage() {
     return null
   }
 
-  const handleSave = (event: FormEvent<HTMLFormElement>) => {
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     setErrorMessage(null)
@@ -465,6 +520,55 @@ export default function ScheduleDetailsPage() {
     }
 
     try {
+      if (!isDemoMode) {
+        const api = getApiClient()
+        const apiPayload = {
+          title: payload.title,
+          description: payload.description,
+          locationId: payload.locationId,
+          startDate: payload.startDate,
+          endDate: payload.endDate,
+          coverageMode: payload.coverageMode,
+          coverageStartTime: payload.coverageStartTime,
+          coverageEndTime: payload.coverageEndTime,
+          shiftDurationHours: payload.shiftDurationHours,
+          professionalsPerShift: payload.professionalsPerShift,
+          shiftValue: payload.shiftValue,
+          requireSwapApproval: payload.requireSwapApproval,
+          geofenceLat: payload.geofence?.lat,
+          geofenceLng: payload.geofence?.lng,
+          geofenceRadiusMeters: payload.geofence?.radiusMeters,
+          geofenceAutoCheckInEnabled: payload.geofence?.autoCheckInEnabled,
+          geofenceLabel: payload.geofence?.label,
+        }
+
+        if (isCreateMode) {
+          const createdResponse = await api.post('schedules', { json: apiPayload }).json()
+          const created = upsertSchedule(
+            mapApiScheduleToManager(
+              createdResponse as Parameters<typeof mapApiScheduleToManager>[0],
+            ),
+          )
+          setSuccessMessage('Escala criada com sucesso.')
+          router.replace(`/schedules/${created.id}`)
+          return
+        }
+
+        if (!scheduleId) {
+          setErrorMessage('ID da escala inválido.')
+          return
+        }
+
+        const updatedResponse = await api.patch(`schedules/${scheduleId}`, { json: apiPayload }).json()
+        upsertSchedule(
+          mapApiScheduleToManager(
+            updatedResponse as Parameters<typeof mapApiScheduleToManager>[0],
+          ),
+        )
+        setSuccessMessage('Escala atualizada com sucesso.')
+        return
+      }
+
       if (isCreateMode) {
         const created = createSchedule(payload)
         if (created.geofence && selectedLocation?.name) {
@@ -569,14 +673,24 @@ export default function ScheduleDetailsPage() {
     setSuccessMessage('Ponto da geofence removido.')
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!scheduleId || isCreateMode) return
 
     const confirmed = window.confirm('Deseja excluir esta escala? Esta ação não pode ser desfeita.')
     if (!confirmed) return
 
-    deleteSchedule(scheduleId)
-    router.push('/schedules')
+    try {
+      if (!isDemoMode) {
+        const api = getApiClient()
+        await api.delete(`schedules/${scheduleId}`)
+        removeSchedule(scheduleId)
+      } else {
+        deleteSchedule(scheduleId)
+      }
+      router.push('/schedules')
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Falha ao excluir a escala.')
+    }
   }
 
   const handleReset = () => {

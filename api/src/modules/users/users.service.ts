@@ -6,10 +6,38 @@ import {
 } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { InviteUserDto } from './dto/invite-user.dto'
+import { CreateInviteCodeDto } from './dto/create-invite-code.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { UserFiltersDto } from './dto/user-filters.dto'
 import { PLAN_LIMITS } from '../../shared-constants'
-import { Plan, UserRole } from '@prisma/client'
+import { Plan, ProfessionalInviteStatus, UserRole } from '@prisma/client'
+
+function toDateOnly(value: Date) {
+  return value.toISOString().slice(0, 10)
+}
+
+function normalizeInviteSectorToken(sectorName: string) {
+  const token = sectorName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 18)
+
+  return token || 'GERAL'
+}
+
+function randomInviteToken(length = 4) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let result = ''
+
+  for (let i = 0; i < length; i += 1) {
+    result += chars[Math.floor(Math.random() * chars.length)]
+  }
+
+  return result
+}
 
 @Injectable()
 export class UsersService {
@@ -151,6 +179,61 @@ export class UsersService {
     return user
   }
 
+  async listInviteCodes(organizationId: string) {
+    await this.expirePastInviteCodes(organizationId)
+
+    return this.prisma.professionalInvite.findMany({
+      where: { organizationId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        code: true,
+        sectorName: true,
+        issuedByName: true,
+        status: true,
+        expiresAt: true,
+        usedAt: true,
+        usedByUserId: true,
+        usedByEmail: true,
+        createdAt: true,
+      },
+    })
+  }
+
+  async createInviteCode(organizationId: string, issuedByName: string, dto: CreateInviteCodeDto) {
+    const normalizedSectorName = dto.sectorName.trim()
+    const clampedDays = Number.isFinite(dto.expirationDays)
+      ? Math.min(90, Math.max(1, Math.round(Number(dto.expirationDays))))
+      : 14
+
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + clampedDays)
+
+    const newInvite = await this.prisma.professionalInvite.create({
+      data: {
+        organizationId,
+        code: await this.generateUniqueInviteCode(normalizedSectorName),
+        sectorName: normalizedSectorName,
+        issuedByName: issuedByName.trim() || 'Gestor',
+        expiresAt: new Date(toDateOnly(expiresAt)),
+      },
+      select: {
+        id: true,
+        code: true,
+        sectorName: true,
+        issuedByName: true,
+        status: true,
+        expiresAt: true,
+        usedAt: true,
+        usedByUserId: true,
+        usedByEmail: true,
+        createdAt: true,
+      },
+    })
+
+    return newInvite
+  }
+
   async update(id: string, organizationId: string, dto: UpdateUserDto) {
     await this.findOne(id, organizationId)
 
@@ -208,6 +291,31 @@ export class UsersService {
     })
   }
 
+  async reactivate(id: string, organizationId: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, organizationId },
+      select: { id: true },
+    })
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado')
+    }
+
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        isActive: true,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isActive: true,
+        deletedAt: true,
+      },
+    })
+  }
+
   async checkPlanLimit(organizationId: string, plan: Plan) {
     const limits = PLAN_LIMITS[plan]
     const currentCount = await this.prisma.user.count({
@@ -224,5 +332,33 @@ export class UsersService {
         `Limite de profissionais atingido para o plano ${plan} (máximo: ${limits.professionals})`,
       )
     }
+  }
+
+  private async expirePastInviteCodes(organizationId: string) {
+    const today = new Date(toDateOnly(new Date()))
+    await this.prisma.professionalInvite.updateMany({
+      where: {
+        organizationId,
+        status: ProfessionalInviteStatus.ACTIVE,
+        expiresAt: { lt: today },
+      },
+      data: { status: ProfessionalInviteStatus.EXPIRED },
+    })
+  }
+
+  private async generateUniqueInviteCode(sectorName: string) {
+    const year = new Date().getFullYear()
+    const sectorToken = normalizeInviteSectorToken(sectorName)
+
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const candidate = `SG-${sectorToken}-${year}-${randomInviteToken(4)}`
+      const existing = await this.prisma.professionalInvite.findUnique({
+        where: { code: candidate },
+        select: { id: true },
+      })
+      if (!existing) return candidate
+    }
+
+    return `SG-${sectorToken}-${year}-${Date.now().toString(36).toUpperCase().slice(-5)}`
   }
 }

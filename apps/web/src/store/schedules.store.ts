@@ -61,6 +61,9 @@ interface SchedulesState {
   createSchedule: (input: ScheduleEditorInput) => ManagerSchedule
   updateSchedule: (id: string, input: ScheduleEditorInput) => ManagerSchedule
   deleteSchedule: (id: string) => void
+  setSchedules: (schedules: Partial<ManagerSchedule>[]) => void
+  upsertSchedule: (schedule: Partial<ManagerSchedule>) => ManagerSchedule
+  removeSchedule: (id: string) => void
   addExtraShift: (scheduleId: string, input: ScheduleExtraShiftInput) => ScheduleExtraShift
   removeExtraShift: (scheduleId: string, extraShiftId: string) => void
   resetSchedules: () => void
@@ -515,6 +518,33 @@ export const useSchedulesStore = create<SchedulesState>()(
       },
 
       deleteSchedule: (id) =>
+        set((state) => ({
+          schedules: state.schedules.filter((item) => item.id !== id),
+        })),
+
+      setSchedules: (schedules) =>
+        set({
+          schedules: withSortedSchedules(
+            schedules.map((schedule) => normalizeSchedule(schedule)),
+          ),
+        }),
+
+      upsertSchedule: (schedule) => {
+        const normalized = normalizeSchedule(schedule)
+        set((state) => {
+          const exists = state.schedules.some((item) => item.id === normalized.id)
+          return {
+            schedules: withSortedSchedules(
+              exists
+                ? state.schedules.map((item) => (item.id === normalized.id ? normalized : item))
+                : [normalized, ...state.schedules],
+            ),
+          }
+        })
+        return normalized
+      },
+
+      removeSchedule: (id) =>
         set((state) => ({
           schedules: state.schedules.filter((item) => item.id !== id),
         })),

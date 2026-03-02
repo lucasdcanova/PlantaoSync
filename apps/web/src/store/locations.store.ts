@@ -32,6 +32,7 @@ interface LocationsState {
   updateLocation: (id: string, input: LocationEditorInput) => ManagerLocation
   deleteLocation: (id: string) => void
   toggleLocationActive: (id: string) => void
+  setLocations: (locations: ManagerLocation[]) => void
   resetLocations: () => void
   initDemoData: () => void
 }
@@ -151,6 +152,11 @@ export const useLocationsStore = create<LocationsState>()(
             ),
           ),
         })),
+
+      setLocations: (locations) =>
+        set({
+          locations: sortLocations(locations),
+        }),
 
       resetLocations: () => set({ locations: [] }),
 

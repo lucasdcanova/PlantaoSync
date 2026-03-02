@@ -19,9 +19,12 @@ import { PageTransition, StaggerList, StaggerItem } from '@/components/shared/pa
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
 import { cn, formatCurrency, formatDate, SHIFT_STATUS_CONFIG } from '@/lib/utils'
 import { isDateInScheduleRange, isOpenEndedSchedule } from '@/lib/schedule-range'
 import { DEMO_DOCTOR_AVAILABLE_SHIFTS, DEMO_MANAGER_ASSIGNED_SHIFTS } from '@/lib/demo-data'
+import { getApiClient } from '@/lib/api'
+import { mapApiScheduleToManager } from '@/lib/backend-mappers'
 import { useSchedulesStore } from '@/store/schedules.store'
 import { useLocationsStore } from '@/store/locations.store'
 import { useAuthStore } from '@/store/auth.store'
@@ -97,7 +100,9 @@ function isShiftActiveNow(date: string, startTime: string, endTime: string, now:
 
 export default function SchedulesPage() {
   const isDemoMode = useAuthStore((s) => s.isDemoMode)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const schedules = useSchedulesStore((state) => state.schedules)
+  const setSchedules = useSchedulesStore((state) => state.setSchedules)
   const locations = useLocationsStore((state) => state.locations)
 
   const demoAvailableShifts = isDemoMode ? DEMO_DOCTOR_AVAILABLE_SHIFTS : []
@@ -107,6 +112,38 @@ export default function SchedulesPage() {
   const [selectedScheduleId, setSelectedScheduleId] = useState('')
   const [selectedSector, setSelectedSector] = useState('all')
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (isDemoMode || !isAuthenticated) return
+    let cancelled = false
+
+    const loadSchedules = async () => {
+      try {
+        const api = getApiClient()
+        const response = await api
+          .get('schedules', { searchParams: { limit: 200 } })
+          .json<{ data: unknown[] }>()
+
+        if (cancelled) return
+
+        const mapped = response.data.map((item) =>
+          mapApiScheduleToManager(item as Parameters<typeof mapApiScheduleToManager>[0]),
+        )
+        setSchedules(mapped)
+      } catch (error) {
+        if (cancelled) return
+        const message =
+          error instanceof Error ? error.message : 'Falha ao carregar escalas da organização.'
+        toast.error(message)
+      }
+    }
+
+    void loadSchedules()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthenticated, isDemoMode, setSchedules])
 
   const locationNameById = useMemo(
     () => new Map(locations.map((location) => [location.id, location.name])),

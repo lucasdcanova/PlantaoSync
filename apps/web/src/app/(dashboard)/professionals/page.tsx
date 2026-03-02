@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   CheckCircle2,
@@ -16,6 +16,7 @@ import {
   Phone,
   Mail,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Header } from '@/components/layout/header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -24,6 +25,8 @@ import { Label } from '@/components/ui/label'
 import { useProfessionalsStore } from '@/store/professionals.store'
 import { useDoctorDemoStore } from '@/store/doctor-demo.store'
 import { useAuthStore } from '@/store/auth.store'
+import { getApiClient } from '@/lib/api'
+import { mapApiProfessionalToDemo, type ApiInviteCode } from '@/lib/backend-mappers'
 import { cn, getInitials } from '@/lib/utils'
 import type { DemoProfessional } from '@/lib/demo-data'
 
@@ -48,20 +51,47 @@ const SPECIALTIES = [
   'Ortopedia','Pediatria','Psiquiatria','Radiologia','Outra',
 ]
 
-function AddProfessionalForm({ onClose }: { onClose: () => void }) {
-  const { addProfessional } = useProfessionalsStore()
+type AddProfessionalInput = {
+  name: string
+  email: string
+  crm: string
+  specialty: string
+  phone?: string
+}
+
+function AddProfessionalForm({
+  onClose,
+  onAddProfessional,
+}: {
+  onClose: () => void
+  onAddProfessional: (input: AddProfessionalInput) => Promise<void>
+}) {
   const [form, setForm] = useState({ name: '', email: '', crm: '', specialty: '', phone: '' })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.name.trim() || !form.email.trim() || !form.crm.trim() || !form.specialty.trim()) {
       setError('Preencha nome, e-mail, CRM e especialidade.')
       return
     }
-    addProfessional(form)
-    setSuccess(true)
-    setTimeout(() => onClose(), 1000)
+
+    setError('')
+    setIsSubmitting(true)
+    try {
+      await onAddProfessional(form)
+      setSuccess(true)
+      setTimeout(() => onClose(), 1000)
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : 'Não foi possível adicionar o profissional.',
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -123,9 +153,9 @@ function AddProfessionalForm({ onClose }: { onClose: () => void }) {
           </div>
           {error && <p className="mt-2 text-xs text-status-urgent">{error}</p>}
           <div className="mt-4 flex gap-2">
-            <Button size="sm" onClick={handleSubmit} className="gap-1.5">
+            <Button size="sm" onClick={() => void handleSubmit()} className="gap-1.5" disabled={isSubmitting}>
               <Plus className="h-3.5 w-3.5" />
-              Adicionar à equipe
+              {isSubmitting ? 'Salvando...' : 'Adicionar à equipe'}
             </Button>
             <Button size="sm" variant="ghost" onClick={onClose}>Cancelar</Button>
           </div>
@@ -139,10 +169,12 @@ function ProfessionalCard({
   professional,
   onRemove,
   onRestore,
+  canRestore = true,
 }: {
   professional: DemoProfessional
   onRemove: () => void
   onRestore: () => void
+  canRestore?: boolean
 }) {
   const [confirmRemove, setConfirmRemove] = useState(false)
   const isRemoved = professional.hospitalStatus === 'REMOVIDO'
@@ -198,7 +230,7 @@ function ProfessionalCard({
         </div>
 
         <div className="shrink-0">
-          {isRemoved ? (
+          {isRemoved && canRestore ? (
             <button
               type="button"
               onClick={onRestore}
@@ -206,7 +238,7 @@ function ProfessionalCard({
             >
               <RotateCcw className="h-3 w-3" />Restaurar
             </button>
-          ) : confirmRemove ? (
+          ) : isRemoved ? null : confirmRemove ? (
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] text-muted-foreground">Confirmar?</span>
               <button
@@ -241,15 +273,120 @@ function ProfessionalCard({
 }
 
 export default function ProfessionalsPage() {
+  const isDemoMode = useAuthStore((s) => s.isDemoMode)
   const user = useAuthStore((s) => s.user)
-  const { professionals, removeProfessional, restoreProfessional } = useProfessionalsStore()
-  const inviteCodes = useDoctorDemoStore((state) => state.inviteCodes)
-  const generateInviteCode = useDoctorDemoStore((state) => state.generateInviteCode)
+  const {
+    professionals: demoProfessionals,
+    addProfessional: addDemoProfessional,
+    removeProfessional: removeDemoProfessional,
+    restoreProfessional: restoreDemoProfessional,
+    setProfessionals,
+  } = useProfessionalsStore()
+  const demoInviteCodes = useDoctorDemoStore((state) => state.inviteCodes)
+  const generateDemoInviteCode = useDoctorDemoStore((state) => state.generateInviteCode)
+
+  const [apiProfessionals, setApiProfessionals] = useState<DemoProfessional[]>([])
+  const [apiInviteCodes, setApiInviteCodes] = useState<ApiInviteCode[]>([])
+  const [isLoadingRemote, setIsLoadingRemote] = useState(false)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'ativos' | 'todos' | 'removidos'>('ativos')
   const [showAddForm, setShowAddForm] = useState(false)
   const [inviteSectorName, setInviteSectorName] = useState('')
   const [latestInviteCode, setLatestInviteCode] = useState('')
+
+  const professionals = isDemoMode ? demoProfessionals : apiProfessionals
+  const inviteCodes = useMemo(() => {
+    if (isDemoMode) return demoInviteCodes
+
+    return apiInviteCodes.map((invite) => ({
+      id: invite.id,
+      code: invite.code,
+      sectorName: invite.sectorName,
+      issuedBy: invite.issuedByName,
+      expiresAt: invite.expiresAt.slice(0, 10),
+      status: invite.status === 'ACTIVE' ? 'ATIVO' : invite.status === 'USED' ? 'UTILIZADO' : 'EXPIRADO',
+    }))
+  }, [apiInviteCodes, demoInviteCodes, isDemoMode])
+
+  const loadRemoteData = useCallback(async () => {
+    if (isDemoMode) return
+
+    setIsLoadingRemote(true)
+    try {
+      const api = getApiClient()
+      const [usersResponse, invitesResponse] = await Promise.all([
+        api
+          .get('users', { searchParams: { role: 'PROFESSIONAL', limit: 200 } })
+          .json<{ data: Array<{ id: string; name: string; email: string; crm?: string | null; specialty?: string | null; phone?: string | null; isActive?: boolean }> }>(),
+        api.get('users/invite-codes').json<ApiInviteCode[]>(),
+      ])
+
+      const mappedProfessionals = usersResponse.data.map((professional) =>
+        mapApiProfessionalToDemo(professional),
+      )
+      setApiProfessionals(mappedProfessionals)
+      setProfessionals(mappedProfessionals)
+      setApiInviteCodes(invitesResponse)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Falha ao carregar equipe da organização.')
+    } finally {
+      setIsLoadingRemote(false)
+    }
+  }, [isDemoMode, setProfessionals])
+
+  useEffect(() => {
+    void loadRemoteData()
+  }, [loadRemoteData])
+
+  const handleAddProfessional = async (input: AddProfessionalInput) => {
+    if (isDemoMode) {
+      addDemoProfessional(input)
+      return
+    }
+
+    const api = getApiClient()
+    await api.post('users/invite', {
+      json: {
+        name: input.name.trim(),
+        email: input.email.trim().toLowerCase(),
+        role: 'PROFESSIONAL',
+        specialty: input.specialty.trim(),
+        crm: input.crm.trim(),
+        phone: input.phone?.trim() || undefined,
+      },
+    })
+    await loadRemoteData()
+  }
+
+  const handleRemoveProfessional = async (professionalId: string) => {
+    if (isDemoMode) {
+      removeDemoProfessional(professionalId)
+      return
+    }
+
+    try {
+      const api = getApiClient()
+      await api.delete(`users/${professionalId}`)
+      await loadRemoteData()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Falha ao remover profissional.')
+    }
+  }
+
+  const handleRestoreProfessional = async (professionalId: string) => {
+    if (isDemoMode) {
+      restoreDemoProfessional(professionalId)
+      return
+    }
+
+    try {
+      const api = getApiClient()
+      await api.post(`users/${professionalId}/reactivate`)
+      await loadRemoteData()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Falha ao restaurar profissional.')
+    }
+  }
 
   const filtered = professionals.filter((p) => {
     const q = search.toLowerCase()
@@ -277,12 +414,39 @@ export default function ProfessionalsPage() {
   )
 
   const handleGenerateInviteCode = () => {
+    if (!isDemoMode) {
+      const createRemoteInvite = async () => {
+        try {
+          const fallbackSectorName =
+            inviteSectorName.trim() || inviteSectorSuggestions[0] || 'Equipe Geral'
+          const api = getApiClient()
+          const invite = await api
+            .post('users/invite-codes', {
+              json: {
+                sectorName: fallbackSectorName,
+                expirationDays: 14,
+              },
+            })
+            .json<ApiInviteCode>()
+
+          setLatestInviteCode(invite.code)
+          setInviteSectorName('')
+          await loadRemoteData()
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Falha ao gerar código de convite.')
+        }
+      }
+
+      void createRemoteInvite()
+      return
+    }
+
     const fallbackSectorName =
       inviteSectorName.trim() ||
       inviteSectorSuggestions[0] ||
       'Equipe Geral'
 
-    const newInvite = generateInviteCode({
+    const newInvite = generateDemoInviteCode({
       sectorName: fallbackSectorName,
       issuedBy: user?.name ?? 'Gestor',
       expirationDays: 14,
@@ -346,8 +510,17 @@ export default function ProfessionalsPage() {
 
         {/* Add form */}
         <AnimatePresence>
-          {showAddForm && <AddProfessionalForm onClose={() => setShowAddForm(false)} />}
+          {showAddForm && (
+            <AddProfessionalForm
+              onClose={() => setShowAddForm(false)}
+              onAddProfessional={handleAddProfessional}
+            />
+          )}
         </AnimatePresence>
+
+        {isLoadingRemote && !isDemoMode ? (
+          <div className="card-base p-4 text-sm text-muted-foreground">Sincronizando equipe...</div>
+        ) : null}
 
         {/* Professional list */}
         <div className="space-y-3">
@@ -356,8 +529,9 @@ export default function ProfessionalsPage() {
               <ProfessionalCard
                 key={p.id}
                 professional={p}
-                onRemove={() => removeProfessional(p.id)}
-                onRestore={() => restoreProfessional(p.id)}
+                onRemove={() => void handleRemoveProfessional(p.id)}
+                onRestore={() => void handleRestoreProfessional(p.id)}
+                canRestore={isDemoMode}
               />
             ))}
           </AnimatePresence>

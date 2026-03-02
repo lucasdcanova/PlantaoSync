@@ -25,6 +25,7 @@ model Organization {
   locations    Location[]
   users        User[]
   schedules    Schedule[]
+  professionalInvites ProfessionalInvite[]
 
   @@map("organizations")
 }
@@ -147,6 +148,18 @@ model Schedule {
   description    String?
   startDate      DateTime       @db.Date
   endDate        DateTime       @db.Date
+  coverageMode   ScheduleCoverageMode @default(FULL_DAY)
+  coverageStartTime String?
+  coverageEndTime String?
+  shiftDurationHours Int?
+  professionalsPerShift Int?
+  shiftValue     Int            @default(140000)
+  requireSwapApproval Boolean   @default(true)
+  geofenceLat    Float?
+  geofenceLng    Float?
+  geofenceRadiusMeters Int?
+  geofenceAutoCheckInEnabled Boolean @default(false)
+  geofenceLabel  String?
   status         ScheduleStatus @default(DRAFT)
   publishedAt    DateTime?
   closedAt       DateTime?
@@ -161,6 +174,26 @@ model Schedule {
   @@index([locationId])
   @@index([startDate, endDate])
   @@map("schedules")
+}
+
+model ProfessionalInvite {
+  id             String                 @id @default(cuid())
+  organizationId String
+  code           String                 @unique
+  sectorName     String
+  issuedByName   String
+  status         ProfessionalInviteStatus @default(ACTIVE)
+  expiresAt      DateTime               @db.Date
+  usedAt         DateTime?
+  usedByUserId   String?
+  usedByEmail    String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@map("professional_invites")
 }
 
 model Shift {
@@ -314,6 +347,11 @@ enum ScheduleStatus {
   ARCHIVED
 }
 
+enum ScheduleCoverageMode {
+  FULL_DAY
+  CUSTOM_WINDOW
+}
+
 enum ConfirmationStatus {
   PENDING
   ACCEPTED
@@ -342,4 +380,11 @@ enum FinancialStatus {
   CONFIRMED
   PAID
   CANCELLED
+}
+
+enum ProfessionalInviteStatus {
+  ACTIVE
+  USED
+  EXPIRED
+  REVOKED
 }

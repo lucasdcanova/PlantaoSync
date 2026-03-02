@@ -15,6 +15,7 @@ import { Throttle } from '@nestjs/throttler'
 import { AuthService } from './auth.service'
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
+import { RegisterByInviteDto } from './dto/register-by-invite.dto'
 import { Public } from '../../shared/decorators/public.decorator'
 import { CurrentUser } from '../../shared/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard'
@@ -54,6 +55,14 @@ export class AuthController {
     const result = await this.authService.register(dto)
     res.cookie(REFRESH_COOKIE, result.refreshToken, COOKIE_OPTIONS)
     return { user: result.user, accessToken: result.accessToken }
+  }
+
+  @Public()
+  @Post('register-by-invite')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @ApiOperation({ summary: 'Cadastro de médico via código de convite' })
+  async registerByInvite(@Body() dto: RegisterByInviteDto) {
+    return this.authService.registerByInvite(dto)
   }
 
   @Public()

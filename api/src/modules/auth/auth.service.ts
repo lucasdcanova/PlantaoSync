@@ -9,10 +9,12 @@ import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../../prisma/prisma.service'
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
+import { RegisterByInviteDto } from './dto/register-by-invite.dto'
 import * as bcrypt from 'bcryptjs'
 import { v4 as uuidv4 } from 'uuid'
 import { TRIAL_DAYS, addDays } from '../../shared-constants'
 import { getJwtAccessSecret, getJwtRefreshSecret } from '../../config/jwt.config'
+import { ProfessionalInviteStatus, UserRole } from '@prisma/client'
 
 @Injectable()
 export class AuthService {
@@ -122,6 +124,92 @@ export class AuthService {
 
     const { passwordHash: _, twoFactorSecret: __, ...safeUser } = result.user
     return { user: safeUser, ...tokens }
+  }
+
+  async registerByInvite(dto: RegisterByInviteDto) {
+    const inviteCode = dto.inviteCode.trim().toUpperCase()
+    const normalizedEmail = dto.email.trim().toLowerCase()
+    const today = new Date(new Date().toISOString().slice(0, 10))
+
+    const invite = await this.prisma.professionalInvite.findUnique({
+      where: { code: inviteCode },
+      select: {
+        id: true,
+        organizationId: true,
+        status: true,
+        expiresAt: true,
+      },
+    })
+
+    if (!invite) {
+      throw new BadRequestException('Código de convite inválido.')
+    }
+
+    if (invite.status !== ProfessionalInviteStatus.ACTIVE) {
+      throw new BadRequestException('Este código de convite não está mais disponível.')
+    }
+
+    if (invite.expiresAt < today) {
+      await this.prisma.professionalInvite.update({
+        where: { id: invite.id },
+        data: { status: ProfessionalInviteStatus.EXPIRED },
+      })
+      throw new BadRequestException('Código de convite expirado.')
+    }
+
+    const existing = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true },
+    })
+    if (existing) {
+      throw new ConflictException('E-mail já cadastrado.')
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 12)
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          organizationId: invite.organizationId,
+          name: dto.fullName.trim(),
+          email: normalizedEmail,
+          passwordHash,
+          phone: dto.phone.trim(),
+          crm: dto.crm.trim(),
+          specialty: dto.specialty.trim(),
+          role: UserRole.PROFESSIONAL,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          organizationId: true,
+          role: true,
+          specialty: true,
+          crm: true,
+          phone: true,
+          createdAt: true,
+        },
+      })
+
+      await tx.professionalInvite.update({
+        where: { id: invite.id },
+        data: {
+          status: ProfessionalInviteStatus.USED,
+          usedAt: new Date(),
+          usedByUserId: user.id,
+          usedByEmail: user.email,
+        },
+      })
+
+      return user
+    })
+
+    return {
+      message: 'Cadastro realizado com sucesso. Faça login para acessar o aplicativo.',
+      user: created,
+    }
   }
 
   async refreshTokens(token: string, ipAddress?: string) {
