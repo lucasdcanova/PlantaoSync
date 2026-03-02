@@ -137,14 +137,10 @@ export default function SubscriptionPage() {
   const router = useRouter()
   const isDemoMode = useAuthStore((state) => state.isDemoMode)
   const user = useAuthStore((state) => state.user)
-  const institution = useInstitutionStore()
+  const institutionName = useInstitutionStore((state) => state.name)
   const managers = useInstitutionStore((state) => state.managers)
-  const professionals = useProfessionalsStore((state) =>
-    state.professionals.filter((professional) => professional.hospitalStatus === 'ATIVO'),
-  )
-  const locations = useLocationsStore((state) =>
-    state.locations.filter((location) => location.isActive),
-  )
+  const allProfessionals = useProfessionalsStore((state) => state.professionals)
+  const allLocations = useLocationsStore((state) => state.locations)
 
   const [processingPlan, setProcessingPlan] = useState<PlanKey | null>(null)
   const handledCheckoutReturn = useRef(false)
@@ -159,6 +155,14 @@ export default function SubscriptionPage() {
   const trialEndsAt = user?.organization?.subscription?.trialEndsAt
   const limits = isDemoMode ? DEMO_SUBSCRIPTION.limits : PLAN_LIMITS[currentPlan]
   const supportText = isDemoMode ? DEMO_SUBSCRIPTION.support : PLAN_SUPPORT[currentPlan]
+  const professionals = useMemo(
+    () => allProfessionals.filter((professional) => professional.hospitalStatus === 'ATIVO'),
+    [allProfessionals],
+  )
+  const locations = useMemo(
+    () => allLocations.filter((location) => location.isActive),
+    [allLocations],
+  )
 
   const usageItems = isDemoMode
     ? [
@@ -216,7 +220,7 @@ export default function SubscriptionPage() {
       billingCycle: 'MONTHLY',
       customerEmail: user?.email,
       organizationId: user?.organizationId,
-      organizationName: institution.name || user?.organization?.name,
+      organizationName: institutionName || user?.organization?.name,
     }
 
     setProcessingPlan(plan)
