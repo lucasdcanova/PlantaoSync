@@ -60,7 +60,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="bg-background relative flex h-[100dvh] min-h-[100dvh] overflow-hidden">
+    <div className="bg-background relative flex h-[100dvh] min-h-[100dvh] overflow-hidden lg:pt-[env(safe-area-inset-top)]">
       <StatusBarSync color="#ffffff" />
       <Sidebar />
       <motion.div

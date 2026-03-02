@@ -64,7 +64,7 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
   return (
     <div className="bg-background min-h-[100dvh]">
       <StatusBarSync color="#ffffff" />
-      <div className="flex h-[100dvh] min-h-[100dvh] overflow-hidden">
+      <div className="flex h-[100dvh] min-h-[100dvh] overflow-hidden lg:pt-[env(safe-area-inset-top)]">
         <DoctorSidebar />
         <motion.div
           aria-hidden
