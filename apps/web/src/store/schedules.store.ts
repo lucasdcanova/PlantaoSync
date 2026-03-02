@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Schedule, ScheduleStatus } from '@agendaplantao/shared'
+import type { Schedule, ScheduleCoverageMode, ScheduleStatus } from '@agendaplantao/shared'
 import { DEMO_LOCATIONS, DEMO_SCHEDULES } from '@/lib/demo-data'
 
 export interface ScheduleExtraShift {
@@ -36,6 +36,11 @@ export interface ScheduleEditorInput {
   description?: string
   startDate: string
   endDate: string
+  coverageMode: ScheduleCoverageMode
+  coverageStartTime?: string
+  coverageEndTime?: string
+  shiftDurationHours: number
+  professionalsPerShift: number
   status: ScheduleStatus
   publishedAt?: string
   requireSwapApproval: boolean
@@ -136,6 +141,60 @@ function normalizeDate(value?: string) {
   return value.slice(0, 10)
 }
 
+const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/
+
+function isValidTime(value?: string) {
+  if (!value) return false
+  return TIME_REGEX.test(value)
+}
+
+function timeToMinutes(value: string) {
+  if (!isValidTime(value)) return Number.NaN
+  const [hourPart, minutePart] = value.split(':')
+  const hours = Number(hourPart)
+  const minutes = Number(minutePart)
+  return hours * 60 + minutes
+}
+
+function normalizeCoverageMode(mode?: ScheduleCoverageMode): ScheduleCoverageMode {
+  return mode === 'CUSTOM_WINDOW' ? 'CUSTOM_WINDOW' : 'FULL_DAY'
+}
+
+function normalizeCoverageTime(
+  value: string | undefined,
+  fallback: string,
+  mode: ScheduleCoverageMode,
+) {
+  if (mode !== 'CUSTOM_WINDOW') return undefined
+  if (isValidTime(value)) return value
+  return fallback
+}
+
+function normalizePositiveInteger(value: number | undefined, fallback: number) {
+  if (Number.isFinite(value) && Number(value) >= 1) {
+    return Math.max(1, Math.round(Number(value)))
+  }
+  return fallback
+}
+
+function getCoverageDurationHours(
+  coverageMode: ScheduleCoverageMode,
+  coverageStartTime?: string,
+  coverageEndTime?: string,
+) {
+  if (coverageMode === 'FULL_DAY') return 24
+  if (!coverageStartTime || !coverageEndTime) return Number.NaN
+
+  const startMinutes = timeToMinutes(coverageStartTime)
+  const endMinutes = timeToMinutes(coverageEndTime)
+  if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes)) return Number.NaN
+  if (startMinutes === endMinutes) return Number.NaN
+
+  let durationMinutes = endMinutes - startMinutes
+  if (durationMinutes < 0) durationMinutes += 24 * 60
+  return durationMinutes / 60
+}
+
 function normalizeShiftValue(value?: number, locationId?: string) {
   if (Number.isFinite(value) && Number(value) > 0) {
     return Math.round(Number(value))
@@ -203,6 +262,7 @@ function normalizeExtraShift(extraShift: Partial<ScheduleExtraShift>, fallbackLo
 
 function normalizeSchedule(schedule: Partial<ManagerSchedule>) {
   const locationId = schedule.locationId ?? DEMO_LOCATIONS[0]?.id ?? 'loc-unknown'
+  const coverageMode = normalizeCoverageMode(schedule.coverageMode)
 
   const extraShifts = (schedule.extraShifts ?? []).map((extraShift) =>
     normalizeExtraShift(extraShift, locationId),
@@ -217,6 +277,11 @@ function normalizeSchedule(schedule: Partial<ManagerSchedule>) {
     description: schedule.description ?? undefined,
     startDate: normalizeDate(schedule.startDate) ?? todayDate(),
     endDate: normalizeDate(schedule.endDate) ?? todayDate(),
+    coverageMode,
+    coverageStartTime: normalizeCoverageTime(schedule.coverageStartTime, '07:00', coverageMode),
+    coverageEndTime: normalizeCoverageTime(schedule.coverageEndTime, '19:00', coverageMode),
+    shiftDurationHours: normalizePositiveInteger(schedule.shiftDurationHours, 12),
+    professionalsPerShift: normalizePositiveInteger(schedule.professionalsPerShift, 1),
     publishedAt: normalizeDate(schedule.publishedAt),
     createdAt: normalizeDate(schedule.createdAt) ?? todayDate(),
     updatedAt: normalizeDate(schedule.updatedAt) ?? todayDate(),
@@ -267,6 +332,56 @@ function validateInput(input: ScheduleEditorInput) {
     throw new Error('Informe um valor por plantão maior que zero.')
   }
 
+  const normalizedCoverageMode = normalizeCoverageMode(input.coverageMode)
+  const normalizedShiftDurationHours = normalizePositiveInteger(input.shiftDurationHours, 0)
+  const normalizedProfessionalsPerShift = normalizePositiveInteger(input.professionalsPerShift, 0)
+  const normalizedCoverageStartTime =
+    normalizedCoverageMode === 'CUSTOM_WINDOW'
+      ? normalizeCoverageTime(input.coverageStartTime, '', normalizedCoverageMode)
+      : undefined
+  const normalizedCoverageEndTime =
+    normalizedCoverageMode === 'CUSTOM_WINDOW'
+      ? normalizeCoverageTime(input.coverageEndTime, '', normalizedCoverageMode)
+      : undefined
+
+  if (normalizedCoverageMode === 'CUSTOM_WINDOW') {
+    if (!isValidTime(normalizedCoverageStartTime)) {
+      throw new Error('Informe um horário de início válido para o período da escala.')
+    }
+    if (!isValidTime(normalizedCoverageEndTime)) {
+      throw new Error('Informe um horário de término válido para o período da escala.')
+    }
+  }
+
+  if (!Number.isFinite(normalizedShiftDurationHours) || normalizedShiftDurationHours < 1) {
+    throw new Error('Informe uma duração de plantão válida em horas.')
+  }
+
+  if (!Number.isFinite(normalizedProfessionalsPerShift) || normalizedProfessionalsPerShift < 1) {
+    throw new Error('Informe quantos médicos por plantão são necessários.')
+  }
+
+  const coverageDurationHours = getCoverageDurationHours(
+    normalizedCoverageMode,
+    normalizedCoverageStartTime,
+    normalizedCoverageEndTime,
+  )
+
+  if (!Number.isFinite(coverageDurationHours) || coverageDurationHours <= 0) {
+    throw new Error('Período de cobertura inválido. Ajuste os horários da escala.')
+  }
+
+  if (normalizedShiftDurationHours > coverageDurationHours) {
+    throw new Error('A duração do plantão não pode ser maior que a janela de cobertura.')
+  }
+
+  const shiftsPerPeriod = coverageDurationHours / normalizedShiftDurationHours
+  if (!Number.isInteger(shiftsPerPeriod)) {
+    throw new Error(
+      'A duração do plantão deve dividir exatamente a cobertura selecionada (ex.: 24h/12h).',
+    )
+  }
+
   if (input.geofence) {
     if (!Number.isFinite(input.geofence.lat) || input.geofence.lat < -90 || input.geofence.lat > 90) {
       throw new Error('Latitude da geofence inválida.')
@@ -307,6 +422,7 @@ function buildScheduleRecord(
   const normalizedPublishedAt =
     input.status === 'DRAFT' ? undefined : (normalizeDate(input.publishedAt) ?? todayDate())
   const normalizedLocationName = input.locationName?.trim()
+  const normalizedCoverageMode = normalizeCoverageMode(input.coverageMode)
 
   return normalizeSchedule({
     id: base.id,
@@ -323,6 +439,19 @@ function buildScheduleRecord(
     description: input.description?.trim() || undefined,
     startDate: normalizeDate(input.startDate) ?? todayDate(),
     endDate: normalizeDate(input.endDate) ?? todayDate(),
+    coverageMode: normalizedCoverageMode,
+    coverageStartTime: normalizeCoverageTime(
+      input.coverageStartTime,
+      '07:00',
+      normalizedCoverageMode,
+    ),
+    coverageEndTime: normalizeCoverageTime(
+      input.coverageEndTime,
+      '19:00',
+      normalizedCoverageMode,
+    ),
+    shiftDurationHours: normalizePositiveInteger(input.shiftDurationHours, 12),
+    professionalsPerShift: normalizePositiveInteger(input.professionalsPerShift, 1),
     status: input.status,
     publishedAt: normalizedPublishedAt,
     createdAt: normalizeDate(base.createdAt) ?? todayDate(),

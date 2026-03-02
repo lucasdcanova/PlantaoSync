@@ -20,7 +20,7 @@ import {
   ExternalLink,
   X,
 } from 'lucide-react'
-import type { ScheduleStatus } from '@agendaplantao/shared'
+import type { ScheduleCoverageMode, ScheduleStatus } from '@agendaplantao/shared'
 import { Header } from '@/components/layout/header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -58,6 +58,11 @@ type ScheduleFormValues = {
   shiftValue: string
   startDate: string
   endDate: string
+  coverageMode: ScheduleCoverageMode
+  coverageStartTime: string
+  coverageEndTime: string
+  shiftDurationHours: string
+  professionalsPerShift: string
   status: ScheduleStatus
   publishedAt: string
   requireSwapApproval: boolean
@@ -84,6 +89,11 @@ const STATUS_OPTIONS: Array<{ value: ScheduleStatus; label: string }> = [
   { value: 'ARCHIVED', label: SHIFT_STATUS_CONFIG.ARCHIVED.label },
 ]
 
+const COVERAGE_MODE_OPTIONS: Array<{ value: ScheduleCoverageMode; label: string }> = [
+  { value: 'FULL_DAY', label: 'Cobertura 24 horas' },
+  { value: 'CUSTOM_WINDOW', label: 'Período específico' },
+]
+
 function buildDefaultForm(defaultLocationId = ''): ScheduleFormValues {
   return {
     title: '',
@@ -92,6 +102,11 @@ function buildDefaultForm(defaultLocationId = ''): ScheduleFormValues {
     shiftValue: '1400,00',
     startDate: '',
     endDate: '',
+    coverageMode: 'FULL_DAY',
+    coverageStartTime: '07:00',
+    coverageEndTime: '19:00',
+    shiftDurationHours: '12',
+    professionalsPerShift: '1',
     status: 'DRAFT',
     publishedAt: '',
     requireSwapApproval: true,
@@ -119,6 +134,11 @@ function toFormValues(input: {
   shiftValue: number
   startDate: string
   endDate?: string
+  coverageMode?: ScheduleCoverageMode
+  coverageStartTime?: string
+  coverageEndTime?: string
+  shiftDurationHours?: number
+  professionalsPerShift?: number
   status: ScheduleStatus
   publishedAt?: string
   requireSwapApproval: boolean
@@ -137,6 +157,11 @@ function toFormValues(input: {
     shiftValue: (input.shiftValue / 100).toFixed(2).replace('.', ','),
     startDate: input.startDate.slice(0, 10),
     endDate: isOpenEndedSchedule(input.endDate) ? '' : input.endDate?.slice(0, 10) ?? '',
+    coverageMode: input.coverageMode ?? 'FULL_DAY',
+    coverageStartTime: input.coverageStartTime ?? '07:00',
+    coverageEndTime: input.coverageEndTime ?? '19:00',
+    shiftDurationHours: String(input.shiftDurationHours ?? 12),
+    professionalsPerShift: String(input.professionalsPerShift ?? 1),
     status: input.status,
     publishedAt: input.publishedAt?.slice(0, 10) ?? '',
     requireSwapApproval: input.requireSwapApproval,
@@ -160,6 +185,46 @@ function parseCurrencyToCents(value: string) {
 
   if (!Number.isFinite(normalized) || normalized <= 0) return Number.NaN
   return Math.round(normalized * 100)
+}
+
+const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/
+
+function isValidTime(value?: string) {
+  if (!value) return false
+  return TIME_REGEX.test(value)
+}
+
+function timeToMinutes(value: string) {
+  if (!isValidTime(value)) return Number.NaN
+  const [hoursPart, minutesPart] = value.split(':')
+  return Number(hoursPart) * 60 + Number(minutesPart)
+}
+
+function getCoverageDurationHours(
+  coverageMode: ScheduleCoverageMode,
+  coverageStartTime?: string,
+  coverageEndTime?: string,
+) {
+  if (coverageMode === 'FULL_DAY') return 24
+  if (!coverageStartTime || !coverageEndTime) return Number.NaN
+
+  const startMinutes = timeToMinutes(coverageStartTime)
+  const endMinutes = timeToMinutes(coverageEndTime)
+  if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes)) return Number.NaN
+  if (startMinutes === endMinutes) return Number.NaN
+
+  let durationMinutes = endMinutes - startMinutes
+  if (durationMinutes < 0) durationMinutes += 24 * 60
+  return durationMinutes / 60
+}
+
+function formatCoverageWindow(
+  coverageMode: ScheduleCoverageMode,
+  coverageStartTime: string,
+  coverageEndTime: string,
+) {
+  if (coverageMode === 'FULL_DAY') return '24 horas contínuas'
+  return `${coverageStartTime || '—'} às ${coverageEndTime || '—'}`
 }
 
 export default function ScheduleDetailsPage() {
@@ -221,6 +286,34 @@ export default function ScheduleDetailsPage() {
 
   const formTitle = isCreateMode ? 'Nova Escala Mensal' : 'Edição Completa da Escala'
   const parsedShiftValue = parseCurrencyToCents(form.shiftValue)
+  const parsedShiftDurationHours = Number(form.shiftDurationHours)
+  const parsedProfessionalsPerShift = Number(form.professionalsPerShift)
+  const coverageDurationHours = getCoverageDurationHours(
+    form.coverageMode,
+    form.coverageStartTime,
+    form.coverageEndTime,
+  )
+  const shiftsPerCoveragePeriod =
+    Number.isFinite(coverageDurationHours) &&
+    Number.isFinite(parsedShiftDurationHours) &&
+    parsedShiftDurationHours > 0
+      ? coverageDurationHours / parsedShiftDurationHours
+      : Number.NaN
+  const doctorsPerCoveragePeriod =
+    Number.isFinite(shiftsPerCoveragePeriod) &&
+    Number.isFinite(parsedProfessionalsPerShift) &&
+    parsedProfessionalsPerShift > 0
+      ? shiftsPerCoveragePeriod * parsedProfessionalsPerShift
+      : Number.NaN
+  const shiftsPerDay =
+    form.coverageMode === 'FULL_DAY'
+      ? shiftsPerCoveragePeriod
+      : Number.NaN
+  const doctorsPerDay =
+    form.coverageMode === 'FULL_DAY' &&
+    Number.isFinite(doctorsPerCoveragePeriod)
+      ? doctorsPerCoveragePeriod
+      : Number.NaN
   const parsedGeofenceLat = Number(form.geofenceLat)
   const parsedGeofenceLng = Number(form.geofenceLng)
   const parsedGeofenceRadius = Number(form.geofenceRadiusMeters)
@@ -259,6 +352,46 @@ export default function ScheduleDetailsPage() {
 
     if (!Number.isFinite(parsedShiftValue) || parsedShiftValue <= 0) {
       return 'Informe um valor por plantão válido e maior que zero.'
+    }
+
+    if (!Number.isFinite(parsedShiftDurationHours) || parsedShiftDurationHours < 1) {
+      return 'Informe a duração de cada plantão (em horas).'
+    }
+
+    if (!Number.isInteger(parsedShiftDurationHours)) {
+      return 'A duração do plantão deve ser um número inteiro de horas.'
+    }
+
+    if (!Number.isFinite(parsedProfessionalsPerShift) || parsedProfessionalsPerShift < 1) {
+      return 'Informe a quantidade de médicos por plantão.'
+    }
+
+    if (!Number.isInteger(parsedProfessionalsPerShift)) {
+      return 'A quantidade de médicos por plantão deve ser um número inteiro.'
+    }
+
+    if (form.coverageMode === 'CUSTOM_WINDOW') {
+      if (!isValidTime(form.coverageStartTime)) {
+        return 'Informe o horário inicial do período de cobertura.'
+      }
+      if (!isValidTime(form.coverageEndTime)) {
+        return 'Informe o horário final do período de cobertura.'
+      }
+      if (form.coverageStartTime === form.coverageEndTime) {
+        return 'Em período específico, início e fim não podem ser iguais.'
+      }
+    }
+
+    if (!Number.isFinite(coverageDurationHours) || coverageDurationHours <= 0) {
+      return 'A cobertura configurada é inválida. Revise horários e duração.'
+    }
+
+    if (parsedShiftDurationHours > coverageDurationHours) {
+      return 'A duração do plantão não pode ser maior do que a cobertura definida.'
+    }
+
+    if (!Number.isFinite(shiftsPerCoveragePeriod) || !Number.isInteger(shiftsPerCoveragePeriod)) {
+      return 'A duração do plantão deve dividir exatamente a cobertura (ex.: 24h com plantão de 12h).'
     }
 
     const hasAnyGeofenceField =
@@ -304,6 +437,12 @@ export default function ScheduleDetailsPage() {
       shiftValue: parsedShiftValue,
       startDate: form.startDate,
       endDate: form.openEnded ? OPEN_ENDED_SCHEDULE_END_DATE : form.endDate,
+      coverageMode: form.coverageMode,
+      coverageStartTime:
+        form.coverageMode === 'CUSTOM_WINDOW' ? form.coverageStartTime : undefined,
+      coverageEndTime: form.coverageMode === 'CUSTOM_WINDOW' ? form.coverageEndTime : undefined,
+      shiftDurationHours: Math.round(parsedShiftDurationHours),
+      professionalsPerShift: Math.round(parsedProfessionalsPerShift),
       status: form.status,
       publishedAt: canEditPublishedAt ? form.publishedAt || undefined : undefined,
       requireSwapApproval: form.requireSwapApproval,
@@ -662,6 +801,121 @@ export default function ScheduleDetailsPage() {
                     Este valor alimenta os relatórios financeiros do gestor e os relatórios de
                     ganhos dos médicos vinculados à escala.
                   </p>
+                </div>
+
+                <div className="border-border bg-background space-y-3 rounded-xl border p-4">
+                  <div>
+                    <p className="text-foreground text-sm font-medium">
+                      Cobertura e composição dos plantões
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      Defina se a escala cobre 24h ou um período específico, a duração de cada
+                      plantão e quantos médicos ficam por plantão.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="schedule-coverage-mode">Modelo de cobertura</Label>
+                    <select
+                      id="schedule-coverage-mode"
+                      value={form.coverageMode}
+                      onChange={(event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          coverageMode: event.target.value as ScheduleCoverageMode,
+                        }))
+                      }
+                      className="border-input bg-card text-foreground shadow-card focus-visible:ring-ring focus-visible:ring-offset-background h-10 w-full rounded-md border px-3 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                    >
+                      {COVERAGE_MODE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {form.coverageMode === 'CUSTOM_WINDOW' && (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="schedule-coverage-start">Início da cobertura</Label>
+                        <Input
+                          id="schedule-coverage-start"
+                          type="time"
+                          value={form.coverageStartTime}
+                          onChange={(event) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              coverageStartTime: event.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="schedule-coverage-end">Fim da cobertura</Label>
+                        <Input
+                          id="schedule-coverage-end"
+                          type="time"
+                          value={form.coverageEndTime}
+                          onChange={(event) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              coverageEndTime: event.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="schedule-shift-duration-hours">Duração de cada plantão (h)</Label>
+                      <Input
+                        id="schedule-shift-duration-hours"
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={form.shiftDurationHours}
+                        onChange={(event) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            shiftDurationHours: event.target.value,
+                          }))
+                        }
+                        placeholder="12"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="schedule-professionals-per-shift">Médicos por plantão</Label>
+                      <Input
+                        id="schedule-professionals-per-shift"
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={form.professionalsPerShift}
+                        onChange={(event) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            professionalsPerShift: event.target.value,
+                          }))
+                        }
+                        placeholder="2"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <p className="text-foreground text-sm font-medium">Prévia operacional</p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {Number.isInteger(shiftsPerCoveragePeriod) &&
+                      Number.isFinite(doctorsPerCoveragePeriod)
+                        ? form.coverageMode === 'FULL_DAY'
+                          ? `${shiftsPerDay.toFixed(0)} plantão(ões)/dia · ${doctorsPerDay.toFixed(0)} médico(s)/dia`
+                          : `${shiftsPerCoveragePeriod.toFixed(0)} plantão(ões) no período · ${doctorsPerCoveragePeriod.toFixed(0)} médico(s) no período`
+                        : 'Ajuste a cobertura e a duração para gerar uma divisão exata de plantões.'}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -1087,6 +1341,28 @@ export default function ScheduleDetailsPage() {
                       : form.endDate
                         ? formatDate(form.endDate)
                         : '—'}
+                  </p>
+                </div>
+
+                <div className="border-border bg-background rounded-xl border p-4">
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide">
+                    Cobertura e equipe
+                  </p>
+                  <p className="text-foreground mt-2 text-sm">
+                    {form.coverageMode === 'FULL_DAY' ? 'Cobertura 24h' : 'Período específico'} ·{' '}
+                    {formatCoverageWindow(form.coverageMode, form.coverageStartTime, form.coverageEndTime)}
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Plantão: {form.shiftDurationHours || '—'}h · {form.professionalsPerShift || '—'} médico(s)
+                    / plantão
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {Number.isInteger(shiftsPerCoveragePeriod) &&
+                    Number.isFinite(doctorsPerCoveragePeriod)
+                      ? form.coverageMode === 'FULL_DAY'
+                        ? `${shiftsPerDay.toFixed(0)} plantão(ões)/dia · ${doctorsPerDay.toFixed(0)} médico(s)/dia`
+                        : `${shiftsPerCoveragePeriod.toFixed(0)} plantão(ões) no período · ${doctorsPerCoveragePeriod.toFixed(0)} médico(s) no período`
+                      : 'Combinação inválida para divisão de plantões'}
                   </p>
                 </div>
 

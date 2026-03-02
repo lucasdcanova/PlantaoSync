@@ -1,6 +1,7 @@
 export type ScheduleStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED'
 export type ConfirmationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED'
 export type FinancialStatus = 'PENDING' | 'CONFIRMED' | 'PAID' | 'CANCELLED'
+export type ScheduleCoverageMode = 'FULL_DAY' | 'CUSTOM_WINDOW'
 
 export interface Schedule {
   id: string
@@ -10,6 +11,11 @@ export interface Schedule {
   description?: string
   startDate: string
   endDate: string
+  coverageMode?: ScheduleCoverageMode
+  coverageStartTime?: string
+  coverageEndTime?: string
+  shiftDurationHours?: number
+  professionalsPerShift?: number
   status: ScheduleStatus
   publishedAt?: string
   createdAt: string
@@ -61,6 +67,11 @@ export interface CreateScheduleDto {
   description?: string
   startDate: string
   endDate?: string
+  coverageMode?: ScheduleCoverageMode
+  coverageStartTime?: string
+  coverageEndTime?: string
+  shiftDurationHours?: number
+  professionalsPerShift?: number
 }
 
 export interface CreateShiftDto {
