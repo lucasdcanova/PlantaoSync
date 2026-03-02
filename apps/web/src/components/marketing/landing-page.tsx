@@ -179,31 +179,20 @@ const faqItems = [
   },
 ]
 
-function SectionBadge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full border border-[#4ecdc4]/35 bg-[#4ecdc4]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#2bb5ab]">
-      {children}
-    </span>
-  )
-}
-
 function SectionIntro({
-  badge,
   title,
   subtitle,
   light = true,
 }: {
-  badge: string
   title: React.ReactNode
   subtitle: string
   light?: boolean
 }) {
   return (
     <motion.div {...revealUp} transition={{ duration: 0.5, ease: landingEase }} className="mx-auto mb-12 max-w-3xl text-center">
-      <SectionBadge>{badge}</SectionBadge>
       <h2
         className={cn(
-          'mt-4 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl',
+          'text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl',
           light ? 'text-[#111318]' : 'text-white',
         )}
       >
@@ -321,14 +310,6 @@ export function LandingPage() {
                 </Button>
               </div>
 
-              <div className="mt-9 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-[#516073]">
-                {['Sem cartão de crédito', 'Onboarding em 24h', 'Conforme LGPD'].map((chip) => (
-                  <span key={chip} className="inline-flex items-center gap-1 rounded-full border border-[#d7e2eb] bg-white px-3 py-1.5">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-[#2bb5ab]" />
-                    {chip}
-                  </span>
-                ))}
-              </div>
             </motion.div>
 
             <motion.button
@@ -380,7 +361,6 @@ export function LandingPage() {
           <section id="painel-operacional" className="bg-[#13181c] px-4 py-20 text-white sm:px-6 md:py-24">
             <div className="mx-auto max-w-6xl">
               <SectionIntro
-                badge="Painel operacional"
                 title={
                   <>
                     Cobertura em tempo real
@@ -476,8 +456,7 @@ export function LandingPage() {
             <div className="mx-auto max-w-6xl">
               <div className="grid items-center gap-10 lg:grid-cols-2">
                 <motion.div {...revealUp} transition={{ duration: 0.5, ease: landingEase }}>
-                  <SectionBadge>Convocação inteligente</SectionBadge>
-                  <h3 className="mt-4 text-3xl font-bold tracking-tight text-[#111318] sm:text-4xl">
+                  <h3 className="text-3xl font-bold tracking-tight text-[#111318] sm:text-4xl">
                     Publicou a escala,
                     <span className="block text-[#2bb5ab]">a confirmação já começa a acontecer.</span>
                   </h3>
@@ -545,7 +524,6 @@ export function LandingPage() {
           <section className="bg-[#141a1f] px-4 py-20 text-white sm:px-6 md:py-24">
             <div className="mx-auto max-w-6xl">
               <SectionIntro
-                badge="Sugestões com IA"
                 title={
                   <>
                     Recomendações para preencher
@@ -628,8 +606,7 @@ export function LandingPage() {
                 </motion.div>
 
                 <motion.div {...revealUp} transition={{ duration: 0.5, ease: landingEase }}>
-                  <SectionBadge>Financeiro integrado</SectionBadge>
-                  <h3 className="mt-4 text-3xl font-bold tracking-tight text-[#111318] sm:text-4xl">
+                  <h3 className="text-3xl font-bold tracking-tight text-[#111318] sm:text-4xl">
                     Escala e custo no mesmo fluxo.
                     <span className="block text-[#2bb5ab]">Sem retrabalho no fechamento.</span>
                   </h3>
@@ -658,7 +635,6 @@ export function LandingPage() {
           <section className="bg-[#0c141a] px-4 py-20 text-white sm:px-6 md:py-24">
             <div className="mx-auto max-w-6xl">
               <SectionIntro
-                badge="Agenda e trocas"
                 title={
                   <>
                     Processo contínuo de publicação,
@@ -714,7 +690,6 @@ export function LandingPage() {
           <section className="px-4 py-20 sm:px-6 md:py-24">
             <div className="mx-auto max-w-6xl">
               <SectionIntro
-                badge="Pilares da plataforma"
                 title={
                   <>
                     Design operacional direto,
@@ -756,7 +731,6 @@ export function LandingPage() {
           <section id="para-quem" className="bg-[#eef4f7] px-4 py-20 sm:px-6 md:py-24">
             <div className="mx-auto max-w-6xl">
               <SectionIntro
-                badge="Para quem é"
                 title={
                   <>
                     Três perspectivas,
@@ -826,8 +800,7 @@ export function LandingPage() {
             <div className="mx-auto max-w-6xl">
               <div className="grid items-start gap-10 lg:grid-cols-2">
                 <motion.div {...revealUp} transition={{ duration: 0.5, ease: landingEase }}>
-                  <SectionBadge>Segurança e compliance</SectionBadge>
-                  <h3 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+                  <h3 className="text-3xl font-bold tracking-tight sm:text-4xl">
                     Governança de dados para
                     <span className="block text-[#8de0da]">operações sensíveis de saúde</span>
                   </h3>
@@ -884,7 +857,6 @@ export function LandingPage() {
           <section id="planos" className="px-4 py-20 sm:px-6 md:py-24">
             <div className="mx-auto max-w-6xl">
               <SectionIntro
-                badge="Planos"
                 title={
                   <>
                     Estrutura clara para crescer
@@ -963,7 +935,6 @@ export function LandingPage() {
           <section id="depoimentos" className="bg-[#0e171d] px-4 py-20 text-white sm:px-6 md:py-24">
             <div className="mx-auto max-w-6xl">
               <SectionIntro
-                badge="Depoimentos"
                 title={
                   <>
                     Quem saiu da planilha
@@ -998,7 +969,6 @@ export function LandingPage() {
           <section id="faq" className="bg-[#141a1f] px-4 py-20 text-white sm:px-6 md:py-24">
             <div className="mx-auto max-w-6xl">
               <SectionIntro
-                badge="FAQ"
                 title={
                   <>
                     Perguntas frequentes
