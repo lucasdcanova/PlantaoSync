@@ -270,7 +270,7 @@ export function LandingPage() {
           <section className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden bg-white px-4 text-center">
             <div className="pointer-events-none absolute inset-0">
               <video
-                className="absolute inset-0 h-full w-full scale-110 object-cover blur-[10px]"
+                className="absolute inset-0 h-full w-full scale-110 object-cover blur-[13px]"
                 autoPlay
                 loop
                 muted
@@ -296,7 +296,7 @@ export function LandingPage() {
                 <ProductLogo variant="full" className="w-[min(86vw,430px)]" imageClassName="h-auto w-full" priority />
               </div>
 
-              <h1 className="text-4xl font-bold tracking-tight text-[#111318] sm:text-5xl md:text-6xl lg:text-7xl">
+              <h1 className="text-2xl font-bold tracking-tight text-[#111318] sm:text-3xl md:text-3xl lg:text-4xl">
                 Gestão de plantões com previsibilidade.
                 <span className="mt-1 block text-[#5f7f7c]">
                   Controle operacional para hospitais e redes assistenciais.
