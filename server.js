@@ -35,6 +35,18 @@ try {
 }
 
 const PORT = parseInt(process.env.PORT || '3001', 10)
+const MIGRATION_MAX_ATTEMPTS = parseInt(process.env.MIGRATION_MAX_ATTEMPTS || '8', 10)
+const MIGRATION_RETRY_BASE_MS = parseInt(process.env.MIGRATION_RETRY_BASE_MS || '5000', 10)
+const MIGRATION_RETRY_MAX_MS = parseInt(process.env.MIGRATION_RETRY_MAX_MS || '60000', 10)
+const SERVER_START_MAX_ATTEMPTS = parseInt(process.env.SERVER_START_MAX_ATTEMPTS || '6', 10)
+const SERVER_START_RETRY_BASE_MS = parseInt(process.env.SERVER_START_RETRY_BASE_MS || '3000', 10)
+const SERVER_START_RETRY_MAX_MS = parseInt(process.env.SERVER_START_RETRY_MAX_MS || '30000', 10)
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function getBackoffDelay(attempt, baseMs, maxMs) {
+    return Math.min(baseMs * 2 ** (attempt - 1), maxMs)
+}
 
 async function main() {
     // ── 1. Boot NestJS (API) on its own Express instance ─────────────
@@ -129,23 +141,71 @@ async function main() {
 }
 
 // ── Run database migrations before starting ──────────────────────────
-function runMigrations() {
-    console.log('🔄 Running database migrations...')
+async function runMigrationsWithRetry() {
+    for (let attempt = 1; attempt <= MIGRATION_MAX_ATTEMPTS; attempt += 1) {
+        console.log(
+            `🔄 Running database migrations (attempt ${attempt}/${MIGRATION_MAX_ATTEMPTS})...`,
+        )
+        try {
+            execSync('pnpm --filter=api run db:migrate:prod', {
+                cwd: __dirname,
+                stdio: 'inherit',
+            })
+            console.log('✅ Database migrations completed')
+            return
+        } catch (err) {
+            const message = err?.message || String(err)
+            if (attempt === MIGRATION_MAX_ATTEMPTS) {
+                throw new Error(
+                    `Migration failed after ${MIGRATION_MAX_ATTEMPTS} attempts. Last error: ${message}`,
+                )
+            }
+            const delayMs = getBackoffDelay(
+                attempt,
+                MIGRATION_RETRY_BASE_MS,
+                MIGRATION_RETRY_MAX_MS,
+            )
+            console.error(
+                `⚠️ Migration attempt ${attempt} failed: ${message}. Retrying in ${delayMs}ms...`,
+            )
+            await sleep(delayMs)
+        }
+    }
+}
+
+async function startServerWithRetry() {
+    for (let attempt = 1; attempt <= SERVER_START_MAX_ATTEMPTS; attempt += 1) {
+        try {
+            await main()
+            return
+        } catch (err) {
+            const message = err?.message || String(err)
+            if (attempt === SERVER_START_MAX_ATTEMPTS) {
+                throw new Error(
+                    `Server bootstrap failed after ${SERVER_START_MAX_ATTEMPTS} attempts. Last error: ${message}`,
+                )
+            }
+            const delayMs = getBackoffDelay(
+                attempt,
+                SERVER_START_RETRY_BASE_MS,
+                SERVER_START_RETRY_MAX_MS,
+            )
+            console.error(
+                `⚠️ Server bootstrap attempt ${attempt} failed: ${message}. Retrying in ${delayMs}ms...`,
+            )
+            await sleep(delayMs)
+        }
+    }
+}
+
+async function bootstrap() {
     try {
-        execSync('pnpm --filter=api run db:migrate:prod', {
-            cwd: __dirname,
-            stdio: 'inherit',
-        })
-        console.log('✅ Database migrations completed')
+        await runMigrationsWithRetry()
+        await startServerWithRetry()
     } catch (err) {
-        console.error('❌ Migration failed:', err.message)
+        console.error('❌ Failed to start unified server:', err)
         process.exit(1)
     }
 }
 
-runMigrations()
-
-main().catch((err) => {
-    console.error('❌ Failed to start unified server:', err)
-    process.exit(1)
-})
+bootstrap()
