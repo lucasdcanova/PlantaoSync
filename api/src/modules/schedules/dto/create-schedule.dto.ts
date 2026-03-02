@@ -22,7 +22,8 @@ export class CreateScheduleDto {
   @IsDateString()
   startDate: string
 
-  @ApiProperty({ example: '2025-03-31' })
+  @ApiPropertyOptional({ example: '2025-03-31', description: 'Opcional para escala aberta' })
+  @IsOptional()
   @IsDateString()
-  endDate: string
+  endDate?: string
 }

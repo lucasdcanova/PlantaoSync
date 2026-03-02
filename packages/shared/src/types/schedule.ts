@@ -60,7 +60,7 @@ export interface CreateScheduleDto {
   title: string
   description?: string
   startDate: string
-  endDate: string
+  endDate?: string
 }
 
 export interface CreateShiftDto {

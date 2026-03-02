@@ -9,6 +9,8 @@ import { CreateScheduleDto } from './dto/create-schedule.dto'
 import { UpdateScheduleDto } from './dto/update-schedule.dto'
 import { ScheduleFiltersDto } from './dto/schedule-filters.dto'
 
+const OPEN_ENDED_SCHEDULE_END_DATE = '9999-12-31'
+
 @Injectable()
 export class SchedulesService {
   constructor(
@@ -83,7 +85,9 @@ export class SchedulesService {
       throw new NotFoundException('Local não encontrado ou inativo')
     }
 
-    if (new Date(dto.startDate) > new Date(dto.endDate)) {
+    const endDate = dto.endDate ?? OPEN_ENDED_SCHEDULE_END_DATE
+
+    if (new Date(dto.startDate) > new Date(endDate)) {
       throw new BadRequestException('Data de início não pode ser posterior à data de fim')
     }
 
@@ -94,7 +98,7 @@ export class SchedulesService {
         title: dto.title,
         description: dto.description,
         startDate: new Date(dto.startDate),
-        endDate: new Date(dto.endDate),
+        endDate: new Date(endDate),
         status: 'DRAFT',
       },
       include: { location: true },

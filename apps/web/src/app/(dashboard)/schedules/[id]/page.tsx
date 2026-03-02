@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useParams, useRouter } from 'next/navigation'
 import {
   ArrowLeft,
@@ -15,6 +16,9 @@ import {
   Plus,
   ShieldCheck,
   ShieldAlert,
+  LocateFixed,
+  ExternalLink,
+  X,
 } from 'lucide-react'
 import type { ScheduleStatus } from '@agendaplantao/shared'
 import { Header } from '@/components/layout/header'
@@ -23,6 +27,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SHIFT_STATUS_CONFIG, formatCurrency, formatDate } from '@/lib/utils'
+import { OPEN_ENDED_SCHEDULE_END_DATE, isOpenEndedSchedule } from '@/lib/schedule-range'
 import {
   inferAttendanceSectorIdByName,
   useShiftAttendanceStore,
@@ -33,6 +38,18 @@ import {
   type ScheduleExtraShiftInput,
 } from '@/store/schedules.store'
 import { useLocationsStore } from '@/store/locations.store'
+
+const GeofencePickerMap = dynamic(
+  () => import('@/components/maps/geofence-picker-map').then((mod) => mod.GeofencePickerMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="border-border bg-muted/30 text-muted-foreground grid h-[260px] w-full place-items-center rounded-xl border text-sm">
+        Carregando mapa...
+      </div>
+    ),
+  },
+)
 
 type ScheduleFormValues = {
   title: string
@@ -49,6 +66,7 @@ type ScheduleFormValues = {
   geofenceRadiusMeters: string
   geofenceLabel: string
   geofenceAutoCheckInEnabled: boolean
+  openEnded: boolean
 }
 
 type ExtraShiftFormValues = {
@@ -82,6 +100,7 @@ function buildDefaultForm(defaultLocationId = ''): ScheduleFormValues {
     geofenceRadiusMeters: '180',
     geofenceLabel: '',
     geofenceAutoCheckInEnabled: false,
+    openEnded: false,
   }
 }
 
@@ -99,7 +118,7 @@ function toFormValues(input: {
   locationId: string
   shiftValue: number
   startDate: string
-  endDate: string
+  endDate?: string
   status: ScheduleStatus
   publishedAt?: string
   requireSwapApproval: boolean
@@ -117,7 +136,7 @@ function toFormValues(input: {
     locationId: input.locationId,
     shiftValue: (input.shiftValue / 100).toFixed(2).replace('.', ','),
     startDate: input.startDate.slice(0, 10),
-    endDate: input.endDate.slice(0, 10),
+    endDate: isOpenEndedSchedule(input.endDate) ? '' : input.endDate?.slice(0, 10) ?? '',
     status: input.status,
     publishedAt: input.publishedAt?.slice(0, 10) ?? '',
     requireSwapApproval: input.requireSwapApproval,
@@ -128,6 +147,7 @@ function toFormValues(input: {
     geofenceRadiusMeters: String(input.geofence?.radiusMeters ?? 180),
     geofenceLabel: input.geofence?.label ?? '',
     geofenceAutoCheckInEnabled: input.geofence?.autoCheckInEnabled ?? false,
+    openEnded: isOpenEndedSchedule(input.endDate),
   } satisfies ScheduleFormValues
 }
 
@@ -176,6 +196,7 @@ export default function ScheduleDetailsPage() {
     useState<ExtraShiftFormValues>(DEFAULT_EXTRA_SHIFT_FORM)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [isLocating, setIsLocating] = useState(false)
 
   useEffect(() => {
     if (isCreateMode) {
@@ -203,6 +224,13 @@ export default function ScheduleDetailsPage() {
   const parsedGeofenceLat = Number(form.geofenceLat)
   const parsedGeofenceLng = Number(form.geofenceLng)
   const parsedGeofenceRadius = Number(form.geofenceRadiusMeters)
+  const geofencePoint =
+    Number.isFinite(parsedGeofenceLat) && Number.isFinite(parsedGeofenceLng)
+      ? { lat: parsedGeofenceLat, lng: parsedGeofenceLng }
+      : null
+  const googleMapsUrl = geofencePoint
+    ? `https://www.google.com/maps/search/?api=1&query=${geofencePoint.lat},${geofencePoint.lng}`
+    : 'https://www.google.com/maps'
 
   const validateForm = () => {
     if (!hasLocations) {
@@ -217,11 +245,15 @@ export default function ScheduleDetailsPage() {
       return 'Selecione o local da escala.'
     }
 
-    if (!form.startDate || !form.endDate) {
-      return 'Informe as datas de início e fim.'
+    if (!form.startDate) {
+      return 'Informe a data de início.'
     }
 
-    if (form.startDate > form.endDate) {
+    if (!form.openEnded && !form.endDate) {
+      return 'Informe a data final ou marque a escala como sem data final.'
+    }
+
+    if (!form.openEnded && form.startDate > form.endDate) {
       return 'A data de início não pode ser maior que a data final.'
     }
 
@@ -271,7 +303,7 @@ export default function ScheduleDetailsPage() {
       locationName: selectedLocation?.name,
       shiftValue: parsedShiftValue,
       startDate: form.startDate,
-      endDate: form.endDate,
+      endDate: form.openEnded ? OPEN_ENDED_SCHEDULE_END_DATE : form.endDate,
       status: form.status,
       publishedAt: canEditPublishedAt ? form.publishedAt || undefined : undefined,
       requireSwapApproval: form.requireSwapApproval,
@@ -337,6 +369,65 @@ export default function ScheduleDetailsPage() {
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Falha ao salvar a escala.')
     }
+  }
+
+  const handleUseCurrentLocation = () => {
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) {
+      setErrorMessage('Geolocalização indisponível neste dispositivo.')
+      return
+    }
+
+    setErrorMessage(null)
+    setSuccessMessage(null)
+    setIsLocating(true)
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude
+        const lng = position.coords.longitude
+        setForm((prev) => ({
+          ...prev,
+          geofenceLat: lat.toFixed(6),
+          geofenceLng: lng.toFixed(6),
+          geofenceLabel: prev.geofenceLabel || selectedLocation?.name || 'Ponto da escala',
+        }))
+        setSuccessMessage('Localização atual aplicada na geofence.')
+        setIsLocating(false)
+      },
+      () => {
+        setErrorMessage(
+          'Não foi possível obter sua localização. Verifique a permissão de geolocalização.',
+        )
+        setIsLocating(false)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 60000,
+      },
+    )
+  }
+
+  const handleMapPinChange = ({ lat, lng }: { lat: number; lng: number }) => {
+    setErrorMessage(null)
+    setSuccessMessage(null)
+    setForm((prev) => ({
+      ...prev,
+      geofenceLat: lat.toFixed(6),
+      geofenceLng: lng.toFixed(6),
+      geofenceLabel: prev.geofenceLabel || selectedLocation?.name || 'Ponto da escala',
+    }))
+  }
+
+  const handleClearGeofencePoint = () => {
+    setForm((prev) => ({
+      ...prev,
+      geofenceLat: '',
+      geofenceLng: '',
+      geofenceLabel: '',
+      geofenceAutoCheckInEnabled: false,
+    }))
+    setSuccessMessage('Ponto da geofence removido.')
   }
 
   const handleDelete = () => {
@@ -573,59 +664,86 @@ export default function ScheduleDetailsPage() {
                   </p>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="schedule-start">Data inicial</Label>
-                    <Input
-                      id="schedule-start"
-                      type="date"
-                      value={form.startDate}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div>
+                      <p className="text-foreground text-sm font-medium">Escala sem data final</p>
+                      <p className="text-muted-foreground text-xs">
+                        Mantém a escala aberta até que a gestão feche manualmente.
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={form.openEnded}
                       onChange={(event) =>
                         setForm((prev) => ({
                           ...prev,
-                          startDate: event.target.value,
+                          openEnded: event.target.checked,
+                          endDate: event.target.checked ? '' : prev.endDate,
                         }))
                       }
-                      required
+                      className="border-border text-brand-600 focus:ring-brand-500 h-4 w-4 rounded"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="schedule-end">Data final</Label>
-                    <Input
-                      id="schedule-end"
-                      type="date"
-                      value={form.endDate}
-                      onChange={(event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          endDate: event.target.value,
-                        }))
-                      }
-                      required
-                    />
+                  <div className={form.openEnded ? 'grid gap-4 md:grid-cols-1' : 'grid gap-4 md:grid-cols-2'}>
+                    <div className="space-y-2">
+                      <Label htmlFor="schedule-start">Data inicial</Label>
+                      <Input
+                        id="schedule-start"
+                        type="date"
+                        value={form.startDate}
+                        onChange={(event) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            startDate: event.target.value,
+                          }))
+                        }
+                        required
+                      />
+                    </div>
+
+                    {!form.openEnded && (
+                      <div className="space-y-2">
+                        <Label htmlFor="schedule-end">Data final</Label>
+                        <Input
+                          id="schedule-end"
+                          type="date"
+                          value={form.endDate}
+                          onChange={(event) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              endDate: event.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="schedule-published">Data de publicação</Label>
-                  <Input
-                    id="schedule-published"
-                    type="date"
-                    disabled={!canEditPublishedAt}
-                    value={form.publishedAt}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        publishedAt: event.target.value,
-                      }))
-                    }
-                  />
-                  {!canEditPublishedAt && (
-                    <p className="text-muted-foreground text-xs">
-                      A data de publicação é habilitada quando o status é diferente de rascunho.
-                    </p>
-                  )}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="schedule-published">Data de publicação</Label>
+                    <Input
+                      id="schedule-published"
+                      type="date"
+                      disabled={!canEditPublishedAt}
+                      value={form.publishedAt}
+                      onChange={(event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          publishedAt: event.target.value,
+                        }))
+                      }
+                    />
+                    {!canEditPublishedAt && (
+                      <p className="text-muted-foreground text-xs">
+                        A data de publicação é habilitada quando o status é diferente de rascunho.
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="border-border bg-background rounded-xl border p-4">
@@ -663,35 +781,63 @@ export default function ScheduleDetailsPage() {
                       Geofence do plantão (local exato)
                     </p>
                     <p className="text-muted-foreground mt-1 text-xs">
-                      Defina a localização exata usada para check-in geolocalizado e check-in
-                      automático com autorização do médico.
+                      Compartilhe sua localização atual ou clique no mapa para posicionar o pin da
+                      geofence.
                     </p>
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="schedule-geofence-lat">Latitude</Label>
-                      <Input
-                        id="schedule-geofence-lat"
-                        inputMode="decimal"
-                        value={form.geofenceLat}
-                        onChange={(event) =>
-                          setForm((prev) => ({ ...prev, geofenceLat: event.target.value }))
-                        }
-                        placeholder="-23.561414"
-                      />
-                    </div>
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={handleUseCurrentLocation}
+                      disabled={isLocating}
+                    >
+                      <LocateFixed className="h-4 w-4" />
+                      {isLocating ? 'Capturando localização...' : 'Usar localização atual'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={handleClearGeofencePoint}
+                      disabled={!geofencePoint}
+                    >
+                      <X className="h-4 w-4" />
+                      Limpar pin
+                    </Button>
+                    <Button asChild type="button" variant="outline" size="sm" className="gap-2">
+                      <a href={googleMapsUrl} target="_blank" rel="noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                        Abrir no Google Maps
+                      </a>
+                    </Button>
+                  </div>
 
+                  <GeofencePickerMap
+                    point={geofencePoint}
+                    radiusMeters={parsedGeofenceRadius}
+                    onPointChange={handleMapPinChange}
+                  />
+
+                  <p className="text-muted-foreground mt-2 text-xs">
+                    Clique em qualquer ponto do mapa para posicionar a geofence manualmente.
+                  </p>
+
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor="schedule-geofence-lng">Longitude</Label>
+                      <Label htmlFor="schedule-geofence-coords">Coordenadas selecionadas</Label>
                       <Input
-                        id="schedule-geofence-lng"
-                        inputMode="decimal"
-                        value={form.geofenceLng}
-                        onChange={(event) =>
-                          setForm((prev) => ({ ...prev, geofenceLng: event.target.value }))
+                        id="schedule-geofence-coords"
+                        value={
+                          geofencePoint
+                            ? `${geofencePoint.lat.toFixed(6)}, ${geofencePoint.lng.toFixed(6)}`
+                            : 'Nenhum ponto selecionado'
                         }
-                        placeholder="-46.655881"
+                        readOnly
                       />
                     </div>
 
@@ -712,7 +858,7 @@ export default function ScheduleDetailsPage() {
                       />
                     </div>
 
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 md:col-span-2">
                       <Label htmlFor="schedule-geofence-label">Etiqueta do ponto</Label>
                       <Input
                         id="schedule-geofence-label"
@@ -936,7 +1082,11 @@ export default function ScheduleDetailsPage() {
                   <p className="text-foreground mt-2 flex items-center gap-2">
                     <Calendar className="text-brand-500 h-4 w-4" />
                     {form.startDate ? formatDate(form.startDate) : '—'} até{' '}
-                    {form.endDate ? formatDate(form.endDate) : '—'}
+                    {form.openEnded
+                      ? 'Sem data final'
+                      : form.endDate
+                        ? formatDate(form.endDate)
+                        : '—'}
                   </p>
                 </div>
 

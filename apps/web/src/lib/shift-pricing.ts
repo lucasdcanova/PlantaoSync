@@ -1,5 +1,6 @@
 import type { ManagerLocation } from '@/store/locations.store'
 import type { ManagerSchedule } from '@/store/schedules.store'
+import { isDateInScheduleRange } from '@/lib/schedule-range'
 
 const DEFAULT_SHIFT_VALUE = 140_000
 
@@ -43,10 +44,7 @@ function getShiftWindow(date: string, startTime: string, endTime: string) {
 }
 
 function scheduleContainsDate(schedule: ManagerSchedule, shiftDate: string) {
-  const normalizedDate = dateKey(shiftDate)
-  return (
-    normalizedDate >= dateKey(schedule.startDate) && normalizedDate <= dateKey(schedule.endDate)
-  )
+  return isDateInScheduleRange(shiftDate, schedule.startDate, schedule.endDate)
 }
 
 export function getShiftDurationHours(date: string, startTime: string, endTime: string) {

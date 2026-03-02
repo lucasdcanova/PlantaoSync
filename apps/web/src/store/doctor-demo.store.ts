@@ -18,6 +18,7 @@ export interface DemoDoctorRegistration {
   inviteCode: string
   fullName: string
   email: string
+  phone: string
   password: string
   crm: string
   specialty: string
@@ -41,6 +42,7 @@ interface RegisterDoctorPayload {
   inviteCode: string
   fullName: string
   email: string
+  phone: string
   password: string
   crm: string
   specialty: string
@@ -368,15 +370,17 @@ export const useDoctorDemoStore = create<DoctorDemoState>()(
           }
         }),
 
-      registerDoctorByInvite: ({ inviteCode, fullName, email, password, crm, specialty }) => {
+      registerDoctorByInvite: ({ inviteCode, fullName, email, phone, password, crm, specialty }) => {
         const normalizedEmail = email.trim().toLowerCase()
         const normalizedCode = inviteCode.trim().toUpperCase()
+        const normalizedPhone = phone.trim()
         const state = get()
 
         if (
           !normalizedCode ||
           !normalizedEmail ||
           !fullName.trim() ||
+          !normalizedPhone ||
           !password ||
           !crm.trim() ||
           !specialty.trim()
@@ -402,6 +406,7 @@ export const useDoctorDemoStore = create<DoctorDemoState>()(
           inviteCode: normalizedCode,
           fullName: fullName.trim(),
           email: normalizedEmail,
+          phone: normalizedPhone,
           password,
           crm: crm.trim(),
           specialty: specialty.trim(),

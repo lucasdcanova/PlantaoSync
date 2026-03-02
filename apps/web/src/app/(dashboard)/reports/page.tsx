@@ -45,6 +45,7 @@ import {
 } from '@/store/shift-attendance.store'
 import { createShiftValueResolver, getShiftDurationHours } from '@/lib/shift-pricing'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
+import { doesScheduleOverlapRange } from '@/lib/schedule-range'
 
 type ReportWindow = 'month' | 'quarter'
 type AnalysisPerspective = 'setores' | 'especialidades'
@@ -265,8 +266,12 @@ export default function ReportsPage() {
     () =>
       schedules.filter(
         (schedule) =>
-          schedule.endDate.slice(0, 10) >= dateRange.startKey &&
-          schedule.startDate <= dateRange.endKey,
+          doesScheduleOverlapRange(
+            schedule.startDate,
+            schedule.endDate,
+            dateRange.startKey,
+            dateRange.endKey,
+          ),
       ),
     [dateRange.endKey, dateRange.startKey, schedules],
   )

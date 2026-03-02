@@ -34,7 +34,12 @@ const registerSchema = z
       .regex(/^[a-z0-9-]*$/, 'Use apenas letras minúsculas, números e hífen')
       .optional()
       .or(z.literal('')),
-    phone: z.string().max(20, 'Telefone muito longo').optional().or(z.literal('')),
+    phone: z
+      .string()
+      .trim()
+      .min(10, 'Informe um celular válido')
+      .max(20, 'Telefone muito longo')
+      .regex(/^[\d()\-\s+]+$/, 'Formato de celular inválido'),
     email: z.string().email('E-mail inválido'),
     password: z
       .string()
@@ -89,7 +94,7 @@ export default function RegisterPage() {
         password: data.password,
         organizationName: data.organizationName,
         organizationSlug: data.organizationSlug || slugify(data.organizationName),
-        phone: data.phone || undefined,
+        phone: data.phone.trim(),
       }
 
       const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
@@ -249,8 +254,14 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="phone">Telefone (opcional)</Label>
-              <Input id="phone" placeholder="(11) 99999-9999" {...register('phone')} />
+              <Label htmlFor="phone">Celular</Label>
+              <Input
+                id="phone"
+                placeholder="(11) 99999-9999"
+                autoComplete="tel"
+                {...register('phone')}
+              />
+              {errors.phone && <p className="text-destructive text-xs">{errors.phone.message}</p>}
             </div>
 
             <div className="space-y-1.5">

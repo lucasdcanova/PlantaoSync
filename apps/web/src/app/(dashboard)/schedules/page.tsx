@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { cn, formatCurrency, formatDate, SHIFT_STATUS_CONFIG } from '@/lib/utils'
+import { isDateInScheduleRange, isOpenEndedSchedule } from '@/lib/schedule-range'
 import { DEMO_DOCTOR_AVAILABLE_SHIFTS, DEMO_MANAGER_ASSIGNED_SHIFTS } from '@/lib/demo-data'
 import { useSchedulesStore } from '@/store/schedules.store'
 import { useLocationsStore } from '@/store/locations.store'
@@ -175,8 +176,7 @@ export default function SchedulesPage() {
     if (!selectedSchedule) return map
 
     const inPeriod = (date: string) =>
-      date.slice(0, 10) >= selectedSchedule.startDate.slice(0, 10) &&
-      date.slice(0, 10) <= selectedSchedule.endDate.slice(0, 10)
+      isDateInScheduleRange(date, selectedSchedule.startDate, selectedSchedule.endDate)
 
     demoAvailableShifts.forEach((shift) => {
       const date = new Date(`${shift.date}T00:00:00`)
@@ -452,9 +452,11 @@ export default function SchedulesPage() {
                       }
 
                       const dateIso = toISODate(year, month, day)
-                      const inScheduleRange =
-                        dateIso >= selectedSchedule.startDate.slice(0, 10) &&
-                        dateIso <= selectedSchedule.endDate.slice(0, 10)
+                      const inScheduleRange = isDateInScheduleRange(
+                        dateIso,
+                        selectedSchedule.startDate,
+                        selectedSchedule.endDate,
+                      )
 
                       const openCount = openCountByDay.get(day) ?? 0
                       const assignedCount = assignedCountByDay.get(day) ?? 0
@@ -699,7 +701,10 @@ export default function SchedulesPage() {
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Calendar className="text-brand-400 h-3.5 w-3.5" />
-                        {formatDate(schedule.startDate)} – {formatDate(schedule.endDate)}
+                        {formatDate(schedule.startDate)} –{' '}
+                        {isOpenEndedSchedule(schedule.endDate)
+                          ? 'Sem data final'
+                          : formatDate(schedule.endDate)}
                       </span>
                       {schedule.publishedAt && (
                         <span className="flex items-center gap-1.5">

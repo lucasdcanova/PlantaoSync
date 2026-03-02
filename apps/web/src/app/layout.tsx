@@ -7,6 +7,7 @@ import { QueryProvider } from '@/lib/query-provider'
 import { getSiteUrl } from '@/lib/site'
 import { BRAND_NAME } from '@/lib/brand'
 import './globals.css'
+import 'leaflet/dist/leaflet.css'
 
 const baseUrl = getSiteUrl()
 const outfit = Outfit({

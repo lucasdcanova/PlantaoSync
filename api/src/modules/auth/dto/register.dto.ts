@@ -32,8 +32,10 @@ export class RegisterDto {
   @Matches(/^[a-z0-9-]+$/, { message: 'Slug deve conter apenas letras minúsculas, números e hífens' })
   organizationSlug?: string
 
-  @ApiPropertyOptional({ example: '(11) 99999-9999' })
-  @IsOptional()
+  @ApiProperty({ example: '(11) 99999-9999' })
   @IsString()
-  phone?: string
+  @MinLength(10, { message: 'Celular inválido' })
+  @MaxLength(20, { message: 'Celular muito longo' })
+  @Matches(/^[\d()\-\s+]+$/, { message: 'Formato de celular inválido' })
+  phone: string
 }

@@ -17,6 +17,7 @@ interface InviteFormState {
   inviteCode: string
   fullName: string
   email: string
+  phone: string
   crm: string
   specialty: string
   password: string
@@ -27,6 +28,7 @@ const initialFormState: InviteFormState = {
   inviteCode: '',
   fullName: '',
   email: '',
+  phone: '',
   crm: '',
   specialty: '',
   password: '',
@@ -58,11 +60,18 @@ export default function InviteRegisterPage() {
       return
     }
 
+    const normalizedPhone = form.phone.replace(/\D/g, '')
+    if (normalizedPhone.length < 10) {
+      setError('Informe um celular válido para concluir o cadastro.')
+      return
+    }
+
     setIsSubmitting(true)
     const result = registerDoctorByInvite({
       inviteCode: form.inviteCode,
       fullName: form.fullName,
       email: form.email,
+      phone: form.phone,
       password: form.password,
       crm: form.crm,
       specialty: form.specialty,
@@ -158,6 +167,17 @@ export default function InviteRegisterPage() {
                 placeholder="medico@hospital.com.br"
                 value={form.email}
                 onChange={(event) => onChange('email', event.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="phone">Celular</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="(11) 99999-9999"
+                value={form.phone}
+                onChange={(event) => onChange('phone', event.target.value)}
               />
             </div>
 
