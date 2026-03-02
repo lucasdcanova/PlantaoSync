@@ -1,10 +1,10 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Bell, LogOut } from 'lucide-react'
+import { Bell, CreditCard, LogOut, Settings } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/auth.store'
 
 interface HeaderProps {
@@ -14,6 +14,7 @@ interface HeaderProps {
 
 export function Header({ title, subtitle }: HeaderProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const logout = useAuthStore((state) => state.logout)
 
   const handleLogout = () => {
@@ -24,7 +25,7 @@ export function Header({ title, subtitle }: HeaderProps) {
   return (
     <>
       {/* Desktop-only page header (mobile header is in layout) */}
-      <header className="hidden lg:sticky lg:top-0 lg:z-50 lg:block lg:border-b lg:border-border lg:bg-card lg:px-6 lg:py-3">
+      <header className="lg:border-border lg:bg-card hidden lg:sticky lg:top-0 lg:z-50 lg:block lg:border-b lg:px-6 lg:py-3">
         <div className="mx-auto flex w-full max-w-[1680px] items-center justify-between gap-4">
           <div>
             <h1 className="font-display text-foreground text-lg font-semibold sm:text-xl">
@@ -50,6 +51,26 @@ export function Header({ title, subtitle }: HeaderProps) {
             </Button>
 
             <Button
+              variant={pathname === '/settings' ? 'default' : 'ghost'}
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => router.push('/settings')}
+            >
+              <Settings className="h-4 w-4" />
+              <span className="sr-only">Configurações</span>
+            </Button>
+
+            <Button
+              variant={pathname === '/subscription' ? 'default' : 'ghost'}
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => router.push('/subscription')}
+            >
+              <CreditCard className="h-4 w-4" />
+              <span className="sr-only">Plano e assinatura</span>
+            </Button>
+
+            <Button
               variant="ghost"
               size="icon"
               className="text-muted-foreground hover:text-foreground h-9 w-9"
@@ -65,9 +86,7 @@ export function Header({ title, subtitle }: HeaderProps) {
       {/* Mobile: page title (smaller, below the main header) */}
       <div className="px-4 pt-3 lg:hidden">
         <h1 className="font-display text-foreground text-base font-semibold">{title}</h1>
-        {subtitle ? (
-          <p className="text-muted-foreground text-[11px]">{subtitle}</p>
-        ) : null}
+        {subtitle ? <p className="text-muted-foreground text-[11px]">{subtitle}</p> : null}
       </div>
     </>
   )

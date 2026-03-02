@@ -3,7 +3,16 @@
 import { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
-import { Calendar, LayoutDashboard, MapPin, Users, BarChart3, LogOut } from 'lucide-react'
+import {
+  Calendar,
+  LayoutDashboard,
+  MapPin,
+  Users,
+  BarChart3,
+  CreditCard,
+  LogOut,
+  Settings,
+} from 'lucide-react'
 import {
   DASHBOARD_SIDEBAR_COLLAPSED_WIDTH,
   DASHBOARD_SIDEBAR_EXPANDED_WIDTH,
@@ -46,6 +55,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push('/login')
   }
 
+  const handleOpenInstitution = () => {
+    router.push('/institution')
+  }
+
   return (
     <div className="bg-background relative flex h-[100dvh] min-h-[100dvh] overflow-hidden">
       <StatusBarSync color="#ffffff" />
@@ -54,7 +67,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         aria-hidden
         className="hidden shrink-0 lg:block"
         animate={{
-          width: sidebarCollapsed ? DASHBOARD_SIDEBAR_COLLAPSED_WIDTH : DASHBOARD_SIDEBAR_EXPANDED_WIDTH,
+          width: sidebarCollapsed
+            ? DASHBOARD_SIDEBAR_COLLAPSED_WIDTH
+            : DASHBOARD_SIDEBAR_EXPANDED_WIDTH,
         }}
         transition={{ type: 'spring', stiffness: 320, damping: 34, mass: 0.9 }}
       />
@@ -64,15 +79,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <header className="mobile-header-solid">
           <div className="mobile-header-inner">
             {/* Left: Institution logo + name */}
-            <div className="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={handleOpenInstitution}
+              className="hover:bg-accent/60 tap-feedback flex min-w-0 items-center gap-2 rounded-lg px-1 py-1 text-left"
+              aria-label="Abrir instituição"
+            >
               <OrgAvatar name={orgName} logoUrl={institution.logoUrl} size="sm" />
               <div className="min-w-0">
-                <p className="text-foreground text-xs font-semibold leading-tight truncate max-w-[110px]">
+                <p className="text-foreground max-w-[110px] truncate text-xs font-semibold leading-tight">
                   {orgName}
                 </p>
                 <p className="text-muted-foreground text-[10px] leading-tight">Gestão</p>
               </div>
-            </div>
+            </button>
 
             {/* Center: Logo with notch */}
             <div className="header-logo-center">
@@ -89,8 +109,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </motion.div>
             </div>
 
-            {/* Right: logout */}
+            {/* Right: shortcuts + logout */}
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => router.push('/settings')}
+              >
+                <Settings className="h-4 w-4" />
+                <span className="sr-only">Configurações</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => router.push('/subscription')}
+              >
+                <CreditCard className="h-4 w-4" />
+                <span className="sr-only">Plano e assinatura</span>
+              </Button>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleLogout}>
                 <LogOut className="h-4 w-4" />
                 <span className="sr-only">Sair</span>
