@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, CreditCard, Loader2, ShieldCheck, Sparkles } from 'lucide-react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Header } from '@/components/layout/header'
 import { Badge } from '@/components/ui/badge'
@@ -135,7 +135,6 @@ type CheckoutResponse = {
 
 export default function SubscriptionPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const isDemoMode = useAuthStore((state) => state.isDemoMode)
   const user = useAuthStore((state) => state.user)
   const institution = useInstitutionStore()
@@ -188,7 +187,9 @@ export default function SubscriptionPage() {
   useEffect(() => {
     if (handledCheckoutReturn.current) return
 
-    const checkoutState = searchParams.get('checkout')
+    if (typeof window === 'undefined') return
+
+    const checkoutState = new URLSearchParams(window.location.search).get('checkout')
     if (!checkoutState) return
 
     handledCheckoutReturn.current = true
@@ -202,7 +203,7 @@ export default function SubscriptionPage() {
     }
 
     router.replace('/subscription')
-  }, [router, searchParams])
+  }, [router])
 
   const handleStartCheckout = async (plan: PlanKey) => {
     if (isDemoMode) {
