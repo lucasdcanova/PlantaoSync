@@ -3,7 +3,7 @@
     "name": "CONFIRMA PLANTÃO",
     "slug": "confirma-plantao",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/brand/icon.png",
     "scheme": "confirma-plantao",
     "userInterfaceStyle": "light",
@@ -13,7 +13,7 @@
       "backgroundColor": "#09090f"
     },
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "com.confirmaplantao.app",
       "infoPlist": {
         "UIBackgroundModes": ["remote-notification"],
@@ -65,7 +65,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "pwaUrl": "https://confirmaplantao.com.br",
+      "pwaUrl": "https://plantaosync.onrender.com",
       "eas": {
         "projectId": "your-eas-project-id"
       }

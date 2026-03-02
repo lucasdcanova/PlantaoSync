@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Linking, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, Linking, Platform, Pressable, Text, View } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import Constants from 'expo-constants'
 import { WebView } from 'react-native-webview'
@@ -71,6 +71,8 @@ export default function RootPwaScreen() {
     return ensureLoginEntry(normalizeUrl(fromEnv ?? fromExpoExtra ?? DEFAULT_PWA_URL))
   }, [])
 
+  const prefersDesktopContent = Platform.OS === 'ios' && Platform.isPad
+
   const handleShouldStartLoadWithRequest = (request: ShouldStartLoadRequest) => {
     const url = request.url
 
@@ -124,6 +126,10 @@ export default function RootPwaScreen() {
         setDisplayZoomControls={false}
         sharedCookiesEnabled
         thirdPartyCookiesEnabled
+        contentMode={prefersDesktopContent ? 'desktop' : 'recommended'}
+        automaticallyAdjustContentInsets={false}
+        contentInsetAdjustmentBehavior="never"
+        bounces={false}
         allowsBackForwardNavigationGestures
         setSupportMultipleWindows={false}
         injectedJavaScriptBeforeContentLoaded={WEBVIEW_VIEWPORT_LOCK_SCRIPT}
