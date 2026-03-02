@@ -297,20 +297,24 @@ export function LandingPage() {
               </div>
 
               <h1 className="text-4xl font-bold tracking-tight text-[#111318] sm:text-5xl md:text-6xl lg:text-7xl">
-                Escala médica sem caos.
-                <span className="mt-1 block text-[#5f7f7c]">Cobertura previsível todos os dias.</span>
+                Gestão de plantões com previsibilidade.
+                <span className="mt-1 block text-[#5f7f7c]">
+                  Controle operacional para hospitais e redes assistenciais.
+                </span>
               </h1>
 
               <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-[#5e6a7b] sm:text-lg">
-                O Agenda Plantão transforma publicação, confirmação, troca e fechamento financeiro em
-                um fluxo único. Menos planilha, menos ligação, mais previsibilidade assistencial.
+                O Confirma Plantão centraliza publicação, confirmação, trocas e fechamento financeiro
+                em um único fluxo, com rastreabilidade em tempo real.
               </p>
 
               <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
-                <Button asChild size="lg" className="w-full bg-[#111318] text-white hover:bg-[#1f2937] sm:w-auto">
-                  <Link href="/register">
-                    Testar 7 dias grátis <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
+                <Button
+                  size="lg"
+                  className="w-full bg-[#111318] text-white hover:bg-[#1f2937] sm:w-auto"
+                  onClick={() => scrollToSection('como-funciona')}
+                >
+                  Conhecer <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 <Button
                   asChild
@@ -318,7 +322,7 @@ export function LandingPage() {
                   variant="outline"
                   className="w-full border-[#bcc9d5] bg-white/80 text-[#111318] hover:bg-white sm:w-auto"
                 >
-                  <Link href="/login">Já tenho conta</Link>
+                  <Link href="/login">Entrar</Link>
                 </Button>
               </div>
 
@@ -344,7 +348,7 @@ export function LandingPage() {
             </motion.button>
           </section>
 
-          <section className="border-y border-[#dde6ed] bg-[#eef4f7] px-4 py-14 sm:px-6">
+          <section id="como-funciona" className="border-y border-[#dde6ed] bg-[#eef4f7] px-4 py-14 sm:px-6">
             <div className="mx-auto max-w-6xl">
               <motion.p
                 {...revealUp}
@@ -1088,7 +1092,9 @@ export function LandingPage() {
                 transition={{ duration: 0.46, ease: landingEase }}
                 className="rounded-3xl border border-[#d6e1e8] bg-white px-6 py-10 text-center text-[#111318] shadow-[0_16px_44px_-30px_rgba(15,23,42,0.45)] sm:px-12"
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.17em] text-[#516073]">Teste gratuito</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.17em] text-[#516073]">
+                  Próximo passo
+                </p>
                 <h3 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
                   Leve sua operação de escala
                   <span className="block">do improviso para o controle.</span>
@@ -1100,9 +1106,7 @@ export function LandingPage() {
 
                 <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
                   <Button asChild className="w-full bg-[#0f1c20] text-white hover:bg-[#1b2d34] sm:w-auto">
-                    <Link href="/register">
-                      Começar gratuitamente <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
+                    <Link href="/register">Conhecer a plataforma <ArrowRight className="ml-2 h-4 w-4" /></Link>
                   </Button>
                   <Button asChild variant="outline" className="w-full border-[#c8d4de] bg-white text-[#111318] hover:bg-[#f4f8fb] sm:w-auto">
                     <Link href="/faq">Ver perguntas frequentes</Link>
