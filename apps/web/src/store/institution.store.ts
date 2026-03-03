@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import type { AuthUser } from '@/store/auth.store'
 
 export interface InstitutionManager {
@@ -47,51 +46,48 @@ const EMPTY_STATE: InstitutionInfo & { managers: InstitutionManager[] } = {
 }
 
 export const useInstitutionStore = create<InstitutionState>()(
-  persist(
-    (set) => ({
-      // Start empty and populate from authenticated user context.
-      ...EMPTY_STATE,
+  (set) => ({
+    // Start empty and populate from authenticated user context.
+    ...EMPTY_STATE,
 
-      updateInfo: (info) => set((state) => ({ ...state, ...info })),
+    updateInfo: (info) => set((state) => ({ ...state, ...info })),
 
-      setLogo: (logoUrl) => set({ logoUrl }),
+    setLogo: (logoUrl) => set({ logoUrl }),
 
-      addManager: (manager) =>
-        set((state) => ({
-          managers: [
-            ...state.managers,
-            {
-              ...manager,
-              id: `mgr-${Date.now()}`,
-              addedAt: new Date().toISOString(),
-            },
-          ],
-        })),
+    addManager: (manager) =>
+      set((state) => ({
+        managers: [
+          ...state.managers,
+          {
+            ...manager,
+            id: `mgr-${Date.now()}`,
+            addedAt: new Date().toISOString(),
+          },
+        ],
+      })),
 
-      removeManager: (managerId) =>
-        set((state) => ({
-          managers: state.managers.filter((m) => m.id !== managerId),
-        })),
+    removeManager: (managerId) =>
+      set((state) => ({
+        managers: state.managers.filter((m) => m.id !== managerId),
+      })),
 
-      // Reset to blank state (for real users at logout)
-      resetInstitution: () => set(EMPTY_STATE),
+    // Reset to blank state (for real users at logout)
+    resetInstitution: () => set(EMPTY_STATE),
 
-      // Populate from real user's org (shows org name, adds them as ADMIN)
-      initFromUser: (user: AuthUser) =>
-        set({
-          ...EMPTY_STATE,
-          name: user.organization?.name ?? '',
-          managers: [
-            {
-              id: `mgr-${user.id}`,
-              name: user.name,
-              email: user.email,
-              role: 'ADMIN',
-              addedAt: new Date().toISOString(),
-            },
-          ],
-        }),
-    }),
-    { name: 'confirma-plantao-institution' },
-  ),
+    // Populate from real user's org (shows org name, adds them as ADMIN)
+    initFromUser: (user: AuthUser) =>
+      set({
+        ...EMPTY_STATE,
+        name: user.organization?.name ?? '',
+        managers: [
+          {
+            id: `mgr-${user.id}`,
+            name: user.name,
+            email: user.email,
+            role: 'ADMIN',
+            addedAt: new Date().toISOString(),
+          },
+        ],
+      }),
+  }),
 )

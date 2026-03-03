@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { createJSONStorage, persist } from 'zustand/middleware'
 
 type LegacySector = { id: string; name: string }
 type LegacyProfessional = { id: string; userId: string; name: string; specialty?: string }
@@ -1763,9 +1762,8 @@ export function buildAttendanceManagerAnalytics(
 }
 
 export const useShiftAttendanceStore = create<ShiftAttendanceState>()(
-  persist(
-    (set, get) => ({
-      ...buildEmptyAttendanceState(),
+  (set, get) => ({
+    ...buildEmptyAttendanceState(),
 
       setAutoCheckInConsent: (value) => set(() => ({ autoCheckInConsent: Boolean(value) })),
 
@@ -1948,21 +1946,8 @@ export const useShiftAttendanceStore = create<ShiftAttendanceState>()(
         return result
       },
 
-      resetAttendanceData: () => set(() => ({ ...buildEmptyAttendanceState() })),
-    }),
-    {
-      name: 'confirma-plantao-shift-attendance',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        geofences: state.geofences,
-        records: state.records,
-        cancellationEvents: state.cancellationEvents,
-        autoCheckInConsent: state.autoCheckInConsent,
-        autoCheckInWindowStartMinutesBefore: state.autoCheckInWindowStartMinutesBefore,
-        autoCheckInWindowEndMinutesAfter: state.autoCheckInWindowEndMinutesAfter,
-      }),
-    },
-  ),
+    resetAttendanceData: () => set(() => ({ ...buildEmptyAttendanceState() })),
+  }),
 )
 
 export function buildGeoPositionFromGeofence(

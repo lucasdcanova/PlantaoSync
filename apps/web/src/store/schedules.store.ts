@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import type { Schedule, ScheduleCoverageMode, ScheduleStatus } from '@agendaplantao/shared'
 
 export interface ScheduleExtraShift {
@@ -381,157 +380,139 @@ function buildScheduleRecord(
 }
 
 export const useSchedulesStore = create<SchedulesState>()(
-  persist(
-    (set, get) => ({
-      // Start empty and hydrate from backend.
-      schedules: [],
+  (set, get) => ({
+    // Start empty and hydrate from backend.
+    schedules: [],
 
-      createSchedule: (input) => {
-        validateInput(input)
+    createSchedule: (input) => {
+      validateInput(input)
 
-        const newSchedule = buildScheduleRecord(input, {
-          id: `schedule-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-          organizationId: LOCAL_ORGANIZATION_ID,
-          createdAt: todayDate(),
-          updatedAt: todayDate(),
-          extraShifts: [],
-          shifts: [],
-        })
+      const newSchedule = buildScheduleRecord(input, {
+        id: `schedule-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        organizationId: LOCAL_ORGANIZATION_ID,
+        createdAt: todayDate(),
+        updatedAt: todayDate(),
+        extraShifts: [],
+        shifts: [],
+      })
 
-        set((state) => ({
-          schedules: withSortedSchedules([newSchedule, ...state.schedules]),
-        }))
+      set((state) => ({
+        schedules: withSortedSchedules([newSchedule, ...state.schedules]),
+      }))
 
-        return newSchedule
-      },
-
-      updateSchedule: (id, input) => {
-        validateInput(input)
-
-        const current = get().schedules.find((item) => item.id === id)
-        if (!current) {
-          throw new Error('Escala não encontrada.')
-        }
-
-        const updated = buildScheduleRecord(input, {
-          id: current.id,
-          organizationId: current.organizationId,
-          createdAt: current.createdAt,
-          updatedAt: todayDate(),
-          extraShifts: current.extraShifts,
-          shifts: current.shifts,
-        })
-
-        set((state) => ({
-          schedules: withSortedSchedules(
-            state.schedules.map((item) => (item.id === id ? updated : item)),
-          ),
-        }))
-
-        return updated
-      },
-
-      deleteSchedule: (id) =>
-        set((state) => ({
-          schedules: state.schedules.filter((item) => item.id !== id),
-        })),
-
-      setSchedules: (schedules) =>
-        set({
-          schedules: withSortedSchedules(
-            schedules.map((schedule) => normalizeSchedule(schedule)),
-          ),
-        }),
-
-      upsertSchedule: (schedule) => {
-        const normalized = normalizeSchedule(schedule)
-        set((state) => {
-          const exists = state.schedules.some((item) => item.id === normalized.id)
-          return {
-            schedules: withSortedSchedules(
-              exists
-                ? state.schedules.map((item) => (item.id === normalized.id ? normalized : item))
-                : [normalized, ...state.schedules],
-            ),
-          }
-        })
-        return normalized
-      },
-
-      removeSchedule: (id) =>
-        set((state) => ({
-          schedules: state.schedules.filter((item) => item.id !== id),
-        })),
-
-      addExtraShift: (scheduleId, input) => {
-        validateExtraShiftInput(input)
-
-        const schedule = get().schedules.find((item) => item.id === scheduleId)
-        if (!schedule) {
-          throw new Error('Escala não encontrada para adicionar turno extra.')
-        }
-
-        if (input.date < schedule.startDate || input.date > schedule.endDate) {
-          throw new Error('A data do turno extra precisa estar dentro do período da escala.')
-        }
-
-        const extraShift = normalizeExtraShift(
-          {
-            id: `extra-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
-            ...input,
-          },
-          input.locationId || schedule.locationId,
-        )
-
-        set((state) => ({
-          schedules: state.schedules.map((item) =>
-            item.id === scheduleId
-              ? {
-                  ...item,
-                  updatedAt: todayDate(),
-                  extraShifts: [...item.extraShifts, extraShift].sort((a, b) =>
-                    `${a.date}-${a.startTime}`.localeCompare(`${b.date}-${b.startTime}`),
-                  ),
-                }
-              : item,
-          ),
-        }))
-
-        return extraShift
-      },
-
-      removeExtraShift: (scheduleId, extraShiftId) =>
-        set((state) => ({
-          schedules: state.schedules.map((item) =>
-            item.id === scheduleId
-              ? {
-                  ...item,
-                  updatedAt: todayDate(),
-                  extraShifts: item.extraShifts.filter(
-                    (extraShift) => extraShift.id !== extraShiftId,
-                  ),
-                }
-              : item,
-          ),
-        })),
-
-      resetSchedules: () => set({ schedules: [] }),
-    }),
-    {
-      name: 'confirma-plantao-schedules',
-      partialize: (state) => ({ schedules: state.schedules }),
-      merge: (persistedState, currentState) => {
-        const typedPersistedState = persistedState as Partial<SchedulesState> | undefined
-        const persistedSchedules = typedPersistedState?.schedules ?? currentState.schedules
-
-        return {
-          ...currentState,
-          ...typedPersistedState,
-          schedules: withSortedSchedules(
-            persistedSchedules.map((schedule) => normalizeSchedule(schedule)),
-          ),
-        }
-      },
+      return newSchedule
     },
-  ),
+
+    updateSchedule: (id, input) => {
+      validateInput(input)
+
+      const current = get().schedules.find((item) => item.id === id)
+      if (!current) {
+        throw new Error('Escala não encontrada.')
+      }
+
+      const updated = buildScheduleRecord(input, {
+        id: current.id,
+        organizationId: current.organizationId,
+        createdAt: current.createdAt,
+        updatedAt: todayDate(),
+        extraShifts: current.extraShifts,
+        shifts: current.shifts,
+      })
+
+      set((state) => ({
+        schedules: withSortedSchedules(
+          state.schedules.map((item) => (item.id === id ? updated : item)),
+        ),
+      }))
+
+      return updated
+    },
+
+    deleteSchedule: (id) =>
+      set((state) => ({
+        schedules: state.schedules.filter((item) => item.id !== id),
+      })),
+
+    setSchedules: (schedules) =>
+      set({
+        schedules: withSortedSchedules(
+          schedules.map((schedule) => normalizeSchedule(schedule)),
+        ),
+      }),
+
+    upsertSchedule: (schedule) => {
+      const normalized = normalizeSchedule(schedule)
+      set((state) => {
+        const exists = state.schedules.some((item) => item.id === normalized.id)
+        return {
+          schedules: withSortedSchedules(
+            exists
+              ? state.schedules.map((item) => (item.id === normalized.id ? normalized : item))
+              : [normalized, ...state.schedules],
+          ),
+        }
+      })
+      return normalized
+    },
+
+    removeSchedule: (id) =>
+      set((state) => ({
+        schedules: state.schedules.filter((item) => item.id !== id),
+      })),
+
+    addExtraShift: (scheduleId, input) => {
+      validateExtraShiftInput(input)
+
+      const schedule = get().schedules.find((item) => item.id === scheduleId)
+      if (!schedule) {
+        throw new Error('Escala não encontrada para adicionar turno extra.')
+      }
+
+      if (input.date < schedule.startDate || input.date > schedule.endDate) {
+        throw new Error('A data do turno extra precisa estar dentro do período da escala.')
+      }
+
+      const extraShift = normalizeExtraShift(
+        {
+          id: `extra-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+          ...input,
+        },
+        input.locationId || schedule.locationId,
+      )
+
+      set((state) => ({
+        schedules: state.schedules.map((item) =>
+          item.id === scheduleId
+            ? {
+                ...item,
+                updatedAt: todayDate(),
+                extraShifts: [...item.extraShifts, extraShift].sort((a, b) =>
+                  `${a.date}-${a.startTime}`.localeCompare(`${b.date}-${b.startTime}`),
+                ),
+              }
+            : item,
+        ),
+      }))
+
+      return extraShift
+    },
+
+    removeExtraShift: (scheduleId, extraShiftId) =>
+      set((state) => ({
+        schedules: state.schedules.map((item) =>
+          item.id === scheduleId
+            ? {
+                ...item,
+                updatedAt: todayDate(),
+                extraShifts: item.extraShifts.filter(
+                  (extraShift) => extraShift.id !== extraShiftId,
+                ),
+              }
+            : item,
+        ),
+      })),
+
+    resetSchedules: () => set({ schedules: [] }),
+  }),
 )

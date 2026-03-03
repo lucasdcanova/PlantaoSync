@@ -54,64 +54,18 @@ const criticalityClassName: Record<LocationCriticality, string> = {
 
 type LocationFormState = {
   name: string
-  criticality: LocationCriticality
-  occupancyRate: string
-  pendingShifts: string
-  activeProfessionals: string
-  monthlyCost: string
 }
 
 function toFormState(location?: ManagerLocation): LocationFormState {
   if (!location) {
     return {
       name: '',
-      criticality: 'Média',
-      occupancyRate: '90',
-      pendingShifts: '0',
-      activeProfessionals: '0',
-      monthlyCost: '0,00',
     }
   }
 
   return {
     name: location.name,
-    criticality: location.criticality,
-    occupancyRate: String(location.occupancyRate),
-    pendingShifts: String(location.pendingShifts),
-    activeProfessionals: String(location.activeProfessionals),
-    monthlyCost: (location.monthlyCost / 100).toFixed(2).replace('.', ','),
   }
-}
-
-function parseCurrencyToCents(value: string) {
-  const numeric = Number(value.replace(',', '.'))
-  if (!Number.isFinite(numeric) || numeric < 0) return Number.NaN
-  return Math.round(numeric * 100)
-}
-
-function mergeApiLocationsWithLocal(
-  apiLocations: ApiLocation[],
-  localLocations: ManagerLocation[],
-): ManagerLocation[] {
-  const localById = new Map(localLocations.map((location) => [location.id, location]))
-
-  return apiLocations.map((apiLocation) => {
-    const mapped = mapApiLocationToManager(apiLocation)
-    const local = localById.get(apiLocation.id)
-
-    if (!local) {
-      return mapped
-    }
-
-    return {
-      ...mapped,
-      criticality: local.criticality,
-      occupancyRate: local.occupancyRate,
-      pendingShifts: local.pendingShifts,
-      activeProfessionals: local.activeProfessionals,
-      monthlyCost: local.monthlyCost,
-    }
-  })
 }
 
 function LocationEditorCard({
@@ -134,44 +88,19 @@ function LocationEditorCard({
   }, [initialLocation])
 
   const handleSubmit = () => {
-    const occupancyRate = Number(form.occupancyRate)
-    const pendingShifts = Number(form.pendingShifts)
-    const activeProfessionals = Number(form.activeProfessionals)
-    const monthlyCost = parseCurrencyToCents(form.monthlyCost)
-
     if (!form.name.trim()) {
       setError('Informe o nome do setor.')
-      return
-    }
-
-    if (!Number.isFinite(occupancyRate) || occupancyRate < 0 || occupancyRate > 100) {
-      setError('Ocupação deve estar entre 0 e 100.')
-      return
-    }
-
-    if (!Number.isFinite(pendingShifts) || pendingShifts < 0) {
-      setError('Plantões pendentes deve ser zero ou maior.')
-      return
-    }
-
-    if (!Number.isFinite(activeProfessionals) || activeProfessionals < 0) {
-      setError('Profissionais ativos deve ser zero ou maior.')
-      return
-    }
-
-    if (!Number.isFinite(monthlyCost) || monthlyCost < 0) {
-      setError('Custo mensal inválido.')
       return
     }
 
     setError(null)
     onSubmit({
       name: form.name,
-      criticality: form.criticality,
-      occupancyRate,
-      pendingShifts,
-      activeProfessionals,
-      monthlyCost,
+      criticality: initialLocation?.criticality ?? 'Média',
+      occupancyRate: initialLocation?.occupancyRate ?? 0,
+      pendingShifts: initialLocation?.pendingShifts ?? 0,
+      activeProfessionals: initialLocation?.activeProfessionals ?? 0,
+      monthlyCost: initialLocation?.monthlyCost ?? 0,
     })
   }
 
@@ -211,93 +140,12 @@ function LocationEditorCard({
             placeholder="Ex.: UTI Adulto"
           />
         </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor={`location-criticality-${mode}`}>Criticidade</Label>
-          <select
-            id={`location-criticality-${mode}`}
-            value={form.criticality}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                criticality: event.target.value as LocationCriticality,
-              }))
-            }
-            className="border-input bg-card text-foreground shadow-card focus-visible:ring-ring focus-visible:ring-offset-background h-10 w-full rounded-md border px-3 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-          >
-            {CRITICALITY_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor={`location-occupancy-${mode}`}>Ocupação (%)</Label>
-          <Input
-            id={`location-occupancy-${mode}`}
-            type="number"
-            min={0}
-            max={100}
-            value={form.occupancyRate}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                occupancyRate: event.target.value,
-              }))
-            }
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor={`location-pending-${mode}`}>Plantões pendentes</Label>
-          <Input
-            id={`location-pending-${mode}`}
-            type="number"
-            min={0}
-            value={form.pendingShifts}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                pendingShifts: event.target.value,
-              }))
-            }
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor={`location-professionals-${mode}`}>Profissionais ativos</Label>
-          <Input
-            id={`location-professionals-${mode}`}
-            type="number"
-            min={0}
-            value={form.activeProfessionals}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                activeProfessionals: event.target.value,
-              }))
-            }
-          />
-        </div>
-
-        <div className="space-y-1.5 md:col-span-2">
-          <Label htmlFor={`location-cost-${mode}`}>Custo mensal (R$)</Label>
-          <Input
-            id={`location-cost-${mode}`}
-            type="text"
-            value={form.monthlyCost}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                monthlyCost: event.target.value,
-              }))
-            }
-            placeholder="0,00"
-          />
-        </div>
       </div>
+
+      <p className="mt-3 rounded-md border border-border bg-background px-3 py-2 text-xs text-muted-foreground">
+        Criticidade e indicadores operacionais serão calculados automaticamente com base em dados
+        reais da operação.
+      </p>
 
       {error && (
         <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
@@ -339,8 +187,7 @@ export default function LocationsPage() {
     try {
       const api = getApiClient()
       const response = await api.get('locations').json<ApiLocation[]>()
-      const localLocations = useLocationsStore.getState().locations
-      setLocations(mergeApiLocationsWithLocal(response, localLocations))
+      setLocations(response.map((location) => mapApiLocationToManager(location)))
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Falha ao carregar setores da organização.',
@@ -414,18 +261,8 @@ export default function LocationsPage() {
           .json<ApiLocation>()
 
         const mapped = mapApiLocationToManager(created)
-        const newLocation: ManagerLocation = {
-          ...mapped,
-          criticality: input.criticality,
-          occupancyRate: input.occupancyRate,
-          pendingShifts: input.pendingShifts,
-          activeProfessionals: input.activeProfessionals,
-          monthlyCost: input.monthlyCost,
-          isActive: true,
-        }
-
         const current = useLocationsStore.getState().locations
-        setLocations([...current.filter((location) => location.id !== newLocation.id), newLocation])
+        setLocations([...current.filter((location) => location.id !== mapped.id), mapped])
         setShowCreateForm(false)
         toast.success('Setor incluído com sucesso.')
       } catch (error) {
@@ -450,17 +287,7 @@ export default function LocationsPage() {
         const current = useLocationsStore.getState().locations
         setLocations(
           current.map((location) =>
-            location.id === locationId
-              ? {
-                  ...location,
-                  ...mapped,
-                  criticality: input.criticality,
-                  occupancyRate: input.occupancyRate,
-                  pendingShifts: input.pendingShifts,
-                  activeProfessionals: input.activeProfessionals,
-                  monthlyCost: input.monthlyCost,
-                }
-              : location,
+            location.id === locationId ? { ...location, ...mapped } : location,
           ),
         )
 

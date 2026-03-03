@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { createJSONStorage, persist } from 'zustand/middleware'
 
 export type LocationCriticality = 'Alta' | 'Média' | 'Baixa'
 
@@ -78,79 +77,72 @@ function sortLocations(locations: ManagerLocation[]) {
 }
 
 export const useLocationsStore = create<LocationsState>()(
-  persist(
-    (set, get) => ({
-      // Start empty and hydrate from backend.
-      locations: [],
+  (set, get) => ({
+    // Start empty and hydrate from backend.
+    locations: [],
 
-      addLocation: (input) => {
-        const normalized = normalizeLocationInput(input)
-        const timestamp = nowIso()
+    addLocation: (input) => {
+      const normalized = normalizeLocationInput(input)
+      const timestamp = nowIso()
 
-        const newLocation: ManagerLocation = {
-          id: `loc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
-          ...normalized,
-          isActive: true,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        }
+      const newLocation: ManagerLocation = {
+        id: `loc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+        ...normalized,
+        isActive: true,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }
 
-        set((state) => ({
-          locations: sortLocations([...state.locations, newLocation]),
-        }))
+      set((state) => ({
+        locations: sortLocations([...state.locations, newLocation]),
+      }))
 
-        return newLocation
-      },
-
-      updateLocation: (id, input) => {
-        const normalized = normalizeLocationInput(input)
-        const current = get().locations.find((location) => location.id === id)
-        if (!current) {
-          throw new Error('Setor não encontrado.')
-        }
-
-        const updated: ManagerLocation = {
-          ...current,
-          ...normalized,
-          updatedAt: nowIso(),
-        }
-
-        set((state) => ({
-          locations: sortLocations(
-            state.locations.map((location) => (location.id === id ? updated : location)),
-          ),
-        }))
-
-        return updated
-      },
-
-      deleteLocation: (id) =>
-        set((state) => ({
-          locations: state.locations.filter((location) => location.id !== id),
-        })),
-
-      toggleLocationActive: (id) =>
-        set((state) => ({
-          locations: sortLocations(
-            state.locations.map((location) =>
-              location.id === id
-                ? { ...location, isActive: !location.isActive, updatedAt: nowIso() }
-                : location,
-            ),
-          ),
-        })),
-
-      setLocations: (locations) =>
-        set({
-          locations: sortLocations(locations),
-        }),
-
-      resetLocations: () => set({ locations: [] }),
-    }),
-    {
-      name: 'confirma-plantao-locations',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ locations: state.locations }),
+      return newLocation
     },
-  ),
+
+    updateLocation: (id, input) => {
+      const normalized = normalizeLocationInput(input)
+      const current = get().locations.find((location) => location.id === id)
+      if (!current) {
+        throw new Error('Setor não encontrado.')
+      }
+
+      const updated: ManagerLocation = {
+        ...current,
+        ...normalized,
+        updatedAt: nowIso(),
+      }
+
+      set((state) => ({
+        locations: sortLocations(
+          state.locations.map((location) => (location.id === id ? updated : location)),
+        ),
+      }))
+
+      return updated
+    },
+
+    deleteLocation: (id) =>
+      set((state) => ({
+        locations: state.locations.filter((location) => location.id !== id),
+      })),
+
+    toggleLocationActive: (id) =>
+      set((state) => ({
+        locations: sortLocations(
+          state.locations.map((location) =>
+            location.id === id
+              ? { ...location, isActive: !location.isActive, updatedAt: nowIso() }
+              : location,
+          ),
+        ),
+      })),
+
+    setLocations: (locations) =>
+      set({
+        locations: sortLocations(locations),
+      }),
+
+    resetLocations: () => set({ locations: [] }),
+  }),
 )

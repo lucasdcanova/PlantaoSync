@@ -36,6 +36,17 @@ type ApiSchedule = {
   createdAt: string
   updatedAt: string
   location?: ApiLocation | null
+  shifts?: ApiShift[] | null
+}
+
+type ApiShift = {
+  id: string
+  date: string
+  startTime: string
+  endTime: string
+  requiredCount?: number | null
+  notes?: string | null
+  locationId: string
 }
 
 type ApiUser = {
@@ -96,6 +107,17 @@ function buildScheduleGeofence(schedule: ApiSchedule): ScheduleGeofenceConfig | 
 }
 
 export function mapApiScheduleToManager(schedule: ApiSchedule): ManagerSchedule {
+  const extraShifts =
+    schedule.shifts?.map((shift) => ({
+      id: shift.id,
+      date: toDateKey(shift.date),
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      requiredCount: shift.requiredCount ?? 1,
+      notes: shift.notes ?? undefined,
+      locationId: shift.locationId,
+    })) ?? []
+
   return {
     id: schedule.id,
     organizationId: schedule.organizationId,
@@ -120,7 +142,7 @@ export function mapApiScheduleToManager(schedule: ApiSchedule): ManagerSchedule 
           name: schedule.location.name,
         }
       : undefined,
-    extraShifts: [],
+    extraShifts,
     requireSwapApproval: schedule.requireSwapApproval ?? true,
     shiftValue: schedule.shiftValue ?? 140_000,
     geofence: buildScheduleGeofence(schedule),

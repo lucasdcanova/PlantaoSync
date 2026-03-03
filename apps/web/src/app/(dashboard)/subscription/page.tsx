@@ -7,10 +7,8 @@ import { toast } from 'sonner'
 import { Header } from '@/components/layout/header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { getApiClient } from '@/lib/api'
 import { useAuthStore } from '@/store/auth.store'
-import { useInstitutionStore } from '@/store/institution.store'
-import { useLocationsStore } from '@/store/locations.store'
-import { useProfessionalsStore } from '@/store/professionals.store'
 
 type PlanKey = 'BASIC' | 'PREMIUM' | 'ENTERPRISE'
 type BillingCycle = 'MONTHLY'
@@ -132,15 +130,29 @@ type CheckoutResponse = {
   message?: string
 }
 
+type UserRow = {
+  id: string
+  role: 'ADMIN' | 'MANAGER' | 'PROFESSIONAL'
+  isActive: boolean
+}
+
+type ApiLocation = {
+  id: string
+  isActive?: boolean
+}
+
 export default function SubscriptionPage() {
   const router = useRouter()
   const user = useAuthStore((state) => state.user)
-  const institutionName = useInstitutionStore((state) => state.name)
-  const managers = useInstitutionStore((state) => state.managers)
-  const allProfessionals = useProfessionalsStore((state) => state.professionals)
-  const allLocations = useLocationsStore((state) => state.locations)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const accessToken = useAuthStore((state) => state.accessToken)
 
   const [processingPlan, setProcessingPlan] = useState<PlanKey | null>(null)
+  const [usageCounts, setUsageCounts] = useState({
+    professionals: 0,
+    locations: 0,
+    managers: 0,
+  })
   const handledCheckoutReturn = useRef(false)
 
   const currentPlan = useMemo(
@@ -152,19 +164,52 @@ export default function SubscriptionPage() {
   const trialEndsAt = user?.organization?.subscription?.trialEndsAt
   const limits = PLAN_LIMITS[currentPlan]
   const supportText = PLAN_SUPPORT[currentPlan]
-  const professionals = useMemo(
-    () => allProfessionals.filter((professional) => professional.hospitalStatus === 'ATIVO'),
-    [allProfessionals],
-  )
-  const locations = useMemo(
-    () => allLocations.filter((location) => location.isActive),
-    [allLocations],
-  )
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) return
+    let cancelled = false
+
+    const loadUsageCounts = async () => {
+      try {
+        const api = getApiClient()
+        const [usersResponse, professionalsResponse, locations] = await Promise.all([
+          api.get('users', { searchParams: { limit: 100 } }).json<{ data: UserRow[] }>(),
+          api
+            .get('users', {
+              searchParams: { role: 'PROFESSIONAL', isActive: true, limit: 100 },
+            })
+            .json<{ data: UserRow[] }>(),
+          api.get('locations').json<ApiLocation[]>(),
+        ])
+
+        if (cancelled) return
+
+        const managers = usersResponse.data.filter(
+          (userItem) =>
+            userItem.isActive &&
+            (userItem.role === 'ADMIN' || userItem.role === 'MANAGER'),
+        ).length
+        const activeLocations = locations.filter((location) => location.isActive !== false).length
+
+        setUsageCounts({
+          professionals: professionalsResponse.data.length,
+          locations: activeLocations,
+          managers,
+        })
+      } catch {
+        // Mantém contadores zerados caso API indisponível.
+      }
+    }
+
+    void loadUsageCounts()
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken, isAuthenticated])
 
   const usageItems = [
-    { label: 'Profissionais', used: professionals.length, limit: limits.professionals },
-    { label: 'Locais', used: locations.length, limit: limits.locations },
-    { label: 'Gestores', used: managers.length, limit: limits.managers },
+    { label: 'Profissionais', used: usageCounts.professionals, limit: limits.professionals },
+    { label: 'Locais', used: usageCounts.locations, limit: limits.locations },
+    { label: 'Gestores', used: usageCounts.managers, limit: limits.managers },
   ]
 
   useEffect(() => {
@@ -194,7 +239,7 @@ export default function SubscriptionPage() {
       billingCycle: 'MONTHLY',
       customerEmail: user?.email,
       organizationId: user?.organizationId,
-      organizationName: institutionName || user?.organization?.name,
+      organizationName: user?.organization?.name,
     }
 
     setProcessingPlan(plan)

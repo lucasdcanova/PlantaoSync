@@ -31,13 +31,8 @@ import { OPEN_ENDED_SCHEDULE_END_DATE, isOpenEndedSchedule } from '@/lib/schedul
 import { getApiClient } from '@/lib/api'
 import { mapApiLocationToManager, mapApiScheduleToManager } from '@/lib/backend-mappers'
 import {
-  inferAttendanceSectorIdByName,
-  useShiftAttendanceStore,
-} from '@/store/shift-attendance.store'
-import {
   useSchedulesStore,
   type ScheduleEditorInput,
-  type ScheduleExtraShiftInput,
 } from '@/store/schedules.store'
 import { useLocationsStore } from '@/store/locations.store'
 import { useAuthStore } from '@/store/auth.store'
@@ -241,12 +236,9 @@ export default function ScheduleDetailsPage() {
   const schedules = useSchedulesStore((state) => state.schedules)
   const upsertSchedule = useSchedulesStore((state) => state.upsertSchedule)
   const removeSchedule = useSchedulesStore((state) => state.removeSchedule)
-  const addExtraShift = useSchedulesStore((state) => state.addExtraShift)
-  const removeExtraShift = useSchedulesStore((state) => state.removeExtraShift)
   const locations = useLocationsStore((state) => state.locations)
   const setLocations = useLocationsStore((state) => state.setLocations)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-  const upsertAttendanceGeofence = useShiftAttendanceStore((state) => state.upsertGeofence)
 
   const defaultLocationId =
     locations.find((location) => location.isActive)?.id ?? locations[0]?.id ?? ''
@@ -544,19 +536,6 @@ export default function ScheduleDetailsPage() {
             createdResponse as Parameters<typeof mapApiScheduleToManager>[0],
           ),
         )
-        if (created.geofence && selectedLocation?.name) {
-          const sectorId = inferAttendanceSectorIdByName(selectedLocation.name) ?? selectedLocation.id
-          upsertAttendanceGeofence({
-            sectorId,
-            sectorName: selectedLocation.name,
-            lat: created.geofence.lat,
-            lng: created.geofence.lng,
-            radiusMeters: created.geofence.radiusMeters,
-            label: created.geofence.label ?? selectedLocation.name,
-            autoCheckInEnabled: created.geofence.autoCheckInEnabled,
-            configuredByManager: true,
-          })
-        }
         setSuccessMessage('Escala criada com sucesso.')
         router.replace(`/schedules/${created.id}`)
         return
@@ -568,24 +547,11 @@ export default function ScheduleDetailsPage() {
       }
 
       const updatedResponse = await api.patch(`schedules/${scheduleId}`, { json: apiPayload }).json()
-      const updated = upsertSchedule(
+      upsertSchedule(
         mapApiScheduleToManager(
           updatedResponse as Parameters<typeof mapApiScheduleToManager>[0],
         ),
       )
-      if (updated.geofence && selectedLocation?.name) {
-        const sectorId = inferAttendanceSectorIdByName(selectedLocation.name) ?? selectedLocation.id
-        upsertAttendanceGeofence({
-          sectorId,
-          sectorName: selectedLocation.name,
-          lat: updated.geofence.lat,
-          lng: updated.geofence.lng,
-          radiusMeters: updated.geofence.radiusMeters,
-          label: updated.geofence.label ?? selectedLocation.name,
-          autoCheckInEnabled: updated.geofence.autoCheckInEnabled,
-          configuredByManager: true,
-        })
-      }
       setSuccessMessage('Escala atualizada com sucesso.')
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Falha ao salvar a escala.')
@@ -678,7 +644,16 @@ export default function ScheduleDetailsPage() {
     }
   }
 
-  const handleAddExtraShift = () => {
+  const refreshScheduleDetails = async () => {
+    if (!scheduleId) return
+    const api = getApiClient()
+    const response = await api.get(`schedules/${scheduleId}`).json()
+    upsertSchedule(
+      mapApiScheduleToManager(response as Parameters<typeof mapApiScheduleToManager>[0]),
+    )
+  }
+
+  const handleAddExtraShift = async () => {
     if (isCreateMode || !scheduleId || !schedule) {
       setErrorMessage('Salve a escala primeiro para incluir turnos extras.')
       return
@@ -687,17 +662,22 @@ export default function ScheduleDetailsPage() {
     setErrorMessage(null)
     setSuccessMessage(null)
 
-    const payload: ScheduleExtraShiftInput = {
-      date: extraShiftForm.date,
-      startTime: extraShiftForm.startTime,
-      endTime: extraShiftForm.endTime,
-      requiredCount: Number(extraShiftForm.requiredCount),
-      notes: extraShiftForm.notes,
-      locationId: form.locationId,
-    }
-
     try {
-      addExtraShift(scheduleId, payload)
+      const api = getApiClient()
+      await api.post('shifts', {
+        json: {
+          scheduleId,
+          locationId: form.locationId,
+          date: extraShiftForm.date,
+          startTime: extraShiftForm.startTime,
+          endTime: extraShiftForm.endTime,
+          requiredCount: Number(extraShiftForm.requiredCount),
+          notes: extraShiftForm.notes?.trim() || undefined,
+          valuePerShift: ((schedule.shiftValue ?? 0) / 100).toFixed(2),
+        },
+      })
+
+      await refreshScheduleDetails()
       setExtraShiftForm(DEFAULT_EXTRA_SHIFT_FORM)
       setSuccessMessage('Turno extra adicionado à escala.')
     } catch (error) {
@@ -705,11 +685,17 @@ export default function ScheduleDetailsPage() {
     }
   }
 
-  const handleRemoveExtraShift = (extraShiftId: string) => {
+  const handleRemoveExtraShift = async (extraShiftId: string) => {
     if (!scheduleId) return
 
-    removeExtraShift(scheduleId, extraShiftId)
-    setSuccessMessage('Turno extra removido.')
+    try {
+      const api = getApiClient()
+      await api.delete(`shifts/${extraShiftId}`)
+      await refreshScheduleDetails()
+      setSuccessMessage('Turno extra removido.')
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Falha ao remover turno extra.')
+    }
   }
 
   if (!scheduleId) {
