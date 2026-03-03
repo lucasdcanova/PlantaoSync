@@ -15,14 +15,14 @@ export class LocationsService {
 
   async findAll(organizationId: string) {
     return this.prisma.location.findMany({
-      where: { organizationId, isActive: true },
+      where: { organizationId },
       orderBy: { name: 'asc' },
     })
   }
 
   async findOne(id: string, organizationId: string) {
     const location = await this.prisma.location.findFirst({
-      where: { id, organizationId, isActive: true },
+      where: { id, organizationId },
     })
 
     if (!location) {
@@ -66,6 +66,7 @@ export class LocationsService {
         ...(dto.city !== undefined && { city: dto.city }),
         ...(dto.state !== undefined && { state: dto.state }),
         ...(dto.zipCode !== undefined && { zipCode: dto.zipCode }),
+        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
     })
   }

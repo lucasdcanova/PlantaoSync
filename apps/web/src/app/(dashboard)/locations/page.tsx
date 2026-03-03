@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   Activity,
@@ -22,7 +22,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { mapApiLocationToManager } from '@/lib/backend-mappers'
+import { getApiClient } from '@/lib/api'
 import { useSchedulesStore } from '@/store/schedules.store'
+import { useAuthStore } from '@/store/auth.store'
 import {
   useLocationsStore,
   type LocationCriticality,
@@ -30,6 +33,14 @@ import {
   type ManagerLocation,
 } from '@/store/locations.store'
 import { cn, formatCurrency } from '@/lib/utils'
+
+type ApiLocation = {
+  id: string
+  name: string
+  isActive?: boolean
+  createdAt?: string
+  updatedAt?: string
+}
 
 const CRITICALITY_OPTIONS: Array<LocationCriticality> = ['Alta', 'Média', 'Baixa']
 
@@ -76,6 +87,31 @@ function parseCurrencyToCents(value: string) {
   const numeric = Number(value.replace(',', '.'))
   if (!Number.isFinite(numeric) || numeric < 0) return Number.NaN
   return Math.round(numeric * 100)
+}
+
+function mergeApiLocationsWithLocal(
+  apiLocations: ApiLocation[],
+  localLocations: ManagerLocation[],
+): ManagerLocation[] {
+  const localById = new Map(localLocations.map((location) => [location.id, location]))
+
+  return apiLocations.map((apiLocation) => {
+    const mapped = mapApiLocationToManager(apiLocation)
+    const local = localById.get(apiLocation.id)
+
+    if (!local) {
+      return mapped
+    }
+
+    return {
+      ...mapped,
+      criticality: local.criticality,
+      occupancyRate: local.occupancyRate,
+      pendingShifts: local.pendingShifts,
+      activeProfessionals: local.activeProfessionals,
+      monthlyCost: local.monthlyCost,
+    }
+  })
 }
 
 function LocationEditorCard({
@@ -284,17 +320,39 @@ function LocationEditorCard({
 
 export default function LocationsPage() {
   const locations = useLocationsStore((state) => state.locations)
-  const addLocation = useLocationsStore((state) => state.addLocation)
-  const updateLocation = useLocationsStore((state) => state.updateLocation)
-  const deleteLocation = useLocationsStore((state) => state.deleteLocation)
-  const toggleLocationActive = useLocationsStore((state) => state.toggleLocationActive)
+  const setLocations = useLocationsStore((state) => state.setLocations)
   const schedules = useSchedulesStore((state) => state.schedules)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const accessToken = useAuthStore((state) => state.accessToken)
 
   const [search, setSearch] = useState('')
   const [criticalityFilter, setCriticalityFilter] = useState<LocationCriticality | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null)
+  const [isSyncingLocations, setIsSyncingLocations] = useState(false)
+
+  const syncLocationsFromApi = useCallback(async () => {
+    if (!isAuthenticated || !accessToken) return
+
+    setIsSyncingLocations(true)
+    try {
+      const api = getApiClient()
+      const response = await api.get('locations').json<ApiLocation[]>()
+      const localLocations = useLocationsStore.getState().locations
+      setLocations(mergeApiLocationsWithLocal(response, localLocations))
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Falha ao carregar setores da organização.',
+      )
+    } finally {
+      setIsSyncingLocations(false)
+    }
+  }, [accessToken, isAuthenticated, setLocations])
+
+  useEffect(() => {
+    void syncLocationsFromApi()
+  }, [syncLocationsFromApi])
 
   const usageByLocation = useMemo(() => {
     const usage = new Map<string, { schedules: number; extras: number }>()
@@ -346,23 +404,74 @@ export default function LocationsPage() {
   const totalMonthlyCost = activeLocations.reduce((sum, location) => sum + location.monthlyCost, 0)
 
   const handleCreateLocation = (input: LocationEditorInput) => {
-    try {
-      addLocation(input)
-      setShowCreateForm(false)
-      toast.success('Setor incluído com sucesso.')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Falha ao incluir setor.')
+    const createRemoteLocation = async () => {
+      try {
+        const api = getApiClient()
+        const created = await api
+          .post('locations', {
+            json: { name: input.name.trim() },
+          })
+          .json<ApiLocation>()
+
+        const mapped = mapApiLocationToManager(created)
+        const newLocation: ManagerLocation = {
+          ...mapped,
+          criticality: input.criticality,
+          occupancyRate: input.occupancyRate,
+          pendingShifts: input.pendingShifts,
+          activeProfessionals: input.activeProfessionals,
+          monthlyCost: input.monthlyCost,
+          isActive: true,
+        }
+
+        const current = useLocationsStore.getState().locations
+        setLocations([...current.filter((location) => location.id !== newLocation.id), newLocation])
+        setShowCreateForm(false)
+        toast.success('Setor incluído com sucesso.')
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Falha ao incluir setor.')
+      }
     }
+
+    void createRemoteLocation()
   }
 
   const handleUpdateLocation = (locationId: string, input: LocationEditorInput) => {
-    try {
-      updateLocation(locationId, input)
-      setEditingLocationId(null)
-      toast.success('Setor atualizado com sucesso.')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Falha ao atualizar setor.')
+    const updateRemoteLocation = async () => {
+      try {
+        const api = getApiClient()
+        const updated = await api
+          .patch(`locations/${locationId}`, {
+            json: { name: input.name.trim() },
+          })
+          .json<ApiLocation>()
+
+        const mapped = mapApiLocationToManager(updated)
+        const current = useLocationsStore.getState().locations
+        setLocations(
+          current.map((location) =>
+            location.id === locationId
+              ? {
+                  ...location,
+                  ...mapped,
+                  criticality: input.criticality,
+                  occupancyRate: input.occupancyRate,
+                  pendingShifts: input.pendingShifts,
+                  activeProfessionals: input.activeProfessionals,
+                  monthlyCost: input.monthlyCost,
+                }
+              : location,
+          ),
+        )
+
+        setEditingLocationId(null)
+        toast.success('Setor atualizado com sucesso.')
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Falha ao atualizar setor.')
+      }
     }
+
+    void updateRemoteLocation()
   }
 
   const handleDeleteLocation = (location: ManagerLocation) => {
@@ -377,19 +486,57 @@ export default function LocationsPage() {
     }
 
     const confirmed = window.confirm(
-      `Deseja excluir o setor "${location.name}"? Esta ação não pode ser desfeita.`,
+      `Deseja desativar o setor "${location.name}"? Você poderá reativá-lo depois.`,
     )
 
     if (!confirmed) return
 
-    deleteLocation(location.id)
-    if (editingLocationId === location.id) setEditingLocationId(null)
-    toast.success('Setor excluído com sucesso.')
+    const deactivateLocation = async () => {
+      try {
+        const api = getApiClient()
+        await api.delete(`locations/${location.id}`)
+
+        const current = useLocationsStore.getState().locations
+        setLocations(
+          current.map((item) =>
+            item.id === location.id ? { ...item, isActive: false } : item,
+          ),
+        )
+        if (editingLocationId === location.id) setEditingLocationId(null)
+        toast.success('Setor desativado com sucesso.')
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Falha ao desativar setor.')
+      }
+    }
+
+    void deactivateLocation()
   }
 
   const handleToggleActive = (location: ManagerLocation) => {
-    toggleLocationActive(location.id)
-    toast.success(location.isActive ? 'Setor desativado.' : 'Setor reativado.')
+    const toggleRemoteLocation = async () => {
+      try {
+        const api = getApiClient()
+        const updated = await api
+          .patch(`locations/${location.id}`, {
+            json: { isActive: !location.isActive },
+          })
+          .json<ApiLocation>()
+        const mapped = mapApiLocationToManager(updated)
+
+        const current = useLocationsStore.getState().locations
+        setLocations(
+          current.map((item) =>
+            item.id === location.id ? { ...item, ...mapped } : item,
+          ),
+        )
+
+        toast.success(location.isActive ? 'Setor desativado.' : 'Setor reativado.')
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Falha ao alterar status do setor.')
+      }
+    }
+
+    void toggleRemoteLocation()
   }
 
   return (
@@ -504,7 +651,8 @@ export default function LocationsPage() {
               </div>
 
               <span className="text-muted-foreground ml-auto text-xs">
-                Ocupação média ativa: <strong className="text-foreground">{avgOccupancy}%</strong>
+                {isSyncingLocations ? 'Sincronizando setores...' : 'Ocupação média ativa:'}{' '}
+                <strong className="text-foreground">{avgOccupancy}%</strong>
               </span>
             </div>
           </section>
