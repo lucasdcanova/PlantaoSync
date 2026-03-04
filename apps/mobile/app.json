@@ -15,8 +15,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.confirmaplantao.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"],
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
         "NSFaceIDUsageDescription": "Use Face ID para autenticar no CONFIRMA PLANTÃO"
       }
     },
@@ -66,9 +71,13 @@
     },
     "extra": {
       "pwaUrl": "https://plantaosync.onrender.com",
+      "router": {
+        "origin": false
+      },
       "eas": {
-        "projectId": "your-eas-project-id"
+        "projectId": "6ed8b666-5d6d-4b43-a78b-727ebc59b935"
       }
-    }
+    },
+    "owner": "lucasdcanova"
   }
 }

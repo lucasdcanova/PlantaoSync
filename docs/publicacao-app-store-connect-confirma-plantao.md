@@ -41,11 +41,10 @@ Tambem inclui um bloco previo de **preparo do build iOS** (fora do App Store Con
 
 ### Observacoes importantes do build atual (impacta review)
 
-- O app mobile atual opera em **modo demo local** (dados mockados/persistidos em `AsyncStorage`)
-- Ha credenciais demo hardcoded
-- Ha textos visiveis de demo (ex.: convites demo)
-- Nao foram encontradas chamadas de API ativas no app mobile atual
-- `expo-notifications` e `expo-local-authentication` estao configurados, mas sem fluxo ativo implementado nas telas
+- O app mobile atual opera como **shell nativo com WebView**, carregando o PWA em producao (`https://plantaosync.onrender.com`).
+- O projeto ja esta vinculado ao EAS (`owner: lucasdcanova`, `projectId: 6ed8b666-5d6d-4b43-a78b-727ebc59b935`).
+- O arquivo `apps/mobile/eas.json` ja existe com perfil `production` em `distribution: store`.
+- O `Info.plist` contem `ITSAppUsesNonExemptEncryption = false`.
 
 ## Bloqueios/pendencias antes da submissao (criticos)
 
@@ -53,11 +52,11 @@ O agente de IA deve verificar estes pontos antes de clicar em `Submit for Review
 
 1. **Build iOS disponivel no App Store Connect**
 - Sem build, nao e possivel submeter.
-- O repo nao possui `eas.json` pronto.
+- O repo possui `eas.json` pronto; usar `pnpm --filter=mobile build:ios:review` para build + auto submit.
 
-2. **`projectId` do EAS ainda e placeholder**
-- Em `apps/mobile/app.json`, o campo `expo.extra.eas.projectId` esta como `your-eas-project-id`.
-- Isso precisa ser substituido por um `projectId` real se o fluxo de build/submissao usar EAS.
+2. **Versionamento alinhado no App Store Connect**
+- O build usa `CFBundleShortVersionString = 1.0.0`.
+- A versao em App Store Connect deve estar no mesmo numero para permitir selecao do build na revisao.
 
 3. **Screenshots de App Store nao existem no repositorio**
 - O agente precisara de screenshots prontos (ou capturados em simulador) para upload.
@@ -465,4 +464,3 @@ Procedimento:
 1. Nao sobrescrever dados criticos sem confirmar
 2. Registrar a divergencia
 3. Solicitar decisao do responsavel humano
-

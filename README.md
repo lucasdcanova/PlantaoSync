@@ -261,6 +261,8 @@ pnpm --filter=mobile start
 pnpm --filter=mobile ios
 pnpm --filter=mobile android
 pnpm --filter=mobile build:ios
+pnpm --filter=mobile build:ios:review
+pnpm --filter=mobile submit:ios
 pnpm --filter=mobile build:android
 ```
 
