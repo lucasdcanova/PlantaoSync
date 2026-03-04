@@ -10,6 +10,7 @@
     "lint": "turbo run lint",
     "format": "turbo run format",
     "ios:logs": "bash scripts/ios-capture-logs.sh",
+    "asc:status": "node scripts/appstoreconnect-status.mjs",
     "db:migrate": "pnpm --filter=api db:migrate",
     "db:generate": "pnpm --filter=api db:generate",
     "db:seed": "pnpm --filter=api db:seed",

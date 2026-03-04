@@ -291,6 +291,24 @@ Observacoes:
 - Para logs de sistema completos, instale `idevicesyslog`:
   `brew install libimobiledevice`
 
+### Status App Store Connect (builds/publicacao)
+
+Com uma chave API `.p8` da App Store Connect, voce pode consultar status de build e versoes:
+
+```bash
+APPSTORE_CONNECT_ISSUER_ID=... \
+APPSTORE_CONNECT_KEY_ID=... \
+APPSTORE_CONNECT_KEY_PATH=/caminho/AuthKey_XXXXX.p8 \
+APPSTORE_CONNECT_BUNDLE_ID=com.confirmaplantao.app \
+pnpm asc:status
+```
+
+Opcional:
+
+```bash
+pnpm asc:status -- --json
+```
+
 ## Deploy
 
 Este repositorio contem mais de uma estrategia de deploy:
