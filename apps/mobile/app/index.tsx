@@ -11,6 +11,7 @@ import type {
 } from 'react-native-webview/lib/WebViewTypes'
 
 const DEFAULT_PWA_URL = 'https://plantaosync.onrender.com'
+const DEFAULT_PWA_LOGIN_URL = `${DEFAULT_PWA_URL}/login`
 const LEGACY_PWA_HOSTS = new Set(['confirmaplantao.com.br', 'www.confirmaplantao.com.br'])
 const WEBVIEW_VIEWPORT_LOCK_SCRIPT = `
   (function () {
@@ -26,6 +27,32 @@ const WEBVIEW_VIEWPORT_LOCK_SCRIPT = `
   true;
 `
 const BRAND = '#4ECDC4'
+const HTTP_URL_PATTERN =
+  /^(https?):\/\/([^/\s?#]+)(\/[^\s?#]*)?(\?[^\s#]*)?(#[^\s]*)?$/i
+
+type ParsedHttpUrl = {
+  hash: string
+  host: string
+  path: string
+  protocol: 'http' | 'https'
+  query: string
+}
+
+function parseHttpUrl(raw: string): ParsedHttpUrl | null {
+  const match = raw.match(HTTP_URL_PATTERN)
+  if (!match) return null
+
+  const protocol = match[1]?.toLowerCase()
+  if (protocol !== 'http' && protocol !== 'https') return null
+
+  return {
+    protocol,
+    host: match[2],
+    path: match[3] ?? '',
+    query: match[4] ?? '',
+    hash: match[5] ?? '',
+  }
+}
 
 function normalizeUrl(raw?: string) {
   if (!raw) return DEFAULT_PWA_URL
@@ -38,23 +65,19 @@ function normalizeUrl(raw?: string) {
       ? trimmed
       : `https://${trimmed}`
 
-  try {
-    const parsed = new URL(withProtocol)
-    if (LEGACY_PWA_HOSTS.has(parsed.hostname.toLowerCase())) return DEFAULT_PWA_URL
-    return parsed.toString()
-  } catch {
-    return DEFAULT_PWA_URL
-  }
+  const parsed = parseHttpUrl(withProtocol)
+  if (!parsed) return DEFAULT_PWA_URL
+  if (LEGACY_PWA_HOSTS.has(parsed.host.toLowerCase())) return DEFAULT_PWA_URL
+
+  return `${parsed.protocol}://${parsed.host}${parsed.path}${parsed.query}${parsed.hash}`
 }
 
 function ensureLoginEntry(urlString: string) {
-  try {
-    const parsed = new URL(urlString)
-    if (parsed.pathname === '/' || parsed.pathname === '') parsed.pathname = '/login'
-    return parsed.toString()
-  } catch {
-    return `${DEFAULT_PWA_URL}/login`
-  }
+  const parsed = parseHttpUrl(urlString)
+  if (!parsed) return DEFAULT_PWA_LOGIN_URL
+
+  const path = parsed.path === '' || parsed.path === '/' ? '/login' : parsed.path
+  return `${parsed.protocol}://${parsed.host}${path}${parsed.query}${parsed.hash}`
 }
 
 export default function RootPwaScreen() {
