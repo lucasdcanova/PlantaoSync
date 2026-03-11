@@ -691,9 +691,7 @@ export default function ScheduleDetailsPage() {
     setSuccessMessage(success ?? null)
   }
 
-  const handleGeofenceSearch = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
+  const runGeofenceSearch = async () => {
     const query = geofenceSearchQuery.trim()
     if (query.length < 3) {
       setGeofenceSearchError('Digite pelo menos 3 caracteres para buscar um endereco.')
@@ -1325,26 +1323,45 @@ export default function ScheduleDetailsPage() {
                     </Badge>
                   </div>
 
-                  <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_320px]">
+                  <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.95fr)] xl:grid-cols-[minmax(0,1.55fr)_360px]">
                     <div className="space-y-4">
-                      <form
-                        className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3"
-                        onSubmit={handleGeofenceSearch}
-                      >
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <div className="relative flex-1">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 md:p-5">
+                        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-foreground text-sm font-medium">
+                              Buscar ponto da geofence
+                            </p>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                              Pesquise o endereço sem sair do preenchimento da escala.
+                            </p>
+                          </div>
+                          <Badge variant="secondary" className="shrink-0">
+                            Web e iPad
+                          </Badge>
+                        </div>
+
+                        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_156px]">
+                          <div className="relative min-w-0">
                             <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
                             <Input
+                              aria-label="Buscar endereco da geofence"
                               value={geofenceSearchQuery}
                               onChange={(event) => setGeofenceSearchQuery(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                  event.preventDefault()
+                                  void runGeofenceSearch()
+                                }
+                              }}
                               placeholder="Buscar rua, hospital, bairro ou cidade"
-                              className="bg-background pl-9"
+                              className="h-12 bg-background pl-9 text-sm md:text-base"
                             />
                           </div>
                           <Button
-                            type="submit"
+                            type="button"
                             variant="outline"
-                            className="gap-2 sm:min-w-[132px]"
+                            className="h-12 w-full gap-2"
+                            onClick={() => void runGeofenceSearch()}
                             disabled={isSearchingGeofence}
                           >
                             {isSearchingGeofence ? (
@@ -1417,7 +1434,7 @@ export default function ScheduleDetailsPage() {
                             Limpar pin
                           </Button>
                         </div>
-                      </form>
+                      </div>
 
                       <GeofencePickerMap
                         point={geofencePoint}
