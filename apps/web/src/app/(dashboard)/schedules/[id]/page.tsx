@@ -16,8 +16,9 @@ import {
   Plus,
   ShieldCheck,
   ShieldAlert,
+  Loader2,
   LocateFixed,
-  ExternalLink,
+  Search,
   X,
 } from 'lucide-react'
 import type { ScheduleCoverageMode, ScheduleStatus } from '@agendaplantao/shared'
@@ -26,7 +27,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { SHIFT_STATUS_CONFIG, formatCurrency, formatDate } from '@/lib/utils'
+import { SHIFT_STATUS_CONFIG, cn, formatCurrency, formatDate } from '@/lib/utils'
 import { OPEN_ENDED_SCHEDULE_END_DATE, isOpenEndedSchedule } from '@/lib/schedule-range'
 import { getApiClient } from '@/lib/api'
 import { mapApiLocationToManager, mapApiScheduleToManager } from '@/lib/backend-mappers'
@@ -80,6 +81,14 @@ type ExtraShiftFormValues = {
   notes: string
 }
 
+type GeocodeLookupResult = {
+  lat: number
+  lng: number
+  displayName: string
+  primaryText: string
+  secondaryText: string
+}
+
 const STATUS_OPTIONS: Array<{ value: ScheduleStatus; label: string }> = [
   { value: 'DRAFT', label: SHIFT_STATUS_CONFIG.DRAFT.label },
   { value: 'PUBLISHED', label: SHIFT_STATUS_CONFIG.PUBLISHED.label },
@@ -91,6 +100,30 @@ const COVERAGE_MODE_OPTIONS: Array<{ value: ScheduleCoverageMode; label: string 
   { value: 'FULL_DAY', label: 'Cobertura 24 horas' },
   { value: 'CUSTOM_WINDOW', label: 'Período específico' },
 ]
+
+const DEFAULT_GEOFENCE_RADIUS_METERS = 180
+const MIN_GEOFENCE_RADIUS_METERS = 30
+const MAX_GEOFENCE_RADIUS_METERS = 1000
+const GEOFENCE_RADIUS_PRESETS = [80, 150, 250, 400]
+
+function clampGeofenceRadius(value: number) {
+  if (!Number.isFinite(value)) return DEFAULT_GEOFENCE_RADIUS_METERS
+
+  return Math.min(
+    MAX_GEOFENCE_RADIUS_METERS,
+    Math.max(MIN_GEOFENCE_RADIUS_METERS, Math.round(value)),
+  )
+}
+
+function formatGeofenceCoverage(radiusMeters: number) {
+  const areaSquareMeters = Math.PI * radiusMeters * radiusMeters
+
+  if (areaSquareMeters >= 1_000_000) {
+    return `${(areaSquareMeters / 1_000_000).toFixed(2).replace('.', ',')} km²`
+  }
+
+  return `${Math.round(areaSquareMeters).toLocaleString('pt-BR')} m²`
+}
 
 function buildDefaultForm(defaultLocationId = ''): ScheduleFormValues {
   return {
@@ -110,7 +143,7 @@ function buildDefaultForm(defaultLocationId = ''): ScheduleFormValues {
     requireSwapApproval: true,
     geofenceLat: '',
     geofenceLng: '',
-    geofenceRadiusMeters: '180',
+    geofenceRadiusMeters: String(DEFAULT_GEOFENCE_RADIUS_METERS),
     geofenceLabel: '',
     geofenceAutoCheckInEnabled: false,
     openEnded: false,
@@ -167,7 +200,7 @@ function toFormValues(input: {
       input.geofence && Number.isFinite(input.geofence.lat) ? String(input.geofence.lat) : '',
     geofenceLng:
       input.geofence && Number.isFinite(input.geofence.lng) ? String(input.geofence.lng) : '',
-    geofenceRadiusMeters: String(input.geofence?.radiusMeters ?? 180),
+    geofenceRadiusMeters: String(input.geofence?.radiusMeters ?? DEFAULT_GEOFENCE_RADIUS_METERS),
     geofenceLabel: input.geofence?.label ?? '',
     geofenceAutoCheckInEnabled: input.geofence?.autoCheckInEnabled ?? false,
     openEnded: isOpenEndedSchedule(input.endDate),
@@ -281,6 +314,13 @@ export default function ScheduleDetailsPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isLocating, setIsLocating] = useState(false)
+  const [geofenceSearchQuery, setGeofenceSearchQuery] = useState('')
+  const [geofenceSearchResults, setGeofenceSearchResults] = useState<GeocodeLookupResult[]>([])
+  const [geofenceSearchError, setGeofenceSearchError] = useState<string | null>(null)
+  const [isSearchingGeofence, setIsSearchingGeofence] = useState(false)
+  const [resolvedGeofenceAddress, setResolvedGeofenceAddress] =
+    useState<GeocodeLookupResult | null>(null)
+  const [isResolvingGeofenceAddress, setIsResolvingGeofenceAddress] = useState(false)
 
   useEffect(() => {
     if (isCreateMode) {
@@ -360,13 +400,69 @@ export default function ScheduleDetailsPage() {
   const parsedGeofenceLat = Number(form.geofenceLat)
   const parsedGeofenceLng = Number(form.geofenceLng)
   const parsedGeofenceRadius = Number(form.geofenceRadiusMeters)
+  const safeGeofenceRadius = clampGeofenceRadius(parsedGeofenceRadius)
   const geofencePoint =
     Number.isFinite(parsedGeofenceLat) && Number.isFinite(parsedGeofenceLng)
       ? { lat: parsedGeofenceLat, lng: parsedGeofenceLng }
       : null
-  const googleMapsUrl = geofencePoint
-    ? `https://www.google.com/maps/search/?api=1&query=${geofencePoint.lat},${geofencePoint.lng}`
-    : 'https://www.google.com/maps'
+  const geofenceAddressLabel =
+    resolvedGeofenceAddress?.secondaryText || resolvedGeofenceAddress?.displayName || null
+  const geofenceDisplayLabel =
+    form.geofenceLabel.trim() ||
+    resolvedGeofenceAddress?.primaryText ||
+    selectedLocation?.name ||
+    'Ponto da escala'
+
+  useEffect(() => {
+    if (!geofencePoint) {
+      setResolvedGeofenceAddress(null)
+      setIsResolvingGeofenceAddress(false)
+      return
+    }
+
+    const controller = new AbortController()
+
+    const resolveAddress = async () => {
+      setIsResolvingGeofenceAddress(true)
+
+      try {
+        const response = await fetch(
+          `/api/geocode?lat=${geofencePoint.lat.toFixed(6)}&lng=${geofencePoint.lng.toFixed(6)}`,
+          {
+            signal: controller.signal,
+            cache: 'no-store',
+          },
+        )
+
+        const payload = (await response.json()) as {
+          message?: string
+          result?: GeocodeLookupResult | null
+        }
+
+        if (!response.ok) {
+          throw new Error(payload.message || 'Nao foi possivel resolver o endereco da geofence.')
+        }
+
+        if (!controller.signal.aborted) {
+          setResolvedGeofenceAddress(payload.result ?? null)
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setResolvedGeofenceAddress(null)
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsResolvingGeofenceAddress(false)
+        }
+      }
+    }
+
+    void resolveAddress()
+
+    return () => {
+      controller.abort()
+    }
+  }, [geofencePoint?.lat, geofencePoint?.lng])
 
   const validateForm = () => {
     if (!hasLocations) {
@@ -499,8 +595,8 @@ export default function ScheduleDetailsPage() {
               lng: parsedGeofenceLng,
               radiusMeters:
                 Number.isFinite(parsedGeofenceRadius) && parsedGeofenceRadius > 0
-                  ? Math.round(parsedGeofenceRadius)
-                  : 180,
+                  ? clampGeofenceRadius(parsedGeofenceRadius)
+                  : DEFAULT_GEOFENCE_RADIUS_METERS,
               label: form.geofenceLabel.trim() || selectedLocation?.name,
               autoCheckInEnabled: form.geofenceAutoCheckInEnabled,
             }
@@ -558,6 +654,117 @@ export default function ScheduleDetailsPage() {
     }
   }
 
+  const applyGeofencePoint = ({
+    lat,
+    lng,
+    fallbackLabel,
+    searchLabel,
+    resolvedAddress,
+    success,
+  }: {
+    lat: number
+    lng: number
+    fallbackLabel?: string
+    searchLabel?: string
+    resolvedAddress?: GeocodeLookupResult | null
+    success?: string | null
+  }) => {
+    setErrorMessage(null)
+    setGeofenceSearchError(null)
+    setGeofenceSearchResults([])
+
+    setForm((prev) => ({
+      ...prev,
+      geofenceLat: lat.toFixed(6),
+      geofenceLng: lng.toFixed(6),
+      geofenceLabel: prev.geofenceLabel || selectedLocation?.name || fallbackLabel || 'Ponto da escala',
+    }))
+
+    if (typeof searchLabel === 'string') {
+      setGeofenceSearchQuery(searchLabel)
+    }
+
+    if (typeof resolvedAddress !== 'undefined') {
+      setResolvedGeofenceAddress(resolvedAddress)
+    }
+
+    setSuccessMessage(success ?? null)
+  }
+
+  const handleGeofenceSearch = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    const query = geofenceSearchQuery.trim()
+    if (query.length < 3) {
+      setGeofenceSearchError('Digite pelo menos 3 caracteres para buscar um endereco.')
+      setGeofenceSearchResults([])
+      return
+    }
+
+    setErrorMessage(null)
+    setSuccessMessage(null)
+    setGeofenceSearchError(null)
+    setIsSearchingGeofence(true)
+
+    try {
+      const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`, {
+        cache: 'no-store',
+      })
+
+      const payload = (await response.json()) as {
+        message?: string
+        results?: GeocodeLookupResult[]
+      }
+
+      if (!response.ok) {
+        throw new Error(payload.message || 'Nao foi possivel buscar o endereco informado.')
+      }
+
+      const results = payload.results ?? []
+      setGeofenceSearchResults(results)
+
+      if (results.length === 0) {
+        setGeofenceSearchError('Nenhum endereco encontrado. Tente incluir rua, numero ou bairro.')
+      }
+    } catch (error) {
+      setGeofenceSearchResults([])
+      setGeofenceSearchError(
+        error instanceof Error ? error.message : 'Falha ao buscar o endereco informado.',
+      )
+    } finally {
+      setIsSearchingGeofence(false)
+    }
+  }
+
+  const handleSelectGeocodeResult = (result: GeocodeLookupResult) => {
+    applyGeofencePoint({
+      lat: result.lat,
+      lng: result.lng,
+      fallbackLabel: result.primaryText,
+      searchLabel: result.displayName,
+      resolvedAddress: result,
+      success: 'Endereco aplicado na geofence.',
+    })
+  }
+
+  const handleGeofenceRadiusChange = (value: string) => {
+    if (!value) {
+      setForm((prev) => ({
+        ...prev,
+        geofenceRadiusMeters: '',
+      }))
+      return
+    }
+
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue)) return
+
+    setForm((prev) => ({
+      ...prev,
+      geofenceRadiusMeters: String(clampGeofenceRadius(numericValue)),
+    }))
+  }
+
   const handleUseCurrentLocation = () => {
     if (typeof window === 'undefined' || !('geolocation' in navigator)) {
       setErrorMessage('Geolocalização indisponível neste dispositivo.')
@@ -572,13 +779,12 @@ export default function ScheduleDetailsPage() {
       (position) => {
         const lat = position.coords.latitude
         const lng = position.coords.longitude
-        setForm((prev) => ({
-          ...prev,
-          geofenceLat: lat.toFixed(6),
-          geofenceLng: lng.toFixed(6),
-          geofenceLabel: prev.geofenceLabel || selectedLocation?.name || 'Ponto da escala',
-        }))
-        setSuccessMessage('Localização atual aplicada na geofence.')
+        applyGeofencePoint({
+          lat,
+          lng,
+          resolvedAddress: null,
+          success: 'Localizacao atual aplicada na geofence.',
+        })
         setIsLocating(false)
       },
       () => {
@@ -596,14 +802,11 @@ export default function ScheduleDetailsPage() {
   }
 
   const handleMapPinChange = ({ lat, lng }: { lat: number; lng: number }) => {
-    setErrorMessage(null)
-    setSuccessMessage(null)
-    setForm((prev) => ({
-      ...prev,
-      geofenceLat: lat.toFixed(6),
-      geofenceLng: lng.toFixed(6),
-      geofenceLabel: prev.geofenceLabel || selectedLocation?.name || 'Ponto da escala',
-    }))
+    applyGeofencePoint({
+      lat,
+      lng,
+      resolvedAddress: null,
+    })
   }
 
   const handleClearGeofencePoint = () => {
@@ -614,6 +817,10 @@ export default function ScheduleDetailsPage() {
       geofenceLabel: '',
       geofenceAutoCheckInEnabled: false,
     }))
+    setGeofenceSearchQuery('')
+    setGeofenceSearchResults([])
+    setGeofenceSearchError(null)
+    setResolvedGeofenceAddress(null)
     setSuccessMessage('Ponto da geofence removido.')
   }
 
@@ -1104,124 +1311,262 @@ export default function ScheduleDetailsPage() {
                 </div>
 
                 <div className="border-border bg-background rounded-xl border p-4">
-                  <div className="mb-3">
-                    <p className="text-foreground text-sm font-medium">
-                      Geofence do plantão (local exato)
-                    </p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      Compartilhe sua localização atual ou clique no mapa para posicionar o pin da
-                      geofence.
-                    </p>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-foreground text-sm font-medium">
+                        Geofence do plantão (local exato)
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        Busque um endereço, arraste o pin no mapa e ajuste o raio sem sair do fluxo.
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="border-brand-200 bg-brand-50 text-brand-800">
+                      {geofencePoint ? `Raio ativo: ${safeGeofenceRadius}m` : 'Sem ponto definido'}
+                    </Badge>
                   </div>
 
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                      onClick={handleUseCurrentLocation}
-                      disabled={isLocating}
-                    >
-                      <LocateFixed className="h-4 w-4" />
-                      {isLocating ? 'Capturando localização...' : 'Usar localização atual'}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                      onClick={handleClearGeofencePoint}
-                      disabled={!geofencePoint}
-                    >
-                      <X className="h-4 w-4" />
-                      Limpar pin
-                    </Button>
-                    <Button asChild type="button" variant="outline" size="sm" className="gap-2">
-                      <a href={googleMapsUrl} target="_blank" rel="noreferrer">
-                        <ExternalLink className="h-4 w-4" />
-                        Abrir no Google Maps
-                      </a>
-                    </Button>
-                  </div>
+                  <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_320px]">
+                    <div className="space-y-4">
+                      <form
+                        className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3"
+                        onSubmit={handleGeofenceSearch}
+                      >
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <div className="relative flex-1">
+                            <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+                            <Input
+                              value={geofenceSearchQuery}
+                              onChange={(event) => setGeofenceSearchQuery(event.target.value)}
+                              placeholder="Buscar rua, hospital, bairro ou cidade"
+                              className="bg-background pl-9"
+                            />
+                          </div>
+                          <Button
+                            type="submit"
+                            variant="outline"
+                            className="gap-2 sm:min-w-[132px]"
+                            disabled={isSearchingGeofence}
+                          >
+                            {isSearchingGeofence ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Buscando...
+                              </>
+                            ) : (
+                              <>
+                                <Search className="h-4 w-4" />
+                                Buscar
+                              </>
+                            )}
+                          </Button>
+                        </div>
 
-                  <GeofencePickerMap
-                    point={geofencePoint}
-                    radiusMeters={parsedGeofenceRadius}
-                    onPointChange={handleMapPinChange}
-                  />
-
-                  <p className="text-muted-foreground mt-2 text-xs">
-                    Clique em qualquer ponto do mapa para posicionar a geofence manualmente.
-                  </p>
-
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="schedule-geofence-coords">Coordenadas selecionadas</Label>
-                      <Input
-                        id="schedule-geofence-coords"
-                        value={
-                          geofencePoint
-                            ? `${geofencePoint.lat.toFixed(6)}, ${geofencePoint.lng.toFixed(6)}`
-                            : 'Nenhum ponto selecionado'
-                        }
-                        readOnly
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="schedule-geofence-radius">Raio (metros)</Label>
-                      <Input
-                        id="schedule-geofence-radius"
-                        type="number"
-                        min={30}
-                        value={form.geofenceRadiusMeters}
-                        onChange={(event) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            geofenceRadiusMeters: event.target.value,
-                          }))
-                        }
-                        placeholder="180"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5 md:col-span-2">
-                      <Label htmlFor="schedule-geofence-label">Etiqueta do ponto</Label>
-                      <Input
-                        id="schedule-geofence-label"
-                        value={form.geofenceLabel}
-                        onChange={(event) =>
-                          setForm((prev) => ({ ...prev, geofenceLabel: event.target.value }))
-                        }
-                        placeholder="UTI Adulto · Bloco A"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                    <label className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-foreground text-sm font-medium">
-                          Permitir check-in automático
+                        <p className="text-muted-foreground mt-2 text-xs">
+                          A busca usa OpenStreetMap e prioriza resultados no Brasil.
                         </p>
-                        <p className="text-muted-foreground mt-0.5 text-xs">
-                          Quando o médico autorizar no app, o sistema registra check-in ao entrar
-                          na geofence durante a janela do plantão.
+
+                        {geofenceSearchError ? (
+                          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                            {geofenceSearchError}
+                          </div>
+                        ) : null}
+
+                        {geofenceSearchResults.length > 0 ? (
+                          <div className="mt-3 space-y-2">
+                            {geofenceSearchResults.map((result) => {
+                              const resultKey = `${result.lat}-${result.lng}-${result.displayName}`
+
+                              return (
+                                <button
+                                  key={resultKey}
+                                  type="button"
+                                  onClick={() => handleSelectGeocodeResult(result)}
+                                  className="w-full rounded-xl border border-slate-200 bg-background px-3 py-3 text-left transition hover:border-brand-300 hover:bg-brand-50/60"
+                                >
+                                  <p className="text-foreground text-sm font-medium">{result.primaryText}</p>
+                                  <p className="text-muted-foreground mt-1 text-xs">
+                                    {result.secondaryText}
+                                  </p>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        ) : null}
+
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            onClick={handleUseCurrentLocation}
+                            disabled={isLocating}
+                          >
+                            <LocateFixed className="h-4 w-4" />
+                            {isLocating ? 'Capturando...' : 'Usar localização atual'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            onClick={handleClearGeofencePoint}
+                            disabled={!geofencePoint}
+                          >
+                            <X className="h-4 w-4" />
+                            Limpar pin
+                          </Button>
+                        </div>
+                      </form>
+
+                      <GeofencePickerMap
+                        point={geofencePoint}
+                        radiusMeters={safeGeofenceRadius}
+                        onPointChange={handleMapPinChange}
+                      />
+
+                      <p className="text-muted-foreground text-xs">
+                        Clique em qualquer ponto do mapa ou arraste o pin para refinar a geofence.
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                        <p className="text-foreground text-sm font-medium">Raio protegido</p>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          Use presets rápidos e depois ajuste fino pelo slider.
+                        </p>
+
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {GEOFENCE_RADIUS_PRESETS.map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => handleGeofenceRadiusChange(String(preset))}
+                              className={cn(
+                                'rounded-full border px-3 py-1.5 text-xs font-medium transition',
+                                safeGeofenceRadius === preset
+                                  ? 'border-brand-300 bg-brand-50 text-brand-800'
+                                  : 'border-slate-200 bg-background text-muted-foreground hover:border-brand-200 hover:text-foreground',
+                              )}
+                            >
+                              {preset}m
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_112px]">
+                          <input
+                            type="range"
+                            min={MIN_GEOFENCE_RADIUS_METERS}
+                            max={MAX_GEOFENCE_RADIUS_METERS}
+                            step={10}
+                            value={safeGeofenceRadius}
+                            onChange={(event) => handleGeofenceRadiusChange(event.target.value)}
+                            className="accent-brand-700 h-10 w-full cursor-pointer"
+                          />
+                          <Input
+                            type="number"
+                            min={MIN_GEOFENCE_RADIUS_METERS}
+                            max={MAX_GEOFENCE_RADIUS_METERS}
+                            value={form.geofenceRadiusMeters}
+                            onChange={(event) => handleGeofenceRadiusChange(event.target.value)}
+                            onBlur={() => {
+                              if (!form.geofenceRadiusMeters.trim()) {
+                                setForm((prev) => ({
+                                  ...prev,
+                                  geofenceRadiusMeters: String(DEFAULT_GEOFENCE_RADIUS_METERS),
+                                }))
+                              }
+                            }}
+                            placeholder={String(DEFAULT_GEOFENCE_RADIUS_METERS)}
+                          />
+                        </div>
+
+                        <p className="text-muted-foreground mt-2 text-xs">
+                          Entre {MIN_GEOFENCE_RADIUS_METERS}m e {MAX_GEOFENCE_RADIUS_METERS}m para
+                          equilibrar precisão e tolerância operacional.
                         </p>
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={form.geofenceAutoCheckInEnabled}
-                        onChange={(event) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            geofenceAutoCheckInEnabled: event.target.checked,
-                          }))
-                        }
-                        className="border-border text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded"
-                      />
-                    </label>
+
+                      <div className="rounded-2xl border border-slate-200 bg-background p-4 shadow-sm">
+                        <p className="text-foreground text-sm font-medium">Resumo do ponto</p>
+
+                        <div className="mt-4 space-y-3">
+                          <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                            <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
+                              Endereço resolvido
+                            </p>
+                            <p className="text-foreground mt-1 text-sm">
+                              {!geofencePoint
+                                ? 'Selecione um ponto no mapa para ver o endereço.'
+                                : isResolvingGeofenceAddress
+                                  ? 'Resolvendo endereço...'
+                                  : resolvedGeofenceAddress?.displayName || 'Endereço ainda não disponível'}
+                            </p>
+                          </div>
+
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                              <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
+                                Coordenadas
+                              </p>
+                              <p className="text-foreground mt-1 text-sm">
+                                {geofencePoint
+                                  ? `${geofencePoint.lat.toFixed(6)}, ${geofencePoint.lng.toFixed(6)}`
+                                  : 'Nenhum ponto selecionado'}
+                              </p>
+                            </div>
+
+                            <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                              <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
+                                Cobertura estimada
+                              </p>
+                              <p className="text-foreground mt-1 text-sm">
+                                {formatGeofenceCoverage(safeGeofenceRadius)}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label htmlFor="schedule-geofence-label">Etiqueta interna</Label>
+                            <Input
+                              id="schedule-geofence-label"
+                              value={form.geofenceLabel}
+                              onChange={(event) =>
+                                setForm((prev) => ({ ...prev, geofenceLabel: event.target.value }))
+                              }
+                              placeholder="UTI Adulto · Bloco A"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <label className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-foreground text-sm font-medium">
+                              Permitir check-in automático
+                            </p>
+                            <p className="text-muted-foreground mt-0.5 text-xs">
+                              Quando o médico autorizar no app, o sistema registra check-in ao entrar
+                              na geofence durante a janela do plantão.
+                            </p>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={form.geofenceAutoCheckInEnabled}
+                            onChange={(event) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                geofenceAutoCheckInEnabled: event.target.checked,
+                              }))
+                            }
+                            className="border-border text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded"
+                          />
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -1485,9 +1830,14 @@ export default function ScheduleDetailsPage() {
                     Geofence / auto check-in
                   </p>
                   <p className="text-foreground mt-2 text-sm">
-                    {form.geofenceLat && form.geofenceLng
-                      ? `${form.geofenceLat}, ${form.geofenceLng} · raio ${form.geofenceRadiusMeters || '180'}m`
+                    {geofencePoint
+                      ? `${geofenceDisplayLabel} · raio ${safeGeofenceRadius}m`
                       : 'Não configurada'}
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {geofencePoint
+                      ? geofenceAddressLabel || `${form.geofenceLat}, ${form.geofenceLng}`
+                      : 'Auto check-in ainda não configurado'}
                   </p>
                   <p className="text-muted-foreground mt-1 text-xs">
                     Auto check-in: {form.geofenceAutoCheckInEnabled ? 'habilitado' : 'desabilitado'}
