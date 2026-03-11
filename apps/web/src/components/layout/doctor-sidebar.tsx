@@ -48,13 +48,16 @@ export function DoctorSidebar() {
 
   return (
     <TooltipProvider delayDuration={0}>
-      <motion.aside
-        animate={{
-          width: sidebarCollapsed ? DOCTOR_SIDEBAR_COLLAPSED_WIDTH : DOCTOR_SIDEBAR_EXPANDED_WIDTH,
-        }}
-        transition={{ type: 'spring', stiffness: 320, damping: 34, mass: 0.9 }}
-        className="border-border/80 bg-card/95 fixed inset-y-0 left-0 z-40 hidden h-[100dvh] flex-col border-r shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur-sm lg:flex lg:pt-[env(safe-area-inset-top)]"
-      >
+      <>
+        <motion.aside
+          animate={{
+            width: sidebarCollapsed
+              ? DOCTOR_SIDEBAR_COLLAPSED_WIDTH
+              : DOCTOR_SIDEBAR_EXPANDED_WIDTH,
+          }}
+          transition={{ type: 'spring', stiffness: 320, damping: 34, mass: 0.9 }}
+          className="border-border/80 bg-card/95 fixed inset-y-0 left-0 z-40 hidden h-[100dvh] flex-col border-r shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur-sm lg:flex lg:pt-[env(safe-area-inset-top)]"
+        >
         <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_65%)]" />
 
         <div className={cn('relative flex h-16 items-center px-4', sidebarCollapsed && 'justify-center')}>
@@ -177,12 +180,21 @@ export function DoctorSidebar() {
           </AnimatePresence>
         </div>
 
+        </motion.aside>
+
         <motion.button
           type="button"
           onClick={toggleSidebar}
+          animate={{
+            left:
+              (sidebarCollapsed
+                ? DOCTOR_SIDEBAR_COLLAPSED_WIDTH
+                : DOCTOR_SIDEBAR_EXPANDED_WIDTH) - 14,
+          }}
+          transition={{ type: 'spring', stiffness: 320, damping: 34, mass: 0.9 }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="border-border/80 bg-card text-muted-foreground hover:text-foreground shadow-card absolute -right-3 top-20 flex h-7 w-7 items-center justify-center rounded-full border transition-colors"
+          className="border-border/80 bg-card text-muted-foreground hover:text-foreground shadow-card fixed top-20 z-[90] hidden h-7 w-7 items-center justify-center rounded-full border transition-colors lg:flex"
           aria-label={sidebarCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
           title={sidebarCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
         >
@@ -192,7 +204,7 @@ export function DoctorSidebar() {
             <ChevronLeft className="h-3 w-3" />
           )}
         </motion.button>
-      </motion.aside>
+      </>
     </TooltipProvider>
   )
 }

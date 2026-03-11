@@ -259,12 +259,18 @@
      DESKTOP/IPAD DASHBOARD HEADER
      ======================================== */
   .desktop-shell-header {
+    --desktop-header-height: 108px;
+    --desktop-header-orb-size: 82px;
+    --desktop-header-orb-radius: 28px;
+    --desktop-header-orb-top: 14px;
+    --desktop-header-notch-width: 150px;
+    --desktop-header-notch-height: 58px;
     position: fixed;
     inset-inline: 0;
     top: 0;
     z-index: 55;
     display: none;
-    min-height: 94px;
+    min-height: var(--desktop-header-height);
     background:
       linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(255, 255, 255, 0.92) 100%);
     border-bottom: 1px solid rgba(148, 163, 184, 0.18);
@@ -298,11 +304,11 @@
     gap: 24px;
     grid-template-columns: minmax(0, 1fr) 148px auto;
     width: 100%;
-    min-height: 94px;
+    min-height: var(--desktop-header-height);
     max-width: 1720px;
     margin-inline: auto;
-    padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
-    padding-bottom: 16px;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 20px);
+    padding-bottom: 20px;
   }
 
   .desktop-shell-header__center-spacer {
@@ -333,9 +339,9 @@
   .desktop-shell-header__notch {
     position: absolute;
     left: 50%;
-    bottom: -28px;
-    width: 144px;
-    height: 52px;
+    bottom: -30px;
+    width: var(--desktop-header-notch-width);
+    height: var(--desktop-header-notch-height);
     transform: translateX(-50%);
     pointer-events: none;
     z-index: 1;
@@ -358,7 +364,7 @@
   .desktop-shell-header__logo {
     position: absolute;
     left: 50%;
-    top: calc(env(safe-area-inset-top, 0px) + 18px);
+    top: calc(env(safe-area-inset-top, 0px) + var(--desktop-header-orb-top));
     transform: translateX(-50%);
     z-index: 3;
     pointer-events: none;
@@ -368,9 +374,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 82px;
-    height: 82px;
-    border-radius: 28px;
+    width: var(--desktop-header-orb-size);
+    height: var(--desktop-header-orb-size);
+    border-radius: var(--desktop-header-orb-radius);
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.95));
     border: 1px solid rgba(255, 255, 255, 0.88);
@@ -390,9 +396,9 @@
   }
 
   .desktop-shell-header__logo-mark {
-    width: 96px;
-    height: 96px;
-    transform: translateY(3px);
+    width: calc(var(--desktop-header-orb-size) + 10px);
+    height: calc(var(--desktop-header-orb-size) + 10px);
+    transform: translateY(1px);
   }
 
   .dark .desktop-shell-header,
