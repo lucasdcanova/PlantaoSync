@@ -34,7 +34,13 @@ export function Header({ title, subtitle }: HeaderProps) {
 
   return (
     <>
-      <header className="desktop-shell-header hidden lg:block">
+      <header
+        className="desktop-shell-header hidden lg:block"
+        style={{
+          left: `${sidebarOffset}px`,
+          width: `calc(100% - ${sidebarOffset}px)`,
+        }}
+      >
         <div className="desktop-shell-header__glow" />
         <div className="desktop-shell-header__notch" />
 
@@ -57,7 +63,7 @@ export function Header({ title, subtitle }: HeaderProps) {
         <div
           className="desktop-shell-header__inner"
           style={{
-            paddingLeft: `${sidebarOffset + 28}px`,
+            paddingLeft: '28px',
             paddingRight: '24px',
           }}
         >
