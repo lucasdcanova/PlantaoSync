@@ -66,12 +66,17 @@ export function Sidebar() {
             ? DASHBOARD_SIDEBAR_COLLAPSED_WIDTH
             : DASHBOARD_SIDEBAR_EXPANDED_WIDTH,
         }}
-        transition={{ type: 'spring', stiffness: 320, damping: 34, mass: 0.9 }}
-        className="border-border/80 bg-card/95 fixed inset-y-0 left-0 z-40 hidden h-[100dvh] flex-col border-r shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur-sm lg:flex lg:pt-[env(safe-area-inset-top)]"
+        transition={{ type: 'spring', stiffness: 280, damping: 30, mass: 0.92 }}
+        className="border-border/80 bg-card/92 fixed inset-y-0 left-0 z-40 hidden h-[100dvh] flex-col border-r shadow-[0_22px_60px_rgba(15,23,42,0.10)] backdrop-blur-xl lg:flex lg:pt-[calc(env(safe-area-inset-top)+6.5rem)]"
       >
         <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[radial-gradient(circle_at_top,rgba(20,184,166,0.10),transparent_65%)]" />
 
-        <div className={cn('relative flex h-16 items-center px-4', sidebarCollapsed && 'justify-center')}>
+        <div
+          className={cn(
+            'relative flex min-h-[76px] items-center px-4',
+            sidebarCollapsed && 'justify-center',
+          )}
+        >
           <AnimatePresence mode="wait">
             {!sidebarCollapsed ? (
               <motion.div
@@ -203,16 +208,25 @@ export function Sidebar() {
         <motion.button
           type="button"
           onClick={toggleSidebar}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="border-border/80 bg-card text-muted-foreground hover:text-foreground shadow-card absolute -right-3 top-20 flex h-7 w-7 items-center justify-center rounded-full border transition-colors"
+          animate={{
+            left:
+              (sidebarCollapsed
+                ? DASHBOARD_SIDEBAR_COLLAPSED_WIDTH
+                : DASHBOARD_SIDEBAR_EXPANDED_WIDTH) - 26,
+          }}
+          transition={{ type: 'spring', stiffness: 280, damping: 26, mass: 0.95 }}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+          className="border-white/80 text-foreground fixed z-[80] hidden h-[52px] w-[52px] items-center justify-center rounded-[18px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(241,245,249,0.92))] shadow-[0_18px_45px_rgba(15,23,42,0.22),0_2px_10px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] transition-[color,box-shadow,transform] lg:flex dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.94),rgba(15,23,42,0.86))]"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 1.55rem)' }}
           aria-label={sidebarCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
           title={sidebarCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
         >
+          <span className="pointer-events-none absolute inset-[5px] rounded-[14px] bg-[radial-gradient(circle_at_30%_20%,rgba(45,212,191,0.22),transparent_58%)]" />
           {sidebarCollapsed ? (
-            <ChevronRight className="h-3 w-3" />
+            <ChevronRight className="relative h-5 w-5" />
           ) : (
-            <ChevronLeft className="h-3 w-3" />
+            <ChevronLeft className="relative h-5 w-5" />
           )}
         </motion.button>
       </motion.aside>
