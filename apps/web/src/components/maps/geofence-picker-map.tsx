@@ -45,13 +45,15 @@ function ClickHandler({ onPointChange }: { onPointChange: (point: MapPoint) => v
 
 function AutoCenter({ point }: { point: MapPoint | null }) {
   const map = useMap()
+  const lat = point?.lat
+  const lng = point?.lng
 
   useEffect(() => {
-    if (!point) return
+    if (lat === undefined || lng === undefined) return
 
     const nextZoom = Math.max(map.getZoom(), 15)
-    map.flyTo([point.lat, point.lng], nextZoom, { duration: 0.35 })
-  }, [map, point])
+    map.flyTo([lat, lng], nextZoom, { duration: 0.35 })
+  }, [map, lat, lng])
 
   return null
 }
