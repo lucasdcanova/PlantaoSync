@@ -26,6 +26,8 @@ export interface LocationEditorInput {
 
 interface LocationsState {
   locations: ManagerLocation[]
+  /** True once the first successful fetch from the backend has completed. */
+  hasFetched: boolean
   addLocation: (input: LocationEditorInput) => ManagerLocation
   updateLocation: (id: string, input: LocationEditorInput) => ManagerLocation
   deleteLocation: (id: string) => void
@@ -80,6 +82,7 @@ export const useLocationsStore = create<LocationsState>()(
   (set, get) => ({
     // Start empty and hydrate from backend.
     locations: [],
+    hasFetched: false,
 
     addLocation: (input) => {
       const normalized = normalizeLocationInput(input)
@@ -140,9 +143,10 @@ export const useLocationsStore = create<LocationsState>()(
 
     setLocations: (locations) =>
       set({
+        hasFetched: true,
         locations: sortLocations(locations),
       }),
 
-    resetLocations: () => set({ locations: [] }),
+    resetLocations: () => set({ locations: [], hasFetched: false }),
   }),
 )

@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/auth.store'
 import { useInstitutionStore } from '@/store/institution.store'
 import { useUIStore } from '@/store/ui.store'
+import { DashboardPreloader } from '@/components/dashboard/dashboard-preloader'
 import { cn } from '@/lib/utils'
 
 const mobileNavItems: BottomNavItem[] = [
@@ -74,6 +75,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="bg-background relative flex h-[100dvh] min-h-[100dvh] overflow-hidden lg:pt-[env(safe-area-inset-top)]">
+      <DashboardPreloader />
       <StatusBarSync color="#ffffff" />
       <Sidebar />
       <motion.div

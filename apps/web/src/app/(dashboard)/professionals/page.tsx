@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   useProfessionalsStore,
   type ProfessionalProfile,
@@ -277,7 +278,7 @@ function ProfessionalCard({
 }
 
 export default function ProfessionalsPage() {
-  const { professionals, setProfessionals } = useProfessionalsStore()
+  const { professionals, setProfessionals, hasFetched } = useProfessionalsStore()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const accessToken = useAuthStore((state) => state.accessToken)
   const [apiInviteCodes, setApiInviteCodes] = useState<ApiInviteCode[]>([])
@@ -474,24 +475,29 @@ export default function ProfessionalsPage() {
           )}
         </AnimatePresence>
 
-        {isLoadingRemote ? (
-          <div className="card-base p-4 text-sm text-muted-foreground">Sincronizando equipe...</div>
-        ) : null}
-
         {/* Professional list */}
         <div className="space-y-3">
-          <AnimatePresence mode="popLayout">
-            {filtered.map((p) => (
-              <ProfessionalCard
-                key={p.id}
-                professional={p}
-                onRemove={() => void handleRemoveProfessional(p.id)}
-                onRestore={() => void handleRestoreProfessional(p.id)}
-                canRestore
-              />
-            ))}
-          </AnimatePresence>
-          {filtered.length === 0 && (
+          {!hasFetched ? (
+            <>
+              {Array.from({ length: 3 }).map((_, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton list
+                <Skeleton key={i} className="h-[88px] w-full rounded-xl" />
+              ))}
+            </>
+          ) : (
+            <AnimatePresence mode="popLayout">
+              {filtered.map((p) => (
+                <ProfessionalCard
+                  key={p.id}
+                  professional={p}
+                  onRemove={() => void handleRemoveProfessional(p.id)}
+                  onRestore={() => void handleRestoreProfessional(p.id)}
+                  canRestore
+                />
+              ))}
+            </AnimatePresence>
+          )}
+          {hasFetched && filtered.length === 0 && (
             <div className="card-base p-10 text-center text-muted-foreground text-sm">
               {search ? 'Nenhum profissional encontrado.' : 'Nenhum profissional nesta categoria.'}
             </div>

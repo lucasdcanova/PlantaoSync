@@ -29,6 +29,8 @@ interface AddProfessionalInput {
 
 interface ProfessionalsState {
   professionals: ProfessionalProfile[]
+  /** True once the first successful fetch from the backend has completed. */
+  hasFetched: boolean
   addProfessional: (input: AddProfessionalInput) => ProfessionalProfile
   setProfessionals: (professionals: ProfessionalProfile[]) => void
   removeProfessional: (professionalId: string) => void
@@ -40,6 +42,7 @@ export const useProfessionalsStore = create<ProfessionalsState>()(
   (set) => ({
     // Start empty and hydrate from backend when available.
     professionals: [],
+    hasFetched: false,
 
     addProfessional: (input) => {
       const newPro: ProfessionalProfile = {
@@ -63,6 +66,7 @@ export const useProfessionalsStore = create<ProfessionalsState>()(
 
     setProfessionals: (professionals) =>
       set({
+        hasFetched: true,
         professionals: professionals.map((professional) => ({ ...professional })),
       }),
 
@@ -81,6 +85,6 @@ export const useProfessionalsStore = create<ProfessionalsState>()(
       })),
 
     // Reset to empty (real users)
-    resetProfessionals: () => set({ professionals: [] }),
+    resetProfessionals: () => set({ professionals: [], hasFetched: false }),
   }),
 )

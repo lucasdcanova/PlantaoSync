@@ -9,6 +9,7 @@ import { PageTransition, StaggerItem, StaggerList } from '@/components/shared/pa
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import { getApiClient } from '@/lib/api'
 import { mapApiScheduleToManager } from '@/lib/backend-mappers'
 import { isOpenEndedSchedule } from '@/lib/schedule-range'
@@ -21,6 +22,7 @@ export default function SchedulesPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const accessToken = useAuthStore((state) => state.accessToken)
   const schedules = useSchedulesStore((state) => state.schedules)
+  const hasFetched = useSchedulesStore((state) => state.hasFetched)
   const setSchedules = useSchedulesStore((state) => state.setSchedules)
   const locations = useLocationsStore((state) => state.locations)
 
@@ -106,7 +108,14 @@ export default function SchedulesPage() {
             </Button>
           </div>
 
-          {filteredSchedules.length === 0 ? (
+          {!hasFetched ? (
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton list
+                <Skeleton key={i} className="h-[120px] w-full rounded-xl" />
+              ))}
+            </div>
+          ) : filteredSchedules.length === 0 ? (
             <section className="border-border bg-background text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-sm">
               Nenhuma escala encontrada. Crie uma nova escala para começar.
             </section>

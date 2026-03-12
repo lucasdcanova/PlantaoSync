@@ -56,6 +56,8 @@ export interface ScheduleExtraShiftInput {
 
 interface SchedulesState {
   schedules: ManagerSchedule[]
+  /** True once the first successful fetch from the backend has completed. */
+  hasFetched: boolean
   createSchedule: (input: ScheduleEditorInput) => ManagerSchedule
   updateSchedule: (id: string, input: ScheduleEditorInput) => ManagerSchedule
   deleteSchedule: (id: string) => void
@@ -383,6 +385,7 @@ export const useSchedulesStore = create<SchedulesState>()(
   (set, get) => ({
     // Start empty and hydrate from backend.
     schedules: [],
+    hasFetched: false,
 
     createSchedule: (input) => {
       validateInput(input)
@@ -436,6 +439,7 @@ export const useSchedulesStore = create<SchedulesState>()(
 
     setSchedules: (schedules) =>
       set({
+        hasFetched: true,
         schedules: withSortedSchedules(
           schedules.map((schedule) => normalizeSchedule(schedule)),
         ),
@@ -513,6 +517,6 @@ export const useSchedulesStore = create<SchedulesState>()(
         ),
       })),
 
-    resetSchedules: () => set({ schedules: [] }),
+    resetSchedules: () => set({ schedules: [], hasFetched: false }),
   }),
 )

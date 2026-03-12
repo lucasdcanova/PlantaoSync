@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
 import { mapApiLocationToManager } from '@/lib/backend-mappers'
 import { getApiClient } from '@/lib/api'
 import { useSchedulesStore } from '@/store/schedules.store'
@@ -168,6 +169,7 @@ function LocationEditorCard({
 
 export default function LocationsPage() {
   const locations = useLocationsStore((state) => state.locations)
+  const hasFetched = useLocationsStore((state) => state.hasFetched)
   const setLocations = useLocationsStore((state) => state.setLocations)
   const schedules = useSchedulesStore((state) => state.schedules)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -635,7 +637,14 @@ export default function LocationsPage() {
             </AnimatePresence>
           </StaggerList>
 
-          {filteredLocations.length === 0 && (
+          {!hasFetched && filteredLocations.length === 0 ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton list
+                <Skeleton key={i} className="h-[160px] w-full rounded-xl" />
+              ))}
+            </div>
+          ) : filteredLocations.length === 0 ? (
             <div className="card-base py-10 text-center">
               <ShieldAlert className="text-muted-foreground/40 mx-auto mb-3 h-9 w-9" />
               <p className="text-foreground text-sm font-medium">Nenhum setor encontrado</p>
@@ -643,7 +652,7 @@ export default function LocationsPage() {
                 Ajuste os filtros ou inclua um novo setor para iniciar a gestão.
               </p>
             </div>
-          )}
+          ) : null}
         </div>
       </PageTransition>
     </>
