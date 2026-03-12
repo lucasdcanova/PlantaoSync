@@ -263,6 +263,7 @@
     --desktop-header-orb-size: 82px;
     --desktop-header-orb-radius: 28px;
     --desktop-header-orb-top: 14px;
+    --desktop-header-content-offset-left: 52px;
     --desktop-header-notch-width: 150px;
     --desktop-header-notch-height: 58px;
     position: fixed;
@@ -368,6 +369,7 @@
     transform: translateX(-50%);
     z-index: 3;
     pointer-events: none;
+    will-change: transform;
   }
 
   .desktop-shell-header__logo-orb {

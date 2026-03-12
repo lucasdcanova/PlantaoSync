@@ -44,26 +44,27 @@ export function Header({ title, subtitle }: HeaderProps) {
         <div className="desktop-shell-header__glow" />
         <div className="desktop-shell-header__notch" />
 
-        <motion.div
-          className="desktop-shell-header__logo"
-          initial={{ opacity: 0, y: -8, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <div className="desktop-shell-header__logo-orb">
-            <ProductLogo
-              variant="mark"
-              className="desktop-shell-header__logo-mark"
-              imageClassName="h-full w-full"
-              priority
-            />
-          </div>
-        </motion.div>
+        <div className="desktop-shell-header__logo">
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="desktop-shell-header__logo-orb">
+              <ProductLogo
+                variant="mark"
+                className="desktop-shell-header__logo-mark"
+                imageClassName="h-full w-full"
+                priority
+              />
+            </div>
+          </motion.div>
+        </div>
 
         <div
           className="desktop-shell-header__inner"
           style={{
-            paddingLeft: '28px',
+            paddingLeft: 'var(--desktop-header-content-offset-left)',
             paddingRight: '24px',
           }}
         >
